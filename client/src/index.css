@@ -1,0 +1,1392 @@
+@import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Vollkorn:wght@400;600;700&display=swap');
+
+:root {
+  background: url('/panels.png') no-repeat center center fixed;
+  background-size: cover;
+  min-height: 100vh;
+}
+
+.overlay-cont {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.overlay-img {
+    position: absolute;
+    width: 86%;
+    z-index: 1;
+    filter: drop-shadow(10px 10px 30px rgba(0, 0, 0, 1));
+}
+
+.overlay-pyramid-img {
+  position: absolute;
+  top: -5px;
+  width: 70%;
+  z-index: 1;
+  filter: drop-shadow(10px 10px 30px rgba(0, 0, 0, 1));
+}
+
+.overlay-diamond-img {
+  position: absolute;
+  top: -3px;
+  width: 89%;
+  z-index: 1;
+  filter: drop-shadow(10px 10px 30px rgba(0, 0, 0, 1));
+}
+
+.main-menu {
+    text-align: center;
+    color: white;
+    height: 98vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 2;
+}
+
+.create-menu {
+  text-align: center;
+  color: white;
+  height: 98vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 2;
+}
+
+.lobbys-menu {
+  text-align: center;
+  color: white;
+  height: 98vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 2;
+}
+
+.access-menu {
+  text-align: center;
+  color: white;
+  height: 98vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 2;
+}
+
+.account-menu {
+  text-align: center;
+  color: white;
+  height: 98vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 2;
+}
+
+.join-menu {
+  text-align: center;
+  color: white;
+  height: 98vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 2;
+}
+
+.game-menu {
+  text-align: center;
+  color: white;
+  height: 98vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 2;
+}
+
+.phase1-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 2;
+}
+
+.phase2-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 2;
+}
+
+.phase3-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 2;
+}
+
+.home-logo {
+    width: 50%;
+    margin-bottom: -6%;
+    margin-top: -27%
+}
+
+.create-logo {
+  width: 60%;
+  margin-bottom: -10%;
+  margin-top: -47%
+}
+
+.access-logo {
+  width: 60%;
+  margin-bottom: -10%;
+  margin-top: -75%
+}
+
+.join-logo {
+  position: absolute;
+  width: 12%;
+  margin-top: -525px;
+}
+
+.home-title {
+    font-family: serif;
+    font-size: 4.5rem;
+    margin-bottom: 2%;
+}
+
+.create-title {
+  font-family: serif;
+  font-size: 4rem;
+  margin-bottom: 5%;
+}
+
+.lobbys-title {
+  position: absolute;
+  font-family: serif;
+  font-size: 4rem;
+  margin-bottom: 10%;
+  top: 30px;
+}
+
+.join-title {
+  position: absolute;
+  font-family: serif;
+  font-size: 4rem;
+  margin-bottom: 5%;
+  top: 310px;
+}
+
+.game-title {
+  position: absolute;
+  font-family: serif;
+  font-size: 4rem;
+  margin-bottom: 5%;
+  top: 40px;
+}
+
+.access-title {
+  font-family: serif;
+  font-size: 4rem;
+  margin-bottom: 5%;
+}
+
+.account-title {
+  position: absolute;
+  font-size: 4rem;
+  top: 20px;
+  font-family: 'Luckiest Guy', cursive;
+  color: white;
+}
+
+.highlight {
+    color: red;
+    margin-left: 15px;
+}
+
+.menu-button {
+    font-family: 'Luckiest Guy', cursive;
+    padding: 8px 16px;
+    font-size: 2.8rem;
+    margin: 10px;
+    border-radius: 10px;
+    width: 100%;
+    background-color: #A68A64;
+    color: white;
+    cursor: pointer;
+    transition: all 0.1s ease-in-out;
+    box-shadow: 4px 4px 8px rgba(0, 0, 0, .4);
+}
+
+.menu-button-disabled {
+  font-family: 'Luckiest Guy', cursive;
+  padding: 8px 16px;
+  font-size: 2.8rem;
+  margin: 10px;
+  border-radius: 10px;
+  width: 100%;
+  background-color: grey;
+  color: white;
+  cursor: default;
+  transition: all 0.1s ease-in-out;
+  box-shadow: 4px 4px 8px rgba(0, 0, 0, .4);
+}
+
+
+.menu-button:hover {
+    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
+    transform: translateY(-3px);
+}
+
+.menu-button:active {
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    transform: translateY(2px);
+}
+
+.settings-button {
+    position: absolute;
+    display: inline-block;
+    bottom: 180px;
+    right: 180px;
+}
+
+.settings-button button {
+    position: absolute;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.1s ease-in-out;
+}
+
+.btn img{
+    width: 150px;
+    height: auto;
+    display: block;
+    box-shadow: 4px 4px 8px rgba(0, 0, 0, .4);
+    border-radius: 65px;
+    transition: all 0.1s ease-in-out;
+}
+
+.btn:hover img {
+    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
+    transform: translateY(-3px);
+}
+
+.btn:active img {
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    transform: translateY(2px);
+}
+
+.create-cont {
+  position: relative;
+  display: inline-block;
+  bottom: -15%;
+}
+
+.create-cont button {
+  position: relative;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-create img{
+  width: 310px;
+  height: auto;
+  display: block;
+  box-shadow: 4px 4px 8px rgba(0, 0, 0, .2);
+  border-radius: 10px;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-text {
+  position: absolute;
+  top: -18%;
+  left: 15%;
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 35px;
+  color: white;
+  text-shadow: 3px 3px 8px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-create:hover img {
+  box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
+  transform: translateY(-3px);
+}
+
+.btn-create:active img {
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  transform: translateY(2px);
+}
+
+.btn-create:hover p {
+  box-shadow: 6px 6px 12px rgba(0, 0, 0, 0);
+  transform: translateY(-3px);
+}
+
+.play-cont {
+  position: relative;
+  display: inline-block;
+}
+
+.play-cont button {
+  position: relative;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-play img{
+  width: 310px;
+  height: auto;
+  display: block;
+  box-shadow: 4px 4px 8px rgba(0, 0, 0, .2);
+  border-radius: 10px;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-play-disabled img{
+  width: 310px;
+  height: auto;
+  display: block;
+  box-shadow: 4px 4px 8px rgba(0, 0, 0, .2);
+  border-radius: 10px;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-text-play {
+  position: absolute;
+  top: -17%;
+  left: 21%;
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 35px;
+  color: white;
+  text-shadow: 3px 3px 8px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-play:hover img {
+  box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
+  transform: translateY(-3px);
+}
+
+.btn-play:active img {
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  transform: translateY(2px);
+}
+
+.btn-play:hover p {
+  box-shadow: 6px 6px 12px rgba(0, 0, 0, 0);
+  transform: translateY(-3px);
+}
+
+.lobby-cont {
+  position: relative;
+  display: inline-block;
+  margin-top: 10px;
+}
+
+.lobby-cont button {
+  position: relative;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-lobby img{
+  width: 310px;
+  height: auto;
+  display: block;
+  box-shadow: 4px 4px 8px rgba(0, 0, 0, .2);
+  border-radius: 10px;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-lobby-disabled img{
+  width: 310px;
+  height: auto;
+  display: block;
+  box-shadow: 4px 4px 8px rgba(0, 0, 0, .2);
+  border-radius: 10px;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-text-lobby {
+  position: absolute;
+  top: -17%;
+  left: 22%;
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 35px;
+  color: white;
+  text-shadow: 3px 3px 8px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-lobby:hover img {
+  box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
+  transform: translateY(-3px);
+}
+
+.btn-lobby:active img {
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  transform: translateY(2px);
+}
+
+.btn-lobby:hover p {
+  box-shadow: 6px 6px 12px rgba(0, 0, 0, 0);
+  transform: translateY(-3px);
+}
+
+.join-cont {
+  position: absolute;
+  display: inline-block;
+  bottom: 80px;
+}
+
+.join-cont button {
+  position: relative;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-join img{
+  width: 310px;
+  height: auto;
+  display: block;
+  box-shadow: 4px 4px 8px rgba(0, 0, 0, .2);
+  border-radius: 10px;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-text-join {
+  position: absolute;
+  top: -16%;
+  left: 22%;
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 35px;
+  color: white;
+  text-shadow: 3px 3px 8px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-join:hover img {
+  box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
+  transform: translateY(-3px);
+}
+
+.btn-join:active img {
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  transform: translateY(2px);
+}
+
+.btn-join:hover p {
+  box-shadow: 6px 6px 12px rgba(0, 0, 0, 0);
+  transform: translateY(-3px);
+}
+
+.access-cont {
+  position: relative;
+  display: inline-block;
+}
+
+.access-cont button {
+  position: relative;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-access img{
+  width: 280px;
+  height: auto;
+  display: block;
+  box-shadow: 4px 4px 8px rgba(0, 0, 0, .2);
+  border-radius: 10px;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-access {
+  position: relative;
+  display: inline-block;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.btn-text-access {
+  position: absolute;
+  top: 5%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 35px;
+  color: white;
+  text-shadow: 3px 3px 8px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  transition: all 0.1s ease-in-out;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.btn-access:hover img {
+  box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
+  transform: translateY(-3px);
+}
+
+.btn-access:active img {
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  transform: translateY(2px);
+}
+
+.btn-access:hover p {
+  box-shadow: 6px 6px 12px rgba(0, 0, 0, 0);
+  transform: translate(-50%, -25px);
+}
+
+.account-cont {
+  position: absolute;
+  display: inline-block;
+  bottom: 65px;
+}
+
+.account-cont button {
+  position: relative;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-account img{
+  width: 310px;
+  height: auto;
+  display: block;
+  box-shadow: 4px 4px 8px rgba(0, 0, 0, .2);
+  border-radius: 10px;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-text-account {
+  position: absolute;
+  top: -18%;
+  left: 29%;
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 35px;
+  color: white;
+  text-shadow: 3px 3px 8px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-account:hover img {
+  box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
+  transform: translateY(-3px);
+}
+
+.btn-account:active img {
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  transform: translateY(2px);
+}
+
+.btn-account:hover p {
+  box-shadow: 6px 6px 12px rgba(0, 0, 0, 0);
+  transform: translateY(-3px);
+}
+
+.startGame-cont {
+  position: absolute;
+  display: inline-block;
+  bottom: 80px
+}
+
+.startGame-cont button {
+  position: relative;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-startGame-disabled {
+  position: relative;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: default;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-startGame img{
+  width: 310px;
+  height: auto;
+  display: block;
+  box-shadow: 4px 4px 8px rgba(0, 0, 0, .2);
+  border-radius: 10px;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-startGame-disabled img{
+  width: 310px;
+  height: auto;
+  display: block;
+  box-shadow: 4px 4px 8px rgba(0, 0, 0, .2);
+  border-radius: 10px;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-text-startGame {
+  position: absolute;
+  top: -17%;
+  left: 19%;
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 35px;
+  color: white;
+  text-shadow: 3px 3px 8px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-startGame:hover img {
+  box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
+  transform: translateY(-3px);
+}
+
+.btn-startGame:active img {
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  transform: translateY(2px);
+}
+
+.btn-startGame:hover p {
+  box-shadow: 6px 6px 12px rgba(0, 0, 0, 0);
+  transform: translateY(-3px);
+}
+
+.switch-cont {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.btn-switch {
+  position: absolute;
+  margin-top: 3%;
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 30px;
+  color: white;
+  text-shadow: 3px 3px 8px rgba(0, 0, 0, 0.7);
+  transition: all 0.1s ease-in-out;
+  text-align: center;
+  background: none;
+  border: none;
+}
+
+.btn-switch:hover {
+  box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.2);
+  transform: translateY(-3px);
+}
+
+.btn-switch:active {
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  transform: translateY(2px);
+}
+
+.rustic-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rustic-form-join {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  top: 450px;
+}
+
+.rustic-input {
+  background: url('/wood_blue.svg');
+  background-size: cover;
+  font-family: 'Cinzel', serif;
+  font-size: 27px;
+  color: #f5e1a4;
+  box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.6);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  border-radius: 5px;
+  outline: none;
+  height: 45px;
+}
+
+.rustic-input:focus {
+  border-color: #c49a6c;
+  box-shadow: 0 0 8px rgba(196, 154, 108, 0.8);
+}
+
+.rustic-checkbox {
+  display: flex;
+  align-items: center;
+  font-family: 'Cinzel', serif;
+  font-size: 27px;
+  color: #f5e1a4;
+}
+
+.rustic-checkbox input {
+  width: 30px;
+  height: 30px;
+  margin-right: 12px;
+  accent-color: #5a3e22;
+}
+
+.back-cont {
+  position: absolute;
+  display: inline-block;
+  bottom: 145px;
+  left: 15px;
+}
+
+.back-cont button {
+  position: absolute;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-back img {
+  width: 125px;
+  height: auto;
+  display: block;
+  box-shadow: 4px 4px 8px rgba(0,0,0,.4);
+  border-radius:  70px;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-back:hover img {
+  box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
+  transform: translateY(-3px);
+}
+
+.btn-back:active img {
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  transform: translateY(2px);
+}
+
+.next-cont {
+  position: absolute;
+  display: inline-block;
+  bottom: 150px;
+  right: 150px;
+}
+
+.next-cont button {
+  position: absolute;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-next-disabled {
+  position: absolute;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-next img {
+  width: 135px;
+  height: auto;
+  display: block;
+  box-shadow: 4px 4px 8px rgba(0,0,0,.4);
+  border-radius:  70px;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-next-disabled img {
+  width: 135px;
+  height: auto;
+  display: block;
+  box-shadow: 4px 4px 8px rgba(0,0,0,.4);
+  border-radius:  70px;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-next:hover img {
+  box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
+  transform: translateY(-3px);
+}
+
+.btn-next:active img {
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  transform: translateY(2px);
+}
+
+.try-cont {
+  position: absolute;
+  display: inline-block;
+  bottom: 150px;
+  right: 150px;
+}
+
+.try-cont button {
+  position: absolute;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-try-disabled {
+  position: absolute;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-try img {
+  width: 135px;
+  height: auto;
+  display: block;
+  box-shadow: 4px 4px 8px rgba(0,0,0,.4);
+  border-radius:  70px;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-try-disabled img {
+  width: 135px;
+  height: auto;
+  display: block;
+  box-shadow: 4px 4px 8px rgba(0,0,0,.4);
+  border-radius:  70px;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-try:hover img {
+  box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
+  transform: translateY(-3px);
+}
+
+.btn-try:active img {
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  transform: translateY(2px);
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rustic-input-access {
+  background: url('/wood_green.svg');
+  background-size: cover;
+  font-family: 'Cinzel', serif;
+  font-size: 27px;
+  color: #f5e1a4;
+  box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.6);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  border-radius: 5px;
+  outline: none;
+  height: 45px;
+}
+
+.rustic-label {
+  font-family: 'Cinzel', serif;
+  font-size: 27px;
+  color: #f5e1a4;
+}
+
+.gender-select {
+  padding: 8px;
+  font-size: 20px;
+  font-family: 'Cinzel', serif;
+  border-radius: 5px;
+  border: none;
+  margin-bottom: 15px;
+  width: 100%;
+}
+
+.private-game-cont {
+  position: absolute;
+  display: inline-block;
+  bottom: 10%;
+}
+
+.private-game {
+  background: url('/wood_green.svg');
+  background-size: cover;
+  font-family: 'Cinzel', serif;
+  font-size: 27px;
+  color: #f5e1a4;
+  box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.6);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  border-radius: 5px;
+  outline: none;
+  height: 45px;
+  margin-right: 20px;
+}
+
+.private-game-cont button {
+  position: absolute;
+  width: 55px;
+  height: 55px;
+  border-radius: 10px;
+  background-color: #c1272d;
+  border: none;
+  background-image: url('/join.svg');
+  background-size: 85% auto;
+  background-position: center;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  transition: all 0.1s ease-in-out;
+  margin-top: -2.5px;
+}
+
+.btn-private:hover {
+  box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
+  transform: translateY(-3px);
+}
+
+.btn-private:active {
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  transform: translateY(2px);
+}
+
+.game-list {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  top: 170px;
+}
+
+.game-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(to right, #5a3e2b, #3b2a1a);
+  padding: 12px 20px;
+  border-radius: 8px;
+  border: 1px solid #8b5e3b;
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+  font-size: 25px;
+  color: #f5deb3;
+  font-family: "Luckiest Guy", cursive;
+  width: 400px;
+  height: 25px;
+}
+
+.game-item span {
+  flex-grow: 1;
+}
+
+.game-item button {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background-color: #c1272d;
+  border: none;
+  background-image: url('/join.svg');
+  background-size: 85% auto;
+  background-position: center;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  text-shadow: 1px 1px 2px black;
+}
+
+.game-item button:hover {
+  box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
+  transform: translateY(-2px);
+}
+
+.game-item button:active {
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  transform: translateY(2px);
+}
+
+.player-list {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  top: 190px;
+}
+
+.player-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(to right, #5a3e2b, #3b2a1a);
+  padding: 12px 20px;
+  border-radius: 8px;
+  border: 1px solid #8b5e3b;
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+  font-size: 25px;
+  color: #f5deb3;
+  font-family: "Luckiest Guy", cursive;
+  width: 400px;
+  height: 25px;
+}
+
+.player-item span {
+  flex-grow: 1;
+}
+
+.player-item-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background-color: #c1272d;
+  border: none;
+  background-image: url('/remove.svg');
+  background-size: 85% auto;
+  background-position: center;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  text-shadow: 1px 1px 2px black;
+}
+
+.player-item-button-disabled {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background-color: #626262;
+  border: none;
+  background-image: url('/remove.svg');
+  background-size: 85% auto;
+  background-position: center;
+  background-repeat: no-repeat;
+  cursor: default;
+  transition: all 0.2s ease-in-out;
+  text-shadow: 1px 1px 2px black;
+}
+
+.player-item-button:hover {
+  box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
+  transform: translateY(-2px);
+}
+
+.player-item-button:active {
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  transform: translateY(2px);
+}
+
+.player-cards {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  justify-content: center;
+  position: absolute;
+  bottom: 10px;
+}
+
+.phase1-cards {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 50px;
+  justify-content: center;
+}
+
+.phase2-cards {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  margin-top: 0px;
+  justify-content: center;
+}
+
+.phase3-cards {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: -10px;
+}
+
+.phase-row {
+  display: flex;
+  justify-content: center;
+  gap: 55px;
+  margin-top: -45px;
+}
+
+.phase-row .card{
+  height: 160px;
+  width: 110px;
+  transform: rotate(90deg);
+}
+
+.card {
+  height: 200px;
+  width: 140px;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: all 0.5s ease-in-out;
+  cursor: pointer;
+  user-select: none;
+}
+
+.card img {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  position: absolute;
+  transition: transform 0.4s ease-in-out;
+  backface-visibility: hidden;
+}
+
+.card.show:hover .front{
+  box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
+  transform: rotateY(180deg) translateY(-20px);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card.show:active .front{
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  transform: rotateY(180deg) translateY(-10px);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card .front {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+  background-color: white;
+  transform: rotateY(180deg)
+}
+
+.card .back {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-image: url("data:image/svg+xml,<svg id='patternId' width='100%' height='100%' xmlns='http://www.w3.org/2000/svg'><defs><pattern id='a' patternUnits='userSpaceOnUse' width='20' height='20' patternTransform='scale(1) rotate(45)'><rect x='0' y='0' width='100%' height='100%' fill='hsla(0,0%,100%,1)'/><path d='M0 0h10v10H0z'  stroke-width='1' stroke='none' fill='hsla(4, 100%, 61%, 1)'/><path d='M10 10h10v10H10z'  stroke-width='1' stroke='none' fill='hsla(4, 100%, 61%, 1)'/></pattern></defs><rect width='800%' height='800%' transform='translate(0,0)' fill='url(%23a)'/></svg>");
+}
+
+.card.flipped {
+  transform: rotateZ(90deg) rotateY(180deg); 
+}
+
+.card.show {
+  transform: rotateY(180deg);
+}
+
+.card-buttons {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotateZ(-90deg);
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.card-btn {
+  background-color: white;
+  border: 2px solid black;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.lower {
+  transform: rotate(90deg);
+  display: inline-block;
+}
+
+.higher {
+  transform: rotate(90deg);
+  display: inline-block;
+}
+
+.card-btn:hover {
+  box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.4);
+  transform: translateY(-3px);
+}
+
+.card-btn:active {
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+  transform: translateY(2px);
+}
+
+.higher:hover, .lower:hover {
+  transform: rotate(90deg) translateX(-3px);
+}
+
+.higher:active, .lower:active {
+  transform: rotate(90deg) translateX(2px);
+}
+
+.turn-info {
+  font-family: 'Luckiest Guy', cursive;
+  position: absolute;
+  font-size: 37px;
+  color: #f5e1a4;
+  bottom: 235px;
+}
+
+.turn-info-phase3 {
+  font-family: 'Luckiest Guy', cursive;
+  position: absolute;
+  font-size: 37px;
+  color: #f5e1a4;
+  bottom: 25px;
+}
+
+.current-player {
+  color: #a65a2e;
+  font-weight: bold;
+}
+
+.drink-count {
+  color: #a12727 ;
+  font-weight: bold;
+}
+
+.dragging {
+  position: absolute;
+  pointer-events: none;
+  z-index: 999;
+  transform: scale(1.1);
+}
+
+.busfahrer-cont {
+  text-align: center;
+  color: white;
+  font-family: 'Vollkorn', serif;
+  color: #1B0E1E;
+}
+
+.busfahrer-title {
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 40px;
+  color: #f5e1a4;
+  font-weight: bold;
+  margin-top: 35px;
+}
+
+.busfahrer-name {
+  color: #a65a2e ;
+  font-weight: bold;
+}
+
+.busfahrer-subtitle {
+  font-size: 35px;
+  font-weight: bolder;
+  margin-top: -30px;
+}
+
+.busfahrer-rules {
+  list-style-type: none;
+  padding: 0;
+  font-size: 27px;
+  margin-top: -40px;
+  font-weight: bold;
+}
+
+.phase3-row {
+  display: flex;
+  justify-content: center;
+  gap: 42.5px;
+  margin-top: -37.5px;
+}
+
+.phase3-row .card{
+  height: 120px;
+  width: 80px;
+  transform: rotate(90deg);
+}
+
+.phase3-row .flipped {
+  transform: rotateZ(90deg) rotateY(180deg); 
+}
+
+.phase3-row:first-child {
+  margin-left: -125px;
+}
+
+.phase3-row:last-child {
+  margin-left: 125px;
+}
+
+.stats-container {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 20px;
+  color: #f5e1a4;
+  top: 140px;
+}
+
+.player-name {
+  font-size: 45px;
+  font-weight: bold;
+  color: #a12727;
+  border-bottom: 2px solid #a12727;
+}
+
+.stats-box {
+  text-align: center;
+  width: 350px;
+}
+
+.stats-box h2 {
+  text-align: center;
+  font-size: 45px;
+  margin-top: 10px;
+  color: #a65a2e;
+  margin-bottom: 0px;
+  border-bottom: 2px solid #a65a2e;
+}
+
+.stats-box p {
+  font-size: 25px;
+  display: flex;
+  justify-content: space-between;
+  padding: 4px;
+  border-bottom: 1px solid #f5e1a4;
+}

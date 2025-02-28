@@ -43,3 +43,4 @@ Thumbs.db
 
 # Git specific
 .git/
+"server/firebase-key.json"

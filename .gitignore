@@ -29,6 +29,7 @@ lerna-debug.log*
 # Firebase related
 firebase-debug.log
 firebase.json
+firebase-key.json
 .firebaserc
 
 # Editor & system files
@@ -43,4 +44,3 @@ Thumbs.db
 
 # Git specific
 .git/
-"server/firebase-key.json"

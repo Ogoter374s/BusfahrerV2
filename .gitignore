@@ -42,4 +42,5 @@ Thumbs.db
 *.sublime-workspace
 
 # Git specific
-server/firebase-key.json
+.git/
+"server/firebase-key.json"

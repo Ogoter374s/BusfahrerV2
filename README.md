@@ -42,7 +42,7 @@ npm start
 
 ### Frontend Setup
 ```sh
-cd frontend
+cd client
 npm install
 npm run dev/build
 ```

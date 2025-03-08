@@ -141,21 +141,21 @@
 }
 
 .create-logo {
-  width: 60%;
-  margin-bottom: -10%;
-  margin-top: -47%
+  position: absolute;
+  width: 9.5%;
+  top: 60px;
 }
 
 .access-logo {
-  width: 60%;
-  margin-bottom: -10%;
-  margin-top: -75%
+  position: absolute;
+  width: 12%;
+  top: 70px;
 }
 
 .join-logo {
   position: absolute;
   width: 12%;
-  margin-top: -525px;
+  top: 70px;
 }
 
 .home-title {
@@ -1264,7 +1264,7 @@ form {
   position: absolute;
   font-size: 37px;
   color: #f5e1a4;
-  bottom: 235px;
+  bottom: 220px;
 }
 
 .turn-info-phase3 {

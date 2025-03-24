@@ -44,3 +44,7 @@ Thumbs.db
 
 # Git specific
 .git/
+
+# Certificates
+*.cert
+*.key

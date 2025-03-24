@@ -5,7 +5,12 @@ import jwt from "jsonwebtoken"
 import bcrypt from "bcryptjs"
 import cookieParser from "cookie-parser";
 import fs from "fs";
-import path from "path"
+import path from "path";
+import redis from "redis";
+import http2 from "http2";
+import https from "https";
+import http2Express from "http2-express-bridge";
+import multer from "multer";
 
 import { MongoClient, ObjectId } from "mongodb";
 import { WebSocket, WebSocketServer } from "ws";
@@ -18,346 +23,201 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const port = process.env.BASE_PORT;
 const wbsPort = process.env.WBS_PORT
 const mongoUri = process.env.MONGO_URI;
 
-const app = express();
+// #region Multer Configuration
+
+const uploadDir = path.join(__dirname, "public", "avatars");
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir);
+}
+
+const storage = multer.diskStorage({
+    destination: uploadDir,
+    filename: (req, file, cb) => {
+        cb(null, `${req.user.userId}_${Date.now()}${path.extname(file.originalname)}`);
+    }
+});
+
+const upload = multer({ storage });
+
+//#endregion
+
+// #region Express App Configuration
+
+const app = http2Express(express);
+const port = process.env.BASE_PORT;
+
+const sslOptions = {
+    key: fs.readFileSync(process.env.SSL_KEY),
+    cert: fs.readFileSync(process.env.SSL_CERT),
+    allowHTTP1: true
+};
+
 app.use(cors({
     origin: process.env.FRONT_URL,
     credentials: true
 }));
+
 app.use(express.json());
 app.use(cookieParser());
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use("/avatars", express.static(uploadDir));
+
+app.use(express.static('public', {
+    maxAge: '1y'
+}));
+
+// #endregion
+
+// #region Server Handling Functions
+
+/**
+ * Deletes the oldest log backups if they exceed the max count.
+ *
+ * @param {string} fileName - The base log file name (e.g., "app.log").
+ * @param {number} maxFiles - The maximum number of backup files to keep.
+ */
+const cleanOldLogs = (fileName, maxFiles) => {
+    const logDir = ".";
+    fs.readdir(logDir, (err, files) => {
+        if (err) {
+            console.error("Failed to read log directory:", err);
+            return;
+        }
+
+        const logBackups = files
+            .filter(file => file.startsWith(fileName) && file.endsWith(".bak"))
+            .sort((a, b) => fs.statSync(a).mtimeMs - fs.statSync(b).mtimeMs);
+
+        while (logBackups.length > maxFiles) {
+            const oldestFile = logBackups.shift();
+            fs.unlink(oldestFile, (unlinkErr) => {
+                if (unlinkErr) console.error(`Failed to delete ${oldestFile}:`, unlinkErr);
+                else console.log(`Deleted old backup: ${oldestFile}`);
+            });
+        }
+    });
+};
+
+/**
+ * Rotates log files if they exceed a max size, keeping only the latest 10 backups.
+ *
+ * @param {string} fileName - The log file to check.
+ * @param {number} maxSize - Max size in bytes before rotating (default 5MB).
+ * @param {number} maxFiles - Maximum number of backup files to keep (default 10).
+ */
+const rotateLogs = (fileName, maxSize = 5 * 1024 * 1024, maxFiles = 10) => {
+    const logFilePath = fileName;
+
+    fs.stat(logFilePath, (err, stats) => {
+        if (!err && stats.size >= maxSize) {
+            const backupFile = `${fileName}.${Date.now()}.bak`;
+
+            fs.rename(logFilePath, backupFile, (renameErr) => {
+                if (renameErr) {
+                    console.error(`Failed to rotate ${fileName}:`, renameErr);
+                } else {
+                    console.log(`Rotated ${fileName} → ${backupFile}`);
+                    cleanOldLogs(fileName, maxFiles);
+                }
+            });
+        }
+    });
+};
+
+/**
+ * Logs messages to a specified log file with a timestamp.
+ *
+ * @param {string} level - The log level (e.g., "ERROR", "TRACE", "INFO").
+ * @param {string} message - The message to log.
+ * @param {string} [fileName="app.log"] - The file to log into.
+ */
+const logMessage = (level, message, fileName = "app.log") => {
+    rotateLogs(fileName);
+
+    const logFilePath = path.join(__dirname, fileName);
+    const timestamp = new Date().toISOString();
+    const logEntry = `[${timestamp}] ${level}: ${message}\n`;
+
+    fs.appendFile(logFilePath, logEntry, (err) => {
+        if (err) console.error(`Failed to write to ${fileName}:`, err);
+    });
+};
+
+const logError = (message) => logMessage("ERROR", message, "error.log");
+const logTrace = (message) => logMessage("TRACE", message, "trace.log");
+const logInfo = (message) => logMessage("INFO", message, "info.log");
+
+// #endregion
 
 // #region MongoDB
 
-const client = new MongoClient(mongoUri, { 
-    useNewUrlParser: true, 
-    useUnifiedTopology: true 
-});
-
-let db;
-client.connect()
-    .then(() => {
-        console.log("Connected to MongoDB");
-        db = client.db("BusfahrerV2");
-    })
-    .catch(err => console.error("MongoDB connection error:", err));
-
-// #endregion
-
-// #region WebSockets
-
-const wss = new WebSocketServer({port: wbsPort});
-
-const activeGameConnections = new Map();
-const waitingGameConnections = new Set();
-const accountConnections = new Set();
-
-/**
- * Handles incoming WebSocket connections and manages different types of subscriptions.
- *
- * - Subscribes clients to game updates, lobby updates, or account updates based on the received message type.
- * - Stores active connections for each game, lobby, and account updates.
- * - Removes disconnected clients when the connection is closed.
- *
- * @param {WebSocket} ws - The WebSocket connection instance.
- * @param {Request} req - The incoming connection request.
- */
-wss.on("connection", (ws, req) => {
-    ws.on("message", (message) => {
-        try {
-            const {type,gameId} = JSON.parse(message);
-
-            // Subscribe to game updates
-            if(type === "subscribe" && gameId) {
-                if(!activeGameConnections.has(gameId)) {
-                    activeGameConnections.set(gameId, []);
-                }
-                activeGameConnections.get(gameId).push(ws);
-
-                watchGameUpdates(gameId);
-                watchPlayersUpdate(gameId);
-                watchDrinkUpdate(gameId);
-                watchCardsUpdate(gameId);
-            }
-
-            // Subscribe to lobby updates
-            if(type === "lobby") {
-                if(!waitingGameConnections.has(ws)) {
-                    waitingGameConnections.add(ws);
-                }
-
-                watchLobbyUpdates();
-            }
-
-            // Subscribe to account updates
-            if(type === "account") {
-                if(!accountConnections.has(ws)) {
-                    accountConnections.add(ws);
-                }
-
-                watchAccountUpdates();
-            }
-        } 
-        catch(error) {
-            logError(`Failed to process WebSocket message: ${error.stack || error.message}`);
-        }
-    });
-
-    // Handle WebSocket disconnection
-    ws.on("close", () => {
-        for(const [gameId, sockets] of activeGameConnections.entries()) {
-            activeGameConnections.set(gameId, sockets.filter((client) => client !== ws));
-        }
-
-        waitingGameConnections.delete(ws);
-        accountConnections.delete(ws);
-    });
+const client = new MongoClient(mongoUri, {
+    maxPoolSize: 10,
 });
 
 /**
- * Watches the "users" collection in MongoDB for any updates.
- * When a change is detected, it notifies all connected WebSocket clients subscribed to account updates.
+ * Establishes a connection to the MongoDB database.
+ *
+ * Attempts to connect using the MongoDB client. Logs success or failure messages.
+ * If the connection fails, the error message is logged.
  *
  * @async
- * @function watchAccountUpdates
- * @throws {Error} Logs an error if the change stream fails to start or encounters an issue.
+ * @function connectToMongoDB
+ * @throws {Error} Logs an error if the connection fails.
  */
-const watchAccountUpdates = async () => {
+async function connectToMongoDB() {
     try {
-        const collection = db.collection("users");
-        const changeStream = collection.watch();
-
-        changeStream.on("change", (change) => {
-            accountConnections.forEach((client) => {
-                if (client.readyState === WebSocket.OPEN) {
-                    client.send(JSON.stringify({ type: "accountUpdate" }));
-                }
-            });
-        });
+        await client.connect();
+        logInfo("Connected to MongoDB");
     } catch (error) {
-        logError(`Error watching account updates: ${error.stack || error.message}`);
+        logError(`MongoDB connection error: ${error.stack || error.message}`);
     }
-};
+}
 
-/**
- * Watches the "games" collection in MongoDB for updates where the game status is "waiting".
- * When a change is detected, it notifies all connected WebSocket clients about the lobby update.
- *
- * @async
- * @function watchLobbyUpdates
- * @throws {Error} Logs an error if the change stream fails to start or encounters an issue.
- */
-const watchLobbyUpdates = async () => {
-    try {
-        const collection = db.collection("games");
-        const changeStream = collection.watch();
+connectToMongoDB();
 
-        changeStream.on("change", (change) => {
-            waitingGameConnections.forEach((client) => {
-                if(client.readyState === WebSocket.OPEN) {
-                    client.send(JSON.stringify({type: "lobbysUpdate"}));
-                }
-            });
-        });
-    }
-    catch(error) {
-        logError(`Error watching games updates: ${error.stack || error.message}`);
-    }
-};
-
-/**
- * Watches the "games" collection in MongoDB for updates to a specific game.
- * When a change is detected for the specified gameId, it notifies all connected WebSocket clients subscribed to that game.
- *
- * @async
- * @function watchGameUpdates
- * @param {string} gameId - The unique identifier of the game to watch for updates.
- * @throws {Error} Logs an error if the change stream fails to start or encounters an issue.
- */
-const watchGameUpdates = async (gameId) => {
-    try {
-        const collection = db.collection("games");
-
-        const changeStream = collection.watch(
-            [{ $match: { "documentKey._id": new ObjectId(gameId) } }],
-            { fullDocument: "updateLookup" }
-        );
-
-        changeStream.on("change", (change) => {
-            const clients = activeGameConnections.get(gameId) || [];
-
-            clients.forEach((client) => {
-                if (client.readyState === WebSocket.OPEN) {
-                    client.send(JSON.stringify({ type: "gameUpdate" }));
-                }
-            });
-        });
-
-    } catch (error) {
-        logError(`Error watching game updates for gameId ${gameId}: ${error.stack || error.message}`);
-    }
-};
-
-/**
- * Watches the "players" array in a specific game document for updates.
- * When a change is detected in the players list, it notifies all connected WebSocket clients.
- * Also watches Player Cards Updates, then notifies all connected WebSocket clients.
- *
- * @async
- * @function watchPlayersUpdate
- * @param {string} gameId - The ID of the game to watch for player updates.
- * @throws {Error} Logs an error if the change stream fails or MongoDB disconnects.
- */
-const watchPlayersUpdate = async (gameId) => {
-    try {
-        const collection = db.collection("games");
-
-        const changeStreamAll = collection.watch(
-            [
-                { $match: { "documentKey._id": new ObjectId(gameId), "updateDescription.updatedFields.players": { $exists: true } } }
-            ],
-            { fullDocument: "updateLookup" }
-        );
-
-        changeStreamAll.on("change", (change) => {
-            const clients = activeGameConnections.get(gameId) || [];
-
-            clients.forEach((client) => {
-                if (client.readyState === WebSocket.OPEN) {
-                    client.send(JSON.stringify({ type: "playersUpdate" }));
-                }
-            });
-        });
-
-        const changeStreamCards = collection.watch();
-
-        changeStreamCards.on("change", (change) => {
-            if (change.operationType === "update") {
-                const updatedFields = change.updateDescription.updatedFields;
-                
-                const cardChanges = Object.keys(updatedFields).some(field => /^players\.\d+\.cards\.\d+\./.test(field));
-
-                if (cardChanges) {
-                    const clients = activeGameConnections.get(gameId) || [];
-                    
-                    clients.forEach((client) => {
-                        if (client.readyState === WebSocket.OPEN) {
-                            client.send(JSON.stringify({ type: "playersUpdate" }));
-                        }
-                    });
-                }
-            }
-        });
-
-    } catch (error) {
-        logError(`Error watching player updates for game ${gameId}: ${error.stack || error.message}`);
-    }
-};
-
-/**
- * Watches the "drinkCount" field in a specific game document for updates.
- * When a change is detected in the drink count, it notifies all connected WebSocket clients.
- *
- * @async
- * @function watchDrinkUpdate
- * @param {string} gameId - The ID of the game to watch for drink count updates.
- * @throws {Error} Logs an error if the change stream fails or MongoDB disconnects.
- */
-const watchDrinkUpdate = async (gameId) => {
-    try {
-        const collection = db.collection("games");
-
-        const changeStream = collection.watch(
-            [
-                { $match: { "documentKey._id": new ObjectId(gameId), "updateDescription.updatedFields.drinkCount": { $exists: true } } }
-            ],
-            { fullDocument: "updateLookup" }
-        );
-
-        changeStream.on("change", (change) => {
-            const clients = activeGameConnections.get(gameId) || [];
-
-            clients.forEach((client) => {
-                if (client.readyState === WebSocket.OPEN) {
-                    client.send(JSON.stringify({ type: "drinkUpdate" }));
-                }
-            });
-        });
-
-    } catch (error) {
-        logError(`Error watching drink count updates for game ${gameId}: ${error.stack || error.message}`);
-    }
-};
-
-/**
- * Watches the "cards" and "phaseCards" fields in a specific game document for updates.
- * When a change is detected in either field, it notifies all connected WebSocket clients.
- *
- * @async
- * @function watchCardsUpdate
- * @param {string} gameId - The ID of the game to watch for card updates.
- * @throws {Error} Logs an error if the change stream fails or MongoDB disconnects.
- */
-const watchCardsUpdate = async (gameId) => {
-    try {
-        const collection = db.collection("games");
-
-        const changeStream = collection.watch();
-
-        changeStream.on("change", (change) => {
-            if (change.operationType === "update") {
-                const updatedFields = change.updateDescription.updatedFields;
-
-                const cardChanges = Object.keys(updatedFields).some(field => field.startsWith("cards"));
-                const phaseChanges = Object.keys(updatedFields).some(field => field.startsWith("phaseCards"));
-
-                if (cardChanges || phaseChanges) {
-                    const clients = activeGameConnections.get(gameId) || [];
-                    
-                    clients.forEach((client) => {
-                        if (client.readyState === WebSocket.OPEN) {
-                            client.send(JSON.stringify({ type: "cardsUpdate" }));
-                        }
-                    });
-                }
-            }
-        });
-
-    } catch (error) {
-        console.error(`Error watching card updates for game ${gameId}:`, error);
-    }
-};
+const db = client.db(process.env.DATABASE);
 
 // #endregion
 
-// #region Functions
+// Need to implement
+// #region Redis
+
+const redisClient = redis.createClient();
+//redisClient.connect().catch(logError("Failed to connect to Redis"));
 
 /**
- * Logs errors to an "error.log" file with a timestamp.
+ * Retrieves game data from Redis cache or MongoDB.
  *
- * @param {string} message - The error message to log.
+ * @function getGame
+ * @param {string} gameId - The unique game ID.
+ * @returns {Promise<Object|null>} The game object or null if not found.
+ * @throws {Error} If there's an issue with Redis or MongoDB.
  */
-const logError = (message) => {
-    const logFilePath = path.join(__dirname, "error.log");
-    const timestamp = new Date().toISOString();
-    const logMessage = `[${timestamp}] ERROR: ${message}\n`;
-
-    fs.access(logFilePath, fs.constants.F_OK, (err) => {
-        if (err) {
-            fs.writeFile(logFilePath, logMessage, (writeErr) => {
-                if (writeErr) console.error("Failed to create error.log:", writeErr);
-            });
-        } else {
-            fs.appendFile(logFilePath, logMessage, (appendErr) => {
-                if (appendErr) console.error("Failed to write to error.log:", appendErr);
-            });
+async function getGame(gameId) {
+    try {
+        const cachedGame = await redisClient.get(gameId);
+        if (cachedGame) {
+            return JSON.parse(cachedGame);
         }
-    });
-};
+
+        const game = await db.collection("games").findOne({ _id: new ObjectId(gameId) });
+        if (!game) return null;
+
+        await redisClient.setEx(gameId, 60, JSON.stringify(game));
+        return game;
+    } catch (error) {
+        logError(`Error fetching game: ${error.stack || error.message}`);
+        throw error;
+    }
+}
+
+// #endregion
+
+// #region Secondary Functions
 
 /**
  * Middleware that authenticates a user by verifying the JWT token stored in an HttpOnly cookie.
@@ -390,6 +250,46 @@ const authenticateToken = (req, res, next) => {
 };
 
 /**
+ * Generates a unique friend code for a new user.
+ *
+ * The friend code always starts with a '#' followed by 6 random alphabetic characters (a-z, A-Z),
+ * ensuring no numbers or special characters. It checks the 'users' collection to confirm uniqueness.
+ *
+ * @function generateUniqueFriendCode
+ * @param {Db} db - The MongoDB database instance.
+ * @returns {Promise<string>} A unique friend code string.
+ * @throws {Error} If the database query fails unexpectedly.
+ */
+async function generateUniqueFriendCode() {
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+    /**
+     * Generates a random friend code starting with '#'
+     * and followed by 6 random letters (no numbers or symbols).
+     *
+     * @returns {string} The generated friend code.
+     */
+    function generateFriendCode() {
+        let code = "#";
+        for (let i = 0; i < 6; i++) {
+            const randomChar = letters.charAt(Math.floor(Math.random() * letters.length));
+            code += randomChar;
+        }
+        return code;
+    }
+
+    let code;
+    let exists = true;
+
+    while (exists) {
+        code = generateFriendCode();
+        exists = await db.collection("users").findOne({ friendCode: code });
+    }
+
+    return code;
+}
+
+/**
  * Creates a deck of playing cards with two full sets of suits and values.
  * Each deck contains:
  * - 2 sets of the 4 suits: Hearts, Diamonds, Clubs, and Spades.
@@ -401,13 +301,13 @@ const authenticateToken = (req, res, next) => {
  */
 const createDeck = () => {
     const suits = ["hearts", "diamonds", "clubs", "spades"];
-    const values = Array.from({length: 13}, (_, i) => i + 2);
+    const values = Array.from({ length: 13 }, (_, i) => i + 2);
     let deck = [];
 
-    for(let i=0; i < 2; i++) {
+    for (let i = 0; i < 2; i++) {
         suits.forEach((suit) => {
             values.forEach((value) => {
-                deck.push({number: value, type: suit});
+                deck.push({ number: value, type: suit });
             });
         });
     }
@@ -462,6 +362,545 @@ const checkFaceCard = (player, card) => {
     });
 };
 
+/**
+ * Checks and unlocks achievements for a given user based on their statistics.
+ *
+ * Retrieves all achievements and the user's current stats, titles, and unlocked achievements.
+ * Compares user statistics with achievement conditions to determine newly unlocked achievements.
+ * Updates the user's document with any newly earned achievements and associated titles.
+ *
+ * @function checkAchievements
+ * @param {string} userId - The MongoDB ObjectId string of the user to check achievements for.
+ * @returns {Promise<string[]>} A list of newly unlocked achievement IDs.
+ * @throws {Error} If database operations fail or the user is not found.
+ */
+const checkAchievements = async(user) => {
+    const unlocked = [];
+    const allAchievements = await db.collection("achievements").find({}).toArray();
+
+    for (const achievement of allAchievements) {
+        const alreadyUnlocked = user.achievements.map(a => a.toString()).includes(achievement._id.toString());
+        if (alreadyUnlocked) continue;
+
+        let conditionMet = true;
+
+        for (const [key, value] of Object.entries(achievement.conditions)) {
+            if (!user.statistics[key] || user.statistics[key] < value) {
+                conditionMet = false;
+                break;
+            }
+        }
+
+        if (conditionMet) {
+            const result = await db.collection("users").updateOne(
+                {
+                    _id: new ObjectId(user._id),
+                    "achievements": { $ne: achievement._id },
+                    "titles.name": { $ne: achievement.titleUnlocked.name }
+                },
+                {
+                    $addToSet: {
+                        achievements: achievement._id,
+                        titles: {
+                            name: achievement.titleUnlocked.name,
+                            color: achievement.titleUnlocked.color,
+                            active: false
+                        }
+                    }
+                }
+            );
+
+            if (result.modifiedCount > 0) {
+                unlocked.push(achievement._id);
+            }
+        }
+    }
+
+    return unlocked;
+};
+
+/**
+ * Extracts the token from the cookies in the request headers.
+ *
+ * @param {Object} req - The incoming connection request.
+ * @returns {string|null} The token if found, otherwise null.
+ */
+const extractTokenFromCookies = (req) => {
+    const cookies = req.headers.cookie;
+    if (!cookies) return null;
+
+    const parsedCookies = cookies.split(';').reduce((acc, cookie) => {
+        const [name, value] = cookie.split('=').map(c => c.trim());
+        acc[name] = value;
+        return acc;
+    }, {});
+
+    return parsedCookies.token || null;
+};
+
+// #endregion
+
+// #region WebSockets
+
+const server = https.createServer(sslOptions);
+const wss = new WebSocketServer({ server });
+
+const activeGameConnections = new Map();
+const accountConnections = new Map();
+const friendsConnections = new Map();
+const waitingGameConnections = new Set();
+
+/**
+ * Handles incoming WebSocket connections and manages different types of subscriptions.
+ *
+ * - Subscribes clients to game updates, lobby updates, or account updates based on the received message type.
+ * - Stores active connections for each game, lobby, and account updates.
+ * - Removes disconnected clients when the connection is closed.
+ *
+ * @param {WebSocket} ws - The WebSocket connection instance.
+ * @param {Request} req - The incoming connection request.
+ */
+wss.on("connection", (ws, req) => {
+    logTrace("WebSocket connection established");
+
+    const token = extractTokenFromCookies(req);
+    if (!token) {
+        ws.close(1008, "Unauthorized: No token provided");
+        return;
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        ws.user = decoded;
+    } catch (error) {
+        logError(`Invalid token attempt: ${error.stack || error.message}`);
+        ws.close(1008, "Unauthorized: Invalid token");
+        return;
+    }
+
+    ws.on("message", (message) => {
+        try {
+            const { type, gameId } = JSON.parse(message);
+
+            // Subscribe to game updates
+            if (type === "subscribe" && gameId) {
+                if (!activeGameConnections.has(gameId)) {
+                    activeGameConnections.set(gameId, []);
+                }
+                activeGameConnections.get(gameId).push(ws);
+                logTrace(`Subscribed to game updates for gameId ${gameId}`);
+            }
+
+            // Subscribe to lobby updates
+            if (type === "lobby") {
+                if (!waitingGameConnections.has(ws)) {
+                    waitingGameConnections.add(ws);
+                }
+
+                watchLobbyUpdates();
+            }
+
+            // Subscribe to account updates
+            if (type === "account") {
+                if (!accountConnections.has(ws.user.userId)) {
+                    accountConnections.set(ws.user.userId, []);
+                }
+                accountConnections.get(ws.user.userId).push(ws);
+            }
+
+            if (type === "friends") {
+                if (!friendsConnections.has(ws.user.userId)) {
+                    friendsConnections.set(ws.user.userId, []);
+                }
+                friendsConnections.get(ws.user.userId).push(ws);
+            }
+        }
+        catch (error) {
+            logError(`Failed to process WebSocket message: ${error.stack || error.message}`);
+        }
+    });
+
+    ws.on("error", (error) => {
+        console.error("⚠️ WebSocket error:", error);
+    });
+
+    // Handle WebSocket disconnection
+    ws.on("close", () => {
+        for (const [gameId, sockets] of activeGameConnections.entries()) {
+            activeGameConnections.set(gameId, sockets.filter((client) => client !== ws));
+        }
+
+        for (const [userId, sockets] of accountConnections.entries()) {
+            accountConnections.set(userId, sockets.filter((client) => client !== ws));
+        }
+
+        waitingGameConnections.delete(ws);
+    });
+});
+
+let globalAccountStream = null;
+/**
+ * Watches for changes in the user's account document in the database.
+ *
+ * Uses a MongoDB change stream to listen for updates in the `users` collection.
+ * When a change occurs, it fetches the updated user statistics and sends them
+ * to all connected WebSocket clients.
+ *
+ * @async
+ * @function watchAccountUpdates
+ * @param {string} userId - The ID of the user whose account updates are being watched.
+ * @returns {void}
+ */
+const watchGlobalAccounts = async () => {
+    if(globalAccountStream) return;
+
+    try {
+        const collection = db.collection("users");
+        globalAccountStream = collection.watch();
+
+        globalAccountStream.on("change", async (change) => {
+            if(!change.documentKey || !change.documentKey._id) return;
+
+            const userId = change.documentKey._id.toString();
+            const clients = accountConnections.get(userId) || [];
+
+            if(clients.length === 0) return;
+
+            const user = await collection.findOne(
+                { _id: new ObjectId(userId) },
+                { 
+                    projection: { 
+                        statistics: 1, 
+                        avatar: 1, 
+                        uploadedAvatar: 1, 
+                        clickSound: 1, 
+                        cardTheme: 1, 
+                        titles: 1,
+                        friends: 1,
+                        pendingRequests: 1,
+                        sentRequests: 1,
+                        friendCode: 1,
+                        achievements: 1,
+                    },
+                }
+            );
+
+            if(!user) return;
+
+            const format = user.titles || [];
+            const active = format.find(title => title.active) || null;
+
+            if (!user) {
+                logError(`User with ID ${userId} not found while getting updated account.`);
+                return;
+            }
+
+            const data = {
+                statistics: user.statistics,
+                avatar: user.avatar,
+                uploadedAvatar: user.uploadedAvatar,
+                titles: format,
+                selectedTitle: active,
+                clickSound: user.clickSound,
+                cardTheme: user.cardTheme,
+            }
+
+            clients.forEach((client) => {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({
+                        type: "accountUpdate",
+                        data
+                    }));
+                }
+            });
+
+            const isUpdate = change.operationType === "update";
+
+            if(!isUpdate) return;
+
+            const updatedFields = change.updateDescription.updatedFields || {};
+            const updatedKeys = Object.keys(updatedFields);
+
+            const isStatisticUpdate = updatedKeys.some(key => 
+                key.startsWith("statistics")
+            );
+
+            if(isStatisticUpdate) {
+                const newTitles = await checkAchievements(user);
+
+                if(newTitles.length > 0) {
+                    const updatedTitles = user.titles.filter(title => newTitles.includes(title._id));
+                    clients.forEach(client => {
+                        if(client.readyState === WebSocket.OPEN) {
+                            client.send(JSON.stringify({
+                                type: "titlesUpdate",
+                                data: updatedTitles
+                            }));
+                        }
+                    });
+                }
+            }
+
+            const isAchievementUpdate = updatedKeys.some(key => 
+                key === "achievements"
+            );
+
+            if(isAchievementUpdate) {
+                const updatedAchievements = user.achievements;
+
+                //Get All Achievements, check if unlocked and format them so the client can display them
+
+                clients.forEach(client => {
+                    if(client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({
+                            type: "achievementsUpdate",
+                            data: updatedAchievements
+                        }));
+                    }
+                });
+            }
+
+            const isFriendUpdate = updatedKeys.some(key =>
+                key.startsWith("friends") ||
+                key.startsWith("pendingRequests") ||
+                key.startsWith("sentRequests") ||
+                key.startsWith("avatar")
+            );
+
+            if(!isFriendUpdate) return;
+
+            const friendsData = {
+                friends: user.friends.map(friend => ({
+                    ...friend,
+                    messages: (friend.messages || []).slice(-13)})),
+                pendingRequests: user.pendingRequests || [],
+                sentRequests: user.sentRequests || [],
+                friendCode: user.friendCode || "",
+            };
+
+            clients.forEach((client) => {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({
+                        type: "friendsUpdate",
+                        data: friendsData,
+                    }));
+                }
+            });
+        });
+    } catch (error) {
+        logError(`Error watching account updates: ${error.stack || error.message}`);
+    }
+};
+watchGlobalAccounts();
+
+let lobbyChangeStream = null;
+/**
+ * Watches for changes in the `games` collection and sends updated waiting game data.
+ *
+ * Uses a MongoDB change stream to listen for updates in the `games` collection.
+ * When a change occurs, it fetches the latest waiting games and sends them
+ * to all connected WebSocket clients subscribed to lobby updates.
+ *
+ * @async
+ * @function watchLobbyUpdates
+ * @returns {void}
+ */
+const watchLobbyUpdates = async () => {
+    if (lobbyChangeStream) return;
+
+    try {
+        const collection = db.collection("games");
+
+        lobbyChangeStream = collection.watch();
+
+        lobbyChangeStream.on("change", async (change) => {
+            const games = await collection.find(
+                { status: "waiting" },
+                {
+                    projection: {
+                        _id: 1,
+                        name: 1,
+                        players: 1,
+                    },
+                }
+            ).toArray();
+
+            if (!games) return;
+
+            const format = games.map(game => ({
+                id: game._id.toString(),
+                name: game.name,
+                playerCount: game.players ? game.players.length : 0,
+            })).filter(game => game.playerCount < 10);
+
+            waitingGameConnections.forEach((client) => {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({
+                        type: "lobbysUpdate",
+                        data: format
+                    }));
+                }
+            });
+        });
+    }
+    catch (error) {
+        logError(`Error watching games updates: ${error.stack || error.message}`);
+    }
+};
+
+let globalGameStream = null;
+/**
+ * Watches the "games" collection in MongoDB for updates to a specific game.
+ * When a change is detected for the specified gameId, it notifies all connected WebSocket clients subscribed to that game.
+ *
+ * @async
+ * @function watchGameUpdates
+ * @param {string} gameId - The unique identifier of the game to watch for updates.
+ * @throws {Error} Logs an error if the change stream fails to start or encounters an issue.
+ */
+const watchGlobalGames = async () => {
+    if(globalGameStream) return;
+
+    try {
+        const collection = db.collection("games");
+        globalGameStream = collection.watch();
+
+        globalGameStream.on("change", async (change) => {
+            const gameId = change.documentKey._id.toString();
+            if(!gameId) return;
+
+            const clients = activeGameConnections.get(gameId) || [];
+            if(clients.length === 0) return;
+
+            const isUpdate = change.operationType === "update";
+            const updatedFields = isUpdate ? change.updateDescription.updatedFields || {} : {};
+
+            const game = await collection.findOne(
+                { _id: new ObjectId(gameId) },
+                {
+                    projection: {
+                        _id: 1,
+                        players: 1,
+                        round: 1,
+                        lastRound: 1,
+                        activePlayer: 1,
+                        phase: 1,
+                        busfahrer: 1,
+                        endGame: 1,
+                        exen: 1,
+                        drinkCount: 1,
+                        phaseCards: 1,
+                        cards: 1,
+                    },
+                }
+            );
+            if (!game) return;
+
+            //Game Update
+            if(!isUpdate || Object.keys(updatedFields).some(field => 
+                ["round", "lastRound", "activePlayer", "phase", "busfahrer", "endGame", "players"].includes(field))) {
+                
+                const playerInfo = game.players.map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    avatar: p.avatar,
+                }));
+
+                const busfahrerIds = game.busfahrer || [];
+                const busfahrerName = busfahrerIds
+                    .map(id => game.players.find(p => p.id === id)?.name)
+                    .filter(Boolean)
+                    .join(" & ");
+                
+                const data = {
+                    players: playerInfo,
+                    round: game.round,
+                    flipped: game.round === game.lastRound || game.round === 6,
+                    busfahrerIds,
+                    busfahrerName,
+                    endGame: !!game.endGame,
+                    currentPlayer: game.activePlayer,
+                };
+
+                logTrace(`Game update for gameId ${gameId}: ${JSON.stringify(data)}`);
+                clients.forEach(client => {
+                    if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({ type: "gameUpdate", data }));
+                    }
+                });
+            }
+
+            //Player Update
+            if(isUpdate && Object.keys(updatedFields).some(field => field.startsWith("players"))) {
+                const player = game.players.find(p => p.id === game.activePlayer);
+                if(player && player.exen !== undefined) {
+                    const data = { exen: player.exen };
+                    clients.forEach(client => {
+                        if(client.readyState === WebSocket.OPEN) {
+                            client.send(JSON.stringify({ type: "playersUpdate", data }));
+                        }
+                    });
+                }
+            }
+
+            //Drink Count Update
+            if(isUpdate && updatedFields.hasOwnProperty("drinkCount")) {
+                const data = { drinks: game.drinkCount };
+                clients.forEach(client => {
+                    if(client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({ type: "drinkUpdate", data }));
+                    }
+                });
+            }
+
+            //Cards / Phase Cards Update
+            if(isUpdate && Object.keys(updatedFields).some(field => 
+                field.startsWith("cards") || field.startsWith("phaseCards"))) {
+        
+                const phaseRows = [];
+                for (let row = 0; row < 3; row++) {
+                    phaseRows.push(game.phaseCards?.[row]?.cards || []);
+                }
+
+                const gCards = game.cards || [];
+                const diamondRows = [];
+                let idx = 0;
+                const maxRows = 5;
+
+                diamondRows.push(gCards.slice(idx, idx + 2));
+                idx += 2;
+
+                for (let row = 2; row <= maxRows; row++) {
+                    diamondRows.push(gCards.slice(idx, idx + row));
+                    idx += row;
+                }
+
+                for (let row = maxRows - 1; row >= 2; row--) {
+                    diamondRows.push(gCards.slice(idx, idx + row));
+                    idx += row;
+                }
+
+                diamondRows.push(gCards.slice(idx, idx + 2));
+
+                const data = {
+                    phaseCards: phaseRows,
+                    diamondCards: diamondRows
+                }
+
+                clients.forEach((client) => {
+                    if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({ type: "cardsUpdate", data }));
+                    }
+                });
+            }
+        });
+
+    } catch (error) {
+        logError(`Error watching game updates: ${error.stack || error.message}`);
+    }
+};
+watchGlobalGames();
+
 // #endregion
 
 // #region GET API Endpoints
@@ -494,14 +933,14 @@ const checkFaceCard = (player, card) => {
 app.get("/check-auth", (req, res) => {
     const token = req.cookies.token;
 
-    if(!token) {
-        return res.json({isAuthenticated: false});
+    if (!token) {
+        return res.json({ isAuthenticated: false });
     }
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        res.json({ isAuthenticated: true});
-    } 
+        res.json({ isAuthenticated: true });
+    }
     catch (error) {
         logError(`Invalid token attempt: ${error.stack || error.message}`);
         res.json({ isAuthenticated: false });
@@ -510,41 +949,449 @@ app.get("/check-auth", (req, res) => {
 
 /**
  * @swagger
- * /get-statistics:
+ * /get-friend-requests:
  *   get:
- *     summary: Retrieves the authenticated user's statistics.
- *     description: Fetches user statistics from MongoDB based on the authenticated user's ID.
+ *     summary: Get the user's friend requests.
+ *     description: Returns a list of pending (received) and sent friend requests for the authenticated user.
  *     responses:
  *       200:
- *         description: User statistics retrieved successfully.
+ *         description: List of friend requests.
  *         content:
  *           application/json:
  *             schema:
  *               type: object
+ *               properties:
+ *                 pendingRequests:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       userId:
+ *                         type: string
+ *                         example: "65f3acba8b67b28925e254b3"
+ *                       username:
+ *                         type: string
+ *                         example: "PendingFriend1"
+ *                 sentRequests:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       userId:
+ *                         type: string
+ *                         example: "65f3acba8b67b28925e254b2"
+ *                       username:
+ *                         type: string
+ *                         example: "SentFriend1"
  *       401:
- *         description: Unauthorized. No valid JWT provided.
- *       403:
- *         description: Forbidden. Invalid or expired JWT.
+ *         description: Unauthorized. User must be logged in.
+ *       500:
+ *         description: Internal server error.
+ */
+app.get("/get-friend-requests", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+
+    try {
+        const user = await db.collection("users").findOne(
+            { _id: new ObjectId(userId) },
+            { projection: { pendingRequests: 1, sentRequests: 1 } }
+        );
+
+        if (!user) {
+            return res.status(404).json({ error: "User not found." });
+        }
+
+        return res.status(200).json({
+            pending: user.pendingRequests || [],
+            sent: user.sentRequests || [],
+        });
+    } catch (error) {
+        logError(`Error fetching friend requests: ${error.message}`);
+        return res.status(500).json({ error: "Something went wrong." });
+    }
+});
+
+/**
+ * @swagger
+ * /get-friends:
+ *   get:
+ *     summary: Retrieve the user's friends list.
+ *     description: Returns a list of friends for the authenticated user.
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved the friends list.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 friends:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       userId:
+ *                         type: string
+ *                         example: "65f3acba8b67b28925e254b3"
+ *                       username:
+ *                         type: string
+ *                         example: "Friend1"
+ *       401:
+ *         description: Unauthorized. User must be logged in.
  *       404:
  *         description: User not found.
  *       500:
  *         description: Internal server error.
  */
-app.get("/get-statistics", authenticateToken, async (req, res) => {
+app.get("/get-friends", authenticateToken, async (req, res) => {
     const userId = req.user.userId;
 
     try {
-        const user = await db.collection("users").findOne({ _id: new ObjectId(userId) });
+        const user = await db.collection("users").findOne(
+            { _id: new ObjectId(userId) },
+            { projection: { friends: 1, } }
+        );
 
-        if(!user) {
-            return res.status(404).json({error: "User not found"});
+        if (!user) {
+            return res.status(404).json({ error: "User not found." });
         }
 
-        res.json(user.statistics);
+        const friendsRaw = user.friends || [];
+
+        const friendIds = friendsRaw.map(f => new ObjectId(f.userId));
+
+        // Fetch current avatars and usernames from the DB
+        const friendProfiles = await db.collection("users")
+            .find({ _id: { $in: friendIds } })
+            .project({ avatar: 1, username: 1 })
+            .toArray();
+
+        const friendMap = new Map();
+        friendProfiles.forEach(profile => {
+            friendMap.set(profile._id.toString(), {
+                avatar: profile.avatar || "default.svg",
+                username: profile.username || "Unknown",
+            });
+        });
+    
+        const syncedFriends = friendsRaw.map(friend => {
+            const profile = friendMap.get(friend.userId.toString()) || {};
+            return {
+                ...friend,
+                avatar: profile.avatar,
+                username: profile.username,
+                messages: (friend.messages || []).slice(-13),
+                unreadCount: profile.unreadCount || 0,
+            };
+        });
+
+        return res.status(200).json({
+            friends: syncedFriends,
+        });
+    } catch (error) {
+        logError(`Error fetching friends: ${error.message}`);
+        return res.status(500).json({ error: "Something went wrong." });
     }
-    catch(error) {
+});
+
+/**
+ * @swagger
+ * /get-friend-code:
+ *   get:
+ *     summary: Retrieves the friend code of the authenticated user.
+ *     description: Fetches the friend code for the logged-in user based on their authentication token.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved the friend code.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 friendCode:
+ *                   type: string
+ *                   example: "ABCD1234"
+ *       401:
+ *         description: Unauthorized. Token is missing or invalid.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Server error.
+ */
+app.get("/get-friend-code", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+
+    try {
+        const user = await db.collection("users").findOne(
+            { _id: new ObjectId(userId) },
+            { projection: { friendCode: 1, } }
+        );
+
+        if (!user) {
+            return res.status(404).json({ error: "User not found." });
+        }
+
+        return res.status(200).json({
+            friendCode: user.friendCode || "",
+        });
+    } catch (error) {
+        logError(`Error fetching friend code: ${error.message}`);
+        return res.status(500).json({ error: "Something went wrong." });
+    }
+});
+
+/**
+ * @swagger
+ * /friend-messages:
+ *   get:
+ *     summary: Retrieves the chat messages between the authenticated user and a selected friend.
+ *     description: Fetches the conversation history between the logged-in user and a specified friend.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: friendId
+ *         schema:
+ *           type: string
+ *           example: "605c72b7e8472a3df6b0e1c5"
+ *         required: true
+ *         description: The ObjectId of the friend whose messages should be retrieved.
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved chat messages.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 messages:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       name:
+ *                         type: string
+ *                         example: "TestUser"
+ *                       message:
+ *                         type: string
+ *                         example: "Hey, how are you?"
+ *       400:
+ *         description: Bad request. The friendId is missing or invalid.
+ *       404:
+ *         description: No messages found for this friend.
+ *       500:
+ *         description: Server error.
+ */
+app.get("/friend-messages", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+    const { friendId } = req.query;
+
+    try {
+        const user = await db.collection("users").findOne(
+            { _id: new ObjectId(userId), "friends.userId": new ObjectId(friendId) },
+            { projection: { "friends.$": 1 } }
+        );
+
+        if (!user || !user.friends.length) {
+            return res.status(404).json({ error: "Friend not found or no messages." });
+        }
+
+        const friendData = user.friends[0];
+        const lastMessages = (friendData.messages || []).slice(-8);
+
+        return res.status(200).json({ messages: lastMessages || [] });
+    } catch (error) {
+        console.error(`Error fetching messages: ${error.message}`);
+        return res.status(500).json({ error: "Something went wrong." });
+    }
+});
+
+/**
+ * @swagger
+ * /get-account:
+ *   get:
+ *     summary: Retrieve user account details
+ *     description: Fetches the user's account information, including statistics and avatar, based on the authenticated user ID.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved user account details.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statistics:
+ *                   type: object
+ *                   description: User's game statistics.
+ *                 avatar:
+ *                   type: string
+ *                   description: URL or identifier of the user's avatar.
+ *       401:
+ *         description: Unauthorized. User authentication token is missing or invalid.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Internal server error occurred while fetching user data.
+ */
+app.get("/get-account", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+
+    try {
+        const userObj = await db.collection("users").findOne(
+            { _id: new ObjectId(userId) },
+            { projection: { statistics: 1, avatar: 1, uploadedAvatar: 1, titles: 1, } }
+        );
+
+        if (!userObj) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        const format = userObj.titles || [];
+        const active = format.find(title => title.active) || null;
+
+        const account = {
+            statistics: userObj.statistics,
+            avatar: userObj.avatar,
+            uploadedAvatar: userObj.uploadedAvatar,
+            titles: format,
+            selectedTitle: active,
+        }
+
+        res.json(account);
+    }
+    catch (error) {
         logError(`Error fetching user statistics for userId ${userId}: ${error.stack || error.message}`);
         res.status(500).json({ error: "Failed to fetch user statistics" });
+    }
+});
+
+/**
+ * @swagger
+ * /get-click-sound:
+ *   get:
+ *     summary: Retrieves the user's selected click sound preference.
+ *     description: Fetches the preferred click sound from the database.
+ *     parameters:
+ *       - in: query
+ *         name: userId
+ *         required: true
+ *         description: The ID of the user.
+ *     responses:
+ *       200:
+ *         description: Returns the user's click sound preference.
+ *       404:
+ *         description: User not found.
+ */
+app.get("/get-click-sound", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+
+    try {
+        const user = await db.collection("users").findOne(
+            { _id: new ObjectId(userId) },
+            { projection: { clickSound: 1 } }
+        );
+
+        if(!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        res.json({ sound: user.clickSound || "ui-click.mp3" });
+    } catch (error) {
+        logError(`Error fetching click sound: ${error.message}`);
+        res.status(500).json({ error: "Database error" });
+    }
+});
+
+/**
+ * @swagger
+ * /get-card-theme:
+ *   get:
+ *     summary: Get the user's selected card theme.
+ *     description: Retrieves the saved card back theme for the authenticated user.
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved card theme.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 cardBack:
+ *                   type: string
+ *                   example: "default.svg"
+ *       401:
+ *         description: Unauthorized - User not authenticated.
+ *       500:
+ *         description: Server error.
+ */
+app.get("/get-card-theme", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+
+    try {
+        const user = await db.collection("users").findOne(
+            { _id: new ObjectId(userId) },
+            { projection: { cardTheme: 1, color1: 1, color2: 1, } }
+        );
+
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        const data = {
+            theme: user.cardTheme || "default",
+            color1: user.color1,
+            color2: user.color2,
+        }
+
+        res.json(data);
+    } catch (error) {
+        logError(`Error fetching card theme: ${error.message}`);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+app.get("/get-achievements", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+
+    try {
+        const user = await db.collection("users").findOne(
+            { _id: new ObjectId(userId) },
+            { projection: { achievements: 1, statistics: 1 } }
+        );
+
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        const achievementList = await db.collection("achievements").find({}).toArray();
+        const achievements = [];
+
+        for (const achievement of achievementList) {
+            const unlocked = user.achievements.some(id => id.equals(achievement._id));
+
+            achievements.push({
+                id: achievement._id,
+                icon: achievement.icon,
+                name: achievement.name,
+                title: achievement.titleUnlocked,
+                unlocked,
+                description: achievement.description,
+                conditions: Object.entries(achievement.conditions).map(([key, required]) => ({
+                    key,
+                    required,
+                    current: unlocked ? required : (user.statistics?.[key] || 0)
+                })),
+            });
+        }
+
+        return res.status(200).json({ achievements });
+    } catch (error) {
+        logError(`Error fetching achievements: ${error.message}`);
+        return res.status(500).json({ error: "Something went wrong." });
     }
 });
 
@@ -588,15 +1435,14 @@ app.get("/get-waiting-games", authenticateToken, async (req, res) => {
     try {
         const games = await db.collection("games")
             .find({ status: "waiting" })
-            .project({_id: 1, name: 1, players: 1})
+            .project({ _id: 1, name: 1, players: 1 })
             .toArray();
 
         const format = games.map(game => ({
             id: game._id.toString(),
             name: game.name,
             playerCount: game.players ? game.players.length : 0,
-        }))
-        .filter(game => game.playerCount < 10);
+        })).filter(game => game.playerCount < 10);
 
         res.json(format);
     } catch (error) {
@@ -675,23 +1521,32 @@ app.get("/get-player-id", authenticateToken, async (req, res) => {
  *         description: Internal server error - Failed to fetch players.
  */
 app.get("/get-players/:gameId", async (req, res) => {
-    const {gameId} = req.params;
+    const { gameId } = req.params;
 
     try {
-        const game = await db.collection("games").findOne({ _id: new ObjectId(gameId) });
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { players: 1, activePlayer: 1 } }
+        );
 
-        if(!game) {
-            return res.status(404).json({error: "Game not found"});
+        if (!game) {
+            return res.status(404).json({ error: "Game not found" });
         }
 
         const players = game.players.map(player => ({
             id: player.id,
-            name: player.name
+            name: player.name,
+            avatar: player.avatar,
         }));
 
-        res.status(200).json(players);
+        const data = {
+            players,
+            currentPlayer: game.activePlayer,
+        }
+
+        res.status(200).json(data);
     }
-    catch(error) {
+    catch (error) {
         logError(`Error fetching players for game (${gameId}): ${error.message}`);
         res.status(500).json({ error: "Failed to fetch players" });
     }
@@ -737,13 +1592,16 @@ app.get("/get-players/:gameId", async (req, res) => {
  */
 app.get("/is-game-master", authenticateToken, async (req, res) => {
     const userId = req.user.userId;
-    
-    const {gameId} = req.query;
+
+    const { gameId } = req.query;
 
     try {
-        const game = await db.collection("games").findOne({ _id: new ObjectId(gameId) });
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { players: 1 } }
+        );
 
-        if(!game) {
+        if (!game) {
             return res.status(404).json({ error: "Game not found" });
         }
 
@@ -751,7 +1609,7 @@ app.get("/is-game-master", authenticateToken, async (req, res) => {
 
         return res.status(200).json(isGameMaster);
     }
-    catch(error) {
+    catch (error) {
         logError(`Error verifying game master (${gameId}): ${error.message}`);
         return res.status(500).json({ error: "Internal server error" });
     }
@@ -803,13 +1661,16 @@ app.get("/is-game-master", authenticateToken, async (req, res) => {
 app.get("/get-player-cards", authenticateToken, async (req, res) => {
     const userId = req.user.userId;
 
-    const {gameId} = req.query;
+    const { gameId } = req.query;
 
     try {
-        const game = await db.collection("games").findOne({ _id: new ObjectId(gameId) });
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { players: 1 } }
+        );
 
-        if(!game) {
-            return res.status(404).json({error: "Game not found"});
+        if (!game) {
+            return res.status(404).json({ error: "Game not found" });
         }
 
         const player = game.players.find(p => p.id === userId);
@@ -819,7 +1680,7 @@ app.get("/get-player-cards", authenticateToken, async (req, res) => {
 
         return res.status(200).json(player.cards || []);
     }
-    catch(error) {
+    catch (error) {
         logError(`Error fetching player cards for game ${gameId}: ${error.message}`);
         return res.status(500).json({ error: "Failed to fetch player cards" });
     }
@@ -866,10 +1727,13 @@ app.get("/get-player-cards", authenticateToken, async (req, res) => {
  *         description: Internal server error.
  */
 app.get("/get-game-cards", authenticateToken, async (req, res) => {
-    const {gameId} = req.query;
+    const { gameId } = req.query;
 
     try {
-        const game = await db.collection("games").findOne({ _id: new ObjectId(gameId) });
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { cards: 1 } }
+        );
 
         if (!game) {
             return res.status(404).json({ error: "Game not found" });
@@ -877,7 +1741,7 @@ app.get("/get-game-cards", authenticateToken, async (req, res) => {
 
         return res.status(200).json(game.cards || []);
     }
-    catch(error) {
+    catch (error) {
         logError(`Error fetching game cards for game ${gameId}: ${error.message}`);
         return res.status(500).json({ error: "Failed to fetch game cards" });
     }
@@ -913,11 +1777,13 @@ app.get("/get-game-cards", authenticateToken, async (req, res) => {
  *         description: Internal server error.
  */
 app.get("/get-round", async (req, res) => {
-    const {gameId} = req.query;
+    const { gameId } = req.query;
 
     try {
-        const game = await db.collection("games")
-            .findOne({ _id: new ObjectId(gameId) }, { projection: { round: 1 } });
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { round: 1 } }
+        );
 
         if (!game) {
             return res.status(404).json({ error: "Game not found" });
@@ -925,7 +1791,7 @@ app.get("/get-round", async (req, res) => {
 
         return res.status(200).json(game.round);
     }
-    catch(error) {
+    catch (error) {
         logError(`Error fetching round for game ${gameId}: ${error.message}`);
         return res.status(500).json({ error: "Failed to fetch round" });
     }
@@ -973,7 +1839,7 @@ app.get("/get-round", async (req, res) => {
 app.get("/get-current-player", authenticateToken, async (req, res) => {
     const userId = req.user.userId;
 
-    const {gameId} = req.query;
+    const { gameId } = req.query;
 
     try {
         const game = await db.collection("games").findOne(
@@ -1003,7 +1869,7 @@ app.get("/get-current-player", authenticateToken, async (req, res) => {
 
         return res.status(200).json({ playerId: activePlayer, playerName: player.name });
     }
-    catch(error) {
+    catch (error) {
         logError(`Error fetching current player for game ${gameId}: ${error.message}`);
         return res.status(500).json({ error: "Failed to fetch current player" });
     }
@@ -1045,7 +1911,7 @@ app.get("/get-current-player", authenticateToken, async (req, res) => {
 app.get("/get-drink-count", authenticateToken, async (req, res) => {
     const userId = req.user.userId;
 
-    const {gameId} = req.query;
+    const { gameId } = req.query;
 
     try {
         const game = await db.collection("games").findOne(
@@ -1053,8 +1919,8 @@ app.get("/get-drink-count", authenticateToken, async (req, res) => {
             { projection: { drinkCount: 1, phase: 1, round: 1, players: 1 } }
         );
 
-        if(!game) {
-            return res.status(404).json({error: "Game not found"});
+        if (!game) {
+            return res.status(404).json({ error: "Game not found" });
         }
 
         const { drinkCount, phase, round, players } = game;
@@ -1070,7 +1936,7 @@ app.get("/get-drink-count", authenticateToken, async (req, res) => {
 
         return res.status(200).json(drinkCount || 0);
     }
-    catch(error) {
+    catch (error) {
         logError(`Error fetching drink count for game ${gameId}: ${error.message}`);
         return res.status(500).json({ error: "Failed to fetch drink count" });
     }
@@ -1107,7 +1973,7 @@ app.get("/get-drink-count", authenticateToken, async (req, res) => {
  *         description: Internal server error.
  */
 app.get("/get-is-row-flipped", async (req, res) => {
-    const {gameId} = req.query;
+    const { gameId } = req.query;
 
     try {
         const game = await db.collection("games").findOne(
@@ -1115,15 +1981,15 @@ app.get("/get-is-row-flipped", async (req, res) => {
             { projection: { round: 1, lastRound: 1 } }
         );
 
-        if(!game) {
-            return res.status(404).json({error: "Game not found"});
+        if (!game) {
+            return res.status(404).json({ error: "Game not found" });
         }
 
         const flipped = (game.round === game.lastRound) || (game.round === 6);
-        
+
         return res.status(200).json(flipped);
     }
-    catch(error) {
+    catch (error) {
         logError(`Error checking row flip status for game ${gameId}: ${error.message}`);
         return res.status(500).json({ error: "Failed to check row flip status" });
     }
@@ -1173,10 +2039,13 @@ app.get("/get-is-row-flipped", async (req, res) => {
  *         description: Internal server error.
  */
 app.get("/get-phase-cards", async (req, res) => {
-    const {gameId} = req.query;
+    const { gameId } = req.query;
 
     try {
-        const game = await db.collection("games").findOne({ _id: new ObjectId(gameId) });
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { phaseCards: 1 } }
+        );
 
         if (!game) {
             return res.status(404).json({ error: "Game not found" });
@@ -1227,10 +2096,13 @@ app.get("/get-phase-cards", async (req, res) => {
  *         description: Internal server error.
  */
 app.get("/get-busfahrer", async (req, res) => {
-    const {gameId} = req.query;
+    const { gameId } = req.query;
 
     try {
-        const game = await db.collection("games").findOne({ _id: new ObjectId(gameId) });
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { busfahrer: 1, players: 1 } }
+        );
 
         if (!game) {
             return res.status(404).json({ error: "Game not found" });
@@ -1250,7 +2122,7 @@ app.get("/get-busfahrer", async (req, res) => {
 
         res.status(200).json({ busfahrerName, playerIds });
     }
-    catch(error) {
+    catch (error) {
         logError(`Error fetching busfahrer for game ${gameId}: ${error.message}`);
         return res.status(500).json({ error: "Failed to fetch busfahrer" });
     }
@@ -1288,11 +2160,14 @@ app.get("/get-busfahrer", async (req, res) => {
  */
 app.get("/all-cards-played", authenticateToken, async (req, res) => {
     const userId = req.user.userId;
-    
-    const {gameId} = req.query;
+
+    const { gameId } = req.query;
 
     try {
-        const game = await db.collection("games").findOne({ _id: new ObjectId(gameId) });
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { round: 1, players: 1 } }
+        );
 
         if (!game) {
             return res.status(404).json({ error: "Game not found" });
@@ -1310,9 +2185,9 @@ app.get("/all-cards-played", authenticateToken, async (req, res) => {
         if (game.round === 1) {
             filterCards = playerCards.filter(card => card.number >= 2 && card.number <= 10);
         } else if (game.round === 2) {
-            let allPlayersPlayed = game.players.every(p => 
+            let allPlayersPlayed = game.players.every(p =>
                 p.cards.filter(card => card.number >= 11 && card.number <= 13)
-                      .every(card => card.played === true)
+                    .every(card => card.played === true)
             );
             return res.json(allPlayersPlayed);
         } else if (game.round === 3) {
@@ -1323,7 +2198,7 @@ app.get("/all-cards-played", authenticateToken, async (req, res) => {
 
         res.status(200).json(hasPlayedAll);
     }
-    catch(error) {
+    catch (error) {
         logError(`Error checking all played cards for game ${gameId}: ${error.message}`);
         return res.status(500).json({ error: "Failed to check played cards" });
     }
@@ -1358,10 +2233,13 @@ app.get("/all-cards-played", authenticateToken, async (req, res) => {
  *         description: Internal server error.
  */
 app.get("/get-has-to-ex", async (req, res) => {
-    const {gameId} = req.query;
+    const { gameId } = req.query;
 
     try {
-        const game = await db.collection("games").findOne({ _id: new ObjectId(gameId) });
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { activePlayer: 1, players: 1 } }
+        );
 
         if (!game) {
             return res.status(404).json({ error: "Game not found" });
@@ -1377,7 +2255,7 @@ app.get("/get-has-to-ex", async (req, res) => {
 
         return res.status(200).json(exen);
     }
-    catch(error) {
+    catch (error) {
         logError(`Error checking has-to-ex for game ${gameId}: ${error.message}`);
         return res.status(500).json({ error: "Failed to check to ex" });
     }
@@ -1412,10 +2290,13 @@ app.get("/get-has-to-ex", async (req, res) => {
  *         description: Internal server error.
  */
 app.get("/get-end-game", async (req, res) => {
-    const {gameId} = req.query;
+    const { gameId } = req.query;
 
     try {
-        const game = await db.collection("games").findOne({ _id: new ObjectId(gameId) });
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { endGame: 1 } }
+        );
 
         if (!game) {
             return res.status(404).json({ error: "Game not found" });
@@ -1425,7 +2306,7 @@ app.get("/get-end-game", async (req, res) => {
 
         return res.status(200).json(end);
     }
-    catch(error) {
+    catch (error) {
         logError(`Error fetching end game status for game ${gameId}: ${error.message}`);
         return res.status(500).json({ error: "Failed to fetch end game" });
     }
@@ -1482,6 +2363,7 @@ app.post("/register", async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const stats = {
+            gamesJoined: 0,
             gamesPlayed: 0,
             gamesBusfahrer: 0,
             drinksGiven: 0,
@@ -1490,15 +2372,47 @@ app.post("/register", async (req, res) => {
             maxDrinksGiven: 0,
             maxDrinksSelf: 0,
             maxCardsSelf: 0,
-            layedCards: 0
+            layedCards: 0,
+            dailyLoginStreak: 0,
+            gamesHosted: 0,
+            topDrinker: 0,
+            topDrinks: 0,
+            rowsFlipped: 0,
+            gamesWon: 0,
+            cardsPlayedPhase1: 0,
+            cardsLeft: 0,
+            phase3Failed: 0,
+            maxRounds: 0,
+            changedTheme: 0,
+            changedSound: 0,
+            uploadedAvatar: 0,
         };
+
+        const friendCode = await generateUniqueFriendCode();
 
         const result = await usersCollection.insertOne({
             username,
             password: hashedPassword,
             createdAt: new Date(),
             lastLogin: new Date(),
-            statistics: stats
+            avatar: "default.svg",
+            uploadedAvatar: "",
+            clickSound: "ui-click.mp3",
+            cardTheme: "default.svg",
+            color1: "#ffffff",
+            color2: "#ff4538",
+            statistics: stats,
+            titles: [{
+                name: "None",
+                color: "#ffffff",
+                active: true,
+            }],
+            friendCode,
+            friends: [],
+            sentRequests: [],
+            pendingRequests: [],
+            blockedUsers: [],
+            achievements: [],
         });
 
         const token = jwt.sign(
@@ -1508,13 +2422,13 @@ app.post("/register", async (req, res) => {
         );
 
         res.cookie("token", token, {
-            httpOnly: true, 
+            httpOnly: true,
             sameSite: "strict",
             maxAge: 12 * 60 * 60 * 1000,
         });
 
         res.json({ success: true });
-    } 
+    }
     catch (error) {
         logError(`Error registering user: ${error.stack || error.message}`);
         res.status(500).json({ error: "Failed to register user" });
@@ -1555,19 +2469,36 @@ app.post("/login", async (req, res) => {
         return res.status(400).json({ error: "Already authenticated" });
     }
 
-    const {username, password} = req.body;
+    const { username, password } = req.body;
 
     try {
         const usersCollection = db.collection("users");
-        
-        const user = await usersCollection.findOne({username});
-        if(!user) {
+
+        const user = await usersCollection.findOne({ username });
+        if (!user) {
             return res.status(400).json({ error: "Invalid credentials" });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(400).json({ error: "Invalid credentials" });
+        }
+
+        const now = new Date();
+        const lastLogin = user.lastLogin ? new Date(user.lastLogin) : null;
+
+        let newStreak = 1;
+        if(lastLogin) {
+            const diffInTime = now.getTime() - lastLogin.getTime();
+            const diffInDays = Math.floor(diffInTime / (1000 * 3600 * 24));
+
+            if(diffInDays === 1) {
+                newStreak = (user.statistics?.dailyLoginStreak || 1) + 1;
+            } else if(diffInDays === 0) {
+                newStreak = user.statistics?.dailyLoginStreak || 1;
+            } else {
+                newStreak = 1;
+            }
         }
 
         const token = jwt.sign(
@@ -1578,7 +2509,12 @@ app.post("/login", async (req, res) => {
 
         await usersCollection.updateOne(
             { _id: user._id },
-            { $set: { lastLogin: new Date() } }
+            { 
+                $set: {
+                    lastLogin: now,
+                    "statistics.dailyLoginStreak": newStreak
+                }
+            }
         );
 
         res.cookie("token", token, {
@@ -1587,11 +2523,766 @@ app.post("/login", async (req, res) => {
             maxAge: 12 * 60 * 60 * 1000,
         });
 
-        res.json({success: true});
+        res.json({ success: true });
     }
-    catch(error) {
+    catch (error) {
         logError(`Error logging in: ${error.stack || error.message}`);
         res.status(500).json({ error: "Failed to log in" });
+    }
+});
+
+/**
+ * @swagger
+ * /send-friend-request:
+ *   post:
+ *     summary: Send a friend request to another user.
+ *     description: Allows an authenticated user to send a friend request to another user by username.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 example: "Ogoter374"
+ *     responses:
+ *       200:
+ *         description: Friend request sent successfully.
+ *       400:
+ *         description: Request is invalid or user already added.
+ *       404:
+ *         description: Target user not found.
+ *       401:
+ *         description: Unauthorized. User must be logged in.
+ *       500:
+ *         description: Internal server error.
+ */
+app.post("/send-friend-request", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+
+    try {
+        const { friendCode } = req.body;
+
+        if (!friendCode) {
+            return res.status(400).json({ error: "Friend Code is required." });
+        }
+
+        const sender = await db.collection("users").findOne({ _id: new ObjectId(userId) });
+        const receiver = await db.collection("users").findOne({ friendCode });
+
+        if (!receiver) {
+            return res.status(404).json({ error: "User not found." });
+        }
+
+        if (receiver._id.equals(sender._id)) {
+            return res.status(400).json({ error: "You can't add yourself." });
+        }
+
+        const alreadyFriends = sender.friends.some(f => f.userId.equals(receiver._id));
+        const alreadySent = sender.sentRequests.some(r => r.userId.equals(receiver._id));
+        const alreadyPending = sender.pendingRequests.some(r => r.userId.equals(receiver._id));
+
+        if (alreadyFriends) {
+            return res.status(400).json({ error: "You are already friends." });
+        }
+
+        if (alreadySent) {
+            return res.status(400).json({ error: "Friend request already sent." });
+        }
+
+        if (alreadyPending) {
+            return res.status(400).json({ error: "User already sent you a request." });
+        }
+
+        // Update sender
+        await db.collection("users").updateOne(
+            { _id: sender._id },
+            {
+                $push: {
+                    sentRequests: { userId: receiver._id, username: receiver.username }
+                }
+            }
+        );
+
+        // Update receiver
+        await db.collection("users").updateOne(
+            { _id: receiver._id },
+            {
+                $push: {
+                    pendingRequests: { userId: sender._id, username: sender.username }
+                }
+            }
+        );
+
+        return res.status(200).json({ message: "Friend request sent." });
+    } catch (error) {
+        logError(`Error sending friend request: ${error.message}`);
+        return res.status(500).json({ error: "Something went wrong." });
+    }
+});
+
+/**
+ * @swagger
+ * /accept-friend-request:
+ *   post:
+ *     summary: Accept a friend request.
+ *     description: Moves the requester from pendingRequests to the friends list of both users.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 example: "65f3acba8b67b28925e254b3"
+ *     responses:
+ *       200:
+ *         description: Friend request accepted successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Friend request accepted."
+ *                 friend:
+ *                   type: object
+ *                   properties:
+ *                     userId:
+ *                       type: string
+ *                       example: "65f3acba8b67b28925e254b3"
+ *                     username:
+ *                       type: string
+ *                       example: "AcceptedFriend"
+ *       400:
+ *         description: Invalid request or user is already a friend.
+ *       404:
+ *         description: User not found.
+ *       401:
+ *         description: Unauthorized. User must be logged in.
+ *       500:
+ *         description: Internal server error.
+ */
+app.post("/accept-friend-request", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+    const { userId: friendId } = req.body;
+
+    try {
+        const user = await db.collection("users").findOne({ _id: new ObjectId(userId) });
+        const friend = await db.collection("users").findOne({ _id: new ObjectId(friendId) });
+
+        if (!friend) return res.status(404).json({ error: "User not found." });
+
+        // Remove from pending requests
+        await db.collection("users").updateOne(
+            { _id: new ObjectId(userId) },
+            { 
+                $pull: { pendingRequests: { userId: new ObjectId(friendId) } },
+                $push: { friends: { userId: friend._id, username: friend.username, avatar: friend.avatar, messages: [] } }
+            }
+        );
+
+        // Remove from sent requests & add to friends
+        await db.collection("users").updateOne(
+            { _id: new ObjectId(friendId) },
+            { 
+                $pull: { sentRequests: { userId: new ObjectId(userId) } },
+                $push: { friends: { userId: user._id, username: user.username, avatar: user.avatar, messages: [] } }
+            }
+        );
+
+        return res.status(200).json({ message: "Friend request accepted.", friend: { userId: friend._id, username: friend.username } });
+    } catch (error) {
+        logError(`Error accepting friend request: ${error.message}`);
+        return res.status(500).json({ error: "Something went wrong." });
+    }
+});
+
+/**
+ * @swagger
+ * /decline-friend-request:
+ *   post:
+ *     summary: Decline a friend request.
+ *     description: Removes the friend request from pendingRequests and sentRequests without adding the user as a friend.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 example: "65f3acba8b67b28925e254b4"
+ *     responses:
+ *       200:
+ *         description: Friend request declined successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Friend request declined."
+ *       400:
+ *         description: Invalid request or no pending request found.
+ *       404:
+ *         description: User not found.
+ *       401:
+ *         description: Unauthorized. User must be logged in.
+ *       500:
+ *         description: Internal server error.
+ */
+app.post("/decline-friend-request", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+    const { userId: friendId } = req.body;
+
+    try {
+        const user = await db.collection("users").findOne({ _id: new ObjectId(userId) });
+        const sender = await db.collection("users").findOne({ _id: new ObjectId(friendId) });
+
+        if (!user) return res.status(404).json({ error: "User not found." });
+        if (!sender) return res.status(404).json({ error: "User not found." });
+
+        // Remove from pending requests
+        await db.collection("users").updateOne(
+            { _id: new ObjectId(userId) },
+            { $pull: { pendingRequests: { userId: new ObjectId(friendId) } } }
+        );
+
+        // Remove from sent requests on the sender's side
+        await db.collection("users").updateOne(
+            { _id: new ObjectId(friendId) },
+            { $pull: { sentRequests: { userId: new ObjectId(userId) } } }
+        );
+
+        return res.status(200).json({ message: "Friend request declined." });
+    } catch (error) {
+        logError(`Error declining friend request: ${error.message}`);
+        return res.status(500).json({ error: "Something went wrong." });
+    }
+});
+
+/**
+ * @swagger
+ * /remove-friend:
+ *   post:
+ *     summary: Removes a friend from the authenticated user's friend list.
+ *     description: Deletes the specified friend from the user's friend list using authentication.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               friendId:
+ *                 type: string
+ *                 example: "605c72b7e8472a3df6b0e1c5"
+ *     responses:
+ *       200:
+ *         description: Successfully removed the friend.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Friend removed successfully."
+ *       400:
+ *         description: Bad request. The friendId is missing or invalid.
+ *       404:
+ *         description: Friend not found in the user's friend list.
+ *       500:
+ *         description: Server error.
+ */
+app.post("/remove-friend", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+    const { friendId } = req.body;
+
+    try {
+        await db.collection("users").updateOne(
+            { _id: new ObjectId(userId) },
+            { $pull: { friends: { userId: new ObjectId(friendId) } } }
+        );
+
+        await db.collection("users").updateOne(
+            { _id: new ObjectId(friendId) },
+            { $pull: { friends: { userId: new ObjectId(userId) } } }
+        );
+
+        return res.status(200).json({ message: "Friend removed successfully." });
+    } catch (error) {
+        logError(`Error removing friend: ${error.message}`);
+        return res.status(500).json({ error: "Something went wrong." });
+    }
+});
+
+/**
+ * @swagger
+ * /send-message:
+ *   post:
+ *     summary: Sends a chat message to a friend.
+ *     description: Stores a new message in both the sender's and recipient's friend message arrays.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - friendId
+ *               - message
+ *             properties:
+ *               friendId:
+ *                 type: string
+ *                 description: The ObjectId of the friend to whom the message is sent.
+ *                 example: "605c72b7e8472a3df6b0e1c5"
+ *               message:
+ *                 type: string
+ *                 description: The content of the message to send.
+ *                 example: "Hey, want to join a game?"
+ *     responses:
+ *       200:
+ *         description: Message sent successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Message sent successfully."
+ *       400:
+ *         description: Bad request. Message content is empty or malformed.
+ *       404:
+ *         description: User not found.
+ *       500:
+ *         description: Internal server error.
+ */
+app.post("/send-message", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+    const { friendId, message } = req.body;
+
+    try {
+        const sender = await db.collection("users").findOne({ _id: new ObjectId(userId) });
+
+        if (!sender) return res.status(404).json({ error: "User not found." });
+
+        const senderMessage = {
+            senderId: new ObjectId(userId),
+            name: "You",
+            message,
+            timestamp: new Date(),
+        };
+
+        const recieverMessage = {
+            senderId: new ObjectId(userId),
+            name: sender.username,
+            message,
+            timestamp: new Date(),
+        };
+
+        await db.collection("users").updateOne(
+            { _id: new ObjectId(userId), "friends.userId": new ObjectId(friendId) },
+            { $push: { "friends.$.messages": senderMessage } }
+        );
+
+        await db.collection("users").updateOne(
+            { _id: new ObjectId(friendId), "friends.userId": new ObjectId(userId) },
+            { 
+                $push: { "friends.$.messages": recieverMessage },
+                $inc: { "friends.$.unreadCount": 1 }
+            }
+        );
+
+        return res.status(200).json({ message: "Message sent successfully." });
+    } catch (error) {
+        logError(`Error sending message: ${error.message}`);
+        return res.status(500).json({ error: "Something went wrong." });
+    }
+});
+
+/**
+ * @swagger
+ * /mark-messages-read:
+ *   post:
+ *     summary: Mark messages from a friend as read.
+ *     description: 
+ *       Marks all messages from a specified friend as read for the currently authenticated user.
+ *       This sets the `unreadCount` flag to false in the user's friends array.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - friendId
+ *             properties:
+ *               friendId:
+ *                 type: string
+ *                 description: The ObjectId of the friend whose messages should be marked as read.
+ *     responses:
+ *       200:
+ *         description: Messages successfully marked as read.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *       401:
+ *         description: Unauthorized. The user must be authenticated.
+ *       500:
+ *         description: Server error while marking messages as read.
+ */
+app.post("/mark-messages-read", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+
+    const { friendId } = req.body;
+
+    try {
+        await db.collection("users").updateOne(
+            { _id: new ObjectId(userId), "friends.userId": new ObjectId(friendId) },
+            { $set: { "friends.$.unreadCount": 0 } }
+        );
+
+        return res.json({ success: true });
+    } catch (error) {
+        console.error("Error marking messages as read:", error);
+        return res.status(500).json({ error: "Something went wrong." });
+    }
+});
+
+/**
+ * @swagger
+ * /upload-avatar:
+ *   post:
+ *     summary: Uploads a user avatar and deletes the previous one.
+ *     description: Allows users to upload an image to use as their avatar. Deletes the previous avatar if it exists.
+ *     consumes:
+ *       - multipart/form-data
+ *     parameters:
+ *       - in: formData
+ *         name: avatar
+ *         type: file
+ *         required: true
+ *         description: The avatar image to upload.
+ *     responses:
+ *       200:
+ *         description: Avatar uploaded successfully.
+ *       400:
+ *         description: Bad request or invalid file type.
+ */
+app.post("/upload-avatar", authenticateToken, upload.single("avatar"), async (req, res) => {
+    const userId = req.user.userId;
+
+    if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    try {
+        const user = await db.collection("users").findOne(
+            { _id: new ObjectId(userId) },
+            { projection: { avatar: 1, uploadedAvatar: 1, } }
+        );
+
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        if (user.uploadedAvatar && user.uploadedAvatar.trim() !== "") {
+            const oldAvatarPath = path.join(uploadDir, user.uploadedAvatar);
+            if (fs.existsSync(oldAvatarPath)) {
+                fs.unlinkSync(oldAvatarPath);
+            }
+        }
+
+        const newAvatarUrl = `${req.file.filename}`;
+        user.uploadedAvatar = newAvatarUrl;
+        user.avatar = newAvatarUrl;
+
+        await db.collection("users").updateOne(
+            { _id: new ObjectId(userId) },
+            { $set: { avatar: newAvatarUrl, uploadedAvatar: newAvatarUrl } }
+        );
+
+        await db.collection("users").updateMany(
+            { "friends.userId": new ObjectId(userId) },
+            { 
+                $set: { "friends.$[elem].avatar": newAvatarUrl },
+                $inc: { "statistics.uploadedAvatar": 1 },
+            },
+            {
+                arrayFilters: [{ "elem.userId": new ObjectId(userId) }],
+            }
+        );
+
+        res.json({ avatarUrl: newAvatarUrl });
+    } catch (err) {
+        logError(`Error updating avatar: ${err.message}`);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+/**
+ * @swagger
+ * /set-avatar:
+ *   post:
+ *     summary: Sets a user's avatar.
+ *     description: Updates the user's avatar in the database with a preset or uploaded image.
+ *     parameters:
+ *       - in: body
+ *         name: avatar
+ *         description: The selected avatar filename.
+ *         required: true
+ *         schema:
+ *           type: object
+ *           properties:
+ *             avatar:
+ *               type: string
+ *               example: "avatar2.svg"
+ *     responses:
+ *       200:
+ *         description: Avatar updated successfully.
+ *       400:
+ *         description: Invalid avatar.
+ *       401:
+ *         description: Unauthorized user.
+ */
+app.post("/set-avatar", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+
+    const { avatar } = req.body;
+
+    try {
+        if (!avatar || typeof avatar !== "string") {
+            return res.status(400).json({ error: "Invalid avatar" });
+        }
+
+        const avatarPath = avatar;
+
+        const user = await db.collection("users").findOne({ _id: new ObjectId(userId) });
+
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        await db.collection("users").updateOne(
+            { _id: new ObjectId(userId) },
+            { $set: { avatar: avatarPath } }
+        );
+
+        await db.collection("users").updateMany(
+            { "friends.userId": new ObjectId(userId) },
+            { $set: { "friends.$[elem].avatar": avatarPath } },
+            {
+                arrayFilters: [{ "elem.userId": new ObjectId(userId) }],
+            }
+        );
+
+        res.json({ message: "Avatar updated successfully", avatarUrl: avatarPath });
+    } catch (error) {
+        logError(`Error updating avatar: ${error.message}`);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+/**
+ * @swagger
+ * /set-click-sound:
+ *   post:
+ *     summary: Updates the user's selected click sound preference.
+ *     description: Stores the preferred click sound in the user's profile in the database.
+ *     parameters:
+ *       - in: body
+ *         name: userId
+ *         description: The ID of the user.
+ *         required: true
+ *         schema:
+ *           type: object
+ *           properties:
+ *             userId:
+ *               type: string
+ *             sound:
+ *               type: string
+ *     responses:
+ *       200:
+ *         description: Successfully updated the sound preference.
+ *       400:
+ *         description: Bad request, missing parameters.
+ */
+app.post("/set-click-sound", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+
+    const { sound } = req.body;
+
+    try {
+        const user = await db.collection("users").findOne({ _id: new ObjectId(userId) });
+
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        await db.collection("users").updateOne(
+            { _id: new ObjectId(userId) },
+            { 
+                $set: { clickSound: sound },
+                $inc: { "statistics.changedSound": 1 },
+            },
+        );
+        res.json({ message: "Sound preference saved" });
+    } catch (error) {
+        logError(`Error updating click sound: ${error.message}`);
+        res.status(500).json({ error: "Database error" });
+    }
+});
+
+/**
+ * @swagger
+ * /set-card-theme:
+ *   post:
+ *     summary: Set the user's selected card theme.
+ *     description: Updates and saves the user's chosen card back theme.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               cardBack:
+ *                 type: string
+ *                 example: "hexagon.svg"
+ *     responses:
+ *       200:
+ *         description: Successfully updated card theme.
+ *       400:
+ *         description: Bad request - Missing or invalid cardBack.
+ *       401:
+ *         description: Unauthorized - User not authenticated.
+ *       500:
+ *         description: Server error.
+ */
+app.post("/set-card-theme", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+
+    const { theme, color1, color2 } = req.body;
+
+    try {
+        const user = await db.collection("users").findOne({ _id: new ObjectId(userId) });
+
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        await db.collection("users").updateOne(
+            { _id: new ObjectId(userId) },
+            { 
+                $set: { cardTheme: theme, color1: color1, color2: color2 },
+                $inc: { "statistics.changedTheme": 1 },
+            },
+        );
+
+        res.status(200).json({ message: "Card theme updated successfully" });
+    } catch (error) {
+        logError(`Error updating card theme: ${error.message}`);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+/**
+ * @swagger
+ * /set-title:
+ *   post:
+ *     summary: Update the user's selected title.
+ *     description: Sets the selected title as active and deactivates the previously active title.
+ *     tags:
+ *       - User
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 description: The name of the title to activate.
+ *     responses:
+ *       200:
+ *         description: Title updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Title not found or not unlocked.
+ *       500:
+ *         description: Internal server error.
+ */
+app.post("/set-title", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+
+    const { title } = req.body;
+
+    try {
+        const user = await db.collection("users").findOne({ _id: new ObjectId(userId) });
+
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        const titleIndex = user.titles.findIndex(t => t.name === title);
+
+        if (titleIndex === -1 ) {
+            return res.status(400).json({ error: "Title not found" });
+        }
+
+        await db.collection("users").updateOne(
+            { _id: new ObjectId(userId) },
+            {
+                $set: {
+                    "titles.$[].active": false
+                }
+            }
+        );
+
+        await db.collection("users").updateOne(
+            { _id: new ObjectId(userId), "titles.name": title },
+            {
+                $set: {
+                    "titles.$.active": true
+                }
+            }
+        );
+
+        res.status(200).json({ message: "Title updated successfully" });
+    } catch (error) {
+        logError(`Error updating title: ${error.message}`);
+        res.status(500).json({ error: "Internal server error" });
     }
 });
 
@@ -1623,10 +3314,78 @@ app.post('/logout', (req, res) => {
             path: '/'
         });
 
-        res.status(200).json({success: true});
+        res.status(200).json({ success: true });
     } catch (error) {
         logError(`Logout error: ${error.stack || error.message}`);
-        res.status(500).json({ success: false});
+        res.status(500).json({ success: false });
+    }
+});
+
+/**
+ * @swagger
+ * /add-achievement:
+ *   post:
+ *     summary: Add a new achievement to the database.
+ *     description: Creates a new achievement with title, icon, description, and unlock conditions.
+ *     tags:
+ *       - Achievements
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               icon:
+ *                 type: string
+ *               titleUnlocked:
+ *                 type: object
+ *                 properties:
+ *                   name:
+ *                     type: string
+ *                   color:
+ *                     type: string
+ *               conditions:
+ *                 type: object
+ *                 additionalProperties:
+ *                   type: number
+ *     responses:
+ *       200:
+ *         description: Achievement added successfully.
+ *       400:
+ *         description: Missing required fields or invalid input.
+ *       500:
+ *         description: Internal server error.
+ */
+app.post("/add-achievement", async (req, res) => {
+    try {
+      const { name, description, icon, titleUnlocked, conditions } = req.body;
+  
+      if (!name || !description || !icon || !titleUnlocked || !conditions) {
+        return res.status(400).json({ error: "Missing required fields." });
+      }
+  
+      const newAchievement = {
+        name,
+        description,
+        icon,
+        titleUnlocked: {
+          name: titleUnlocked.name,
+          color: titleUnlocked.color
+        },
+        conditions
+      };
+  
+      await db.collection("achievements").insertOne(newAchievement);
+  
+      res.status(200).json({ message: "Achievement added successfully." });
+    } catch (error) {
+      console.error("Error adding achievement:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
 });
 
@@ -1676,19 +3435,39 @@ app.post('/logout', (req, res) => {
 app.post("/create-game", authenticateToken, async (req, res) => {
     const userId = req.user.userId;
 
-    const {gameName, playerName, isPrivate, gender} = req.body;
+    const { gameName, playerName, isPrivate, gender } = req.body;
 
     try {
+        const user = await db.collection("users").findOne(
+            { _id: new ObjectId(userId) },
+            { projection: { avatar: 1, } }
+        );
+
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        const statistics = {
+            topDrinker: { drinks: 0, id: "" },
+            schluckePerPlayer: [
+              { id: userId, drinks: 0 }  
+            ],
+            roundsPerPlayer: [
+                { id: userId, rounds: 1 }
+            ],
+        };
+
         const newGame = {
             name: gameName,
             players: [{
                 id: userId,
-                name: playerName, 
-                role: "Game Master", 
+                name: playerName,
+                role: "Game Master",
                 gender: gender,
                 cards: [],
                 drinks: 0,
                 exen: false,
+                avatar: user.avatar,
             }],
             status: "waiting",
             private: isPrivate,
@@ -1698,14 +3477,15 @@ app.post("/create-game", authenticateToken, async (req, res) => {
             round: 1,
             lastRound: 0,
             phase: "phase1",
-            createdAt: new Date()
+            createdAt: new Date(),
+            statistics,
         };
 
         const result = await db.collection("games").insertOne(newGame);
 
         res.status(200).json({ success: true, gameId: result.insertedId });
-    } 
-    catch(error) {
+    }
+    catch (error) {
         logError(`Error creating game: ${error.message}`);
         res.status(500).json({ success: false, error: "Failed to create game" });
     }
@@ -1759,7 +3539,10 @@ app.post("/check-game-code", authenticateToken, async (req, res) => {
     const { gameId } = req.body;
 
     try {
-        const game = await db.collection("games").findOne({ _id: new ObjectId(gameId) });
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { players: 1 } }
+        );
 
         if (!game) {
             return res.status(404).json({ error: "Game not found." });
@@ -1832,22 +3615,34 @@ app.post("/check-game-code", authenticateToken, async (req, res) => {
 app.post("/join-game/:gameId", authenticateToken, async (req, res) => {
     const userId = req.user.userId;
 
-    const {playerName, gender} = req.body;
-    const {gameId} = req.params;
+    const { playerName, gender } = req.body;
+    const { gameId } = req.params;
 
     try {
-        const game = await db.collection("games").findOne({ _id: new ObjectId(gameId) });
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { players: 1, status: 1 } }
+        );
 
-        if(!game) {
-            return res.status(404).json({error: "Game not found"});
+        if (!game) {
+            return res.status(404).json({ error: "Game not found" });
         }
 
-        if(game.status !== "waiting") {
-            return res.status(400).json({error: "Game is not joinable"});
+        if (game.status !== "waiting") {
+            return res.status(400).json({ error: "Game is not joinable" });
         }
 
         if (game.players.some(player => player.id === userId)) {
             return res.status(400).json({ error: "Player already in game" });
+        }
+
+        const user = await db.collection("users").findOne(
+            { _id: new ObjectId(userId) },
+            { projection: { avatar: 1, } }
+        );
+
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
         }
 
         const result = await db.collection("games").updateOne(
@@ -1861,8 +3656,17 @@ app.post("/join-game/:gameId", authenticateToken, async (req, res) => {
                         role: "Player",
                         cards: [],
                         drinks: 0,
-                        exen: false
-                    }
+                        exen: false,
+                        avatar: user.avatar,
+                    },
+                    "statistics.schluckePerPlayer": {
+                        id: userId,
+                        drinks: 0
+                    },
+                    "statistics.roundsPerPlayer": {
+                        id: userId,
+                        rounds: 1
+                    },
                 }
             }
         );
@@ -1871,9 +3675,14 @@ app.post("/join-game/:gameId", authenticateToken, async (req, res) => {
             return res.status(500).json({ error: "Failed to join game" });
         }
 
+        await db.collection("users").updateOne(
+            { _id: new ObjectId(user._id) },
+            { $inc: { "statistics.gamesJoined": 1 } }
+        );
+
         res.status(200).json({ message: "Player joined game" });
     }
-    catch(error) {
+    catch (error) {
         logError(`Error joining game (${gameId}): ${error.message}`);
         res.status(500).json({ error: "Failed to join game" });
     }
@@ -1924,13 +3733,16 @@ app.post("/join-game/:gameId", authenticateToken, async (req, res) => {
  */
 app.post("/kick-player", authenticateToken, async (req, res) => {
     const userId = req.user.userId;
-    
-    const {gameId, id} = req.body;
+
+    const { gameId, id } = req.body;
 
     try {
-        const game = await db.collection("games").findOne({ _id: new ObjectId(gameId) });
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { players: 1, statistics: 1 } }
+        );
 
-        if(!game) {
+        if (!game) {
             return res.status(404).json({ error: "Game not found" });
         }
 
@@ -1943,10 +3755,13 @@ app.post("/kick-player", authenticateToken, async (req, res) => {
         }
 
         const updatedPlayers = game.players.filter(player => player.id !== id);
+        const updatedStatistics = game.statistics;
+        updatedStatistics.schluckePerPlayer = game.statistics.schluckePerPlayer.filter(player => player.id !== userId);
+        updatedStatistics.roundsPerPlayer = game.statistics.roundsPerPlayer.filter(player => player.id !== userId);
 
         const result = await db.collection("games").updateOne(
             { _id: new ObjectId(gameId) },
-            { $set: { players: updatedPlayers } }
+            { $set: { players: updatedPlayers, statistics: updatedStatistics } }
         );
 
         if (result.modifiedCount === 0) {
@@ -1955,15 +3770,15 @@ app.post("/kick-player", authenticateToken, async (req, res) => {
 
         const clients = activeGameConnections.get(gameId) || [];
         clients.forEach(client => {
-            if(client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify({type: "kicked", id}));
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({ type: "kicked", id }));
             }
         });
 
         return res.status(200).json({ message: "Player kicked successfully" });
     }
-    catch(error) {
-        logError(`Error kicking player in game ${gameId}: ${error.message}`);
+    catch (error) {
+        logError(`Error kicking player from game ${gameId}: ${error.message}`);
         return res.status(500).json({ error: "Error kicking player" });
     }
 });
@@ -2011,13 +3826,16 @@ app.post("/kick-player", authenticateToken, async (req, res) => {
  */
 app.post("/start-game", authenticateToken, async (req, res) => {
     const userId = req.user.userId;
-    
-    const {gameId} = req.body;
+
+    const { gameId } = req.body;
 
     try {
-        const game = await db.collection("games").findOne({ _id: new ObjectId(gameId) });
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { players: 1, activePlayer: 1 } }
+        );
 
-        if(!game) {
+        if (!game) {
             return res.status(404).json({ error: "Game not found" });
         }
 
@@ -2048,17 +3866,22 @@ app.post("/start-game", authenticateToken, async (req, res) => {
                 { $inc: { "statistics.gamesPlayed": 1 } }
             );
         }
-        
+
+        await db.collection("users").updateOne(
+            { _id: new ObjectId(game.players[0].id) },
+            { $inc: { "statistics.gamesHosted": 1 } }
+        );
+
         const clients = activeGameConnections.get(gameId) || [];
         clients.forEach(client => {
-            if(client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify({type: "start"}));
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({ type: "start" }));
             }
         });
-        
+
         return res.status(200).json({ message: "Game started successfully" });
     }
-    catch(error) {
+    catch (error) {
         logError(`Error starting game ${gameId}: ${error.message}`);
         return res.status(500).json({ error: "Error starting game" });
     }
@@ -2107,22 +3930,28 @@ app.post("/start-game", authenticateToken, async (req, res) => {
  */
 app.post("/leave-game", authenticateToken, async (req, res) => {
     const userId = req.user.userId;
-    
-    const {gameId} = req.body;
+
+    const { gameId } = req.body;
 
     try {
-        const game = await db.collection("games").findOne({ _id: new ObjectId(gameId) });
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { players: 1, statistics: 1, endGame: 1 } }
+        );
 
-        if(!game) {
+        if (!game) {
             return res.status(404).json({ error: "Game not found" });
         }
 
         if (game.players[0].id !== userId) {
             const updatedPlayers = game.players.filter(player => player.id !== userId);
+            const updatedStatistics = game.statistics;
+            updatedStatistics.schluckePerPlayer = game.statistics.schluckePerPlayer.filter(player => player.id !== userId);
+            updatedStatistics.roundsPerPlayer = game.statistics.roundsPerPlayer.filter(player => player.id !== userId);
 
             const result = await db.collection("games").updateOne(
                 { _id: new ObjectId(gameId) },
-                { $set: { players: updatedPlayers } }
+                { $set: { players: updatedPlayers, statistics: updatedStatistics } }
             );
 
             if (result.modifiedCount === 0) {
@@ -2133,23 +3962,35 @@ app.post("/leave-game", authenticateToken, async (req, res) => {
         }
 
         if (game.players[0].id === userId) {
+            if (game.endGame) {
+                const stats = game.statistics;
+
+                await db.collection("users").updateOne(
+                    { _id: new ObjectId(stats.topDrinker.id) },
+                    {
+                        $inc: { "statistics.topDrinker": 1 },
+                        $set: { "statistics.topDrinks": stats.topDrinker.drinks }
+                    }
+                );
+            }
+
             const deleteResult = await db.collection("games").deleteOne({ _id: new ObjectId(gameId) });
-            
+
             if (deleteResult.deletedCount === 0) {
                 return res.status(500).json({ error: "Failed to delete game" });
             }
 
             const clients = activeGameConnections.get(gameId) || [];
             clients.forEach(client => {
-                if(client.readyState === WebSocket.OPEN) {
-                    client.send(JSON.stringify({type: "close", userId}));
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({ type: "close", userId }));
                 }
             });
 
             return res.status(200).json({ success: true, message: "all" });
         }
     }
-    catch(error) {
+    catch (error) {
         logError(`Error leaving game ${gameId}: ${error.message}`);
         return res.status(500).json({ error: "Error leaving lobby" });
     }
@@ -2206,7 +4047,10 @@ app.post("/flip-row", authenticateToken, async (req, res) => {
     const { gameId, rowIdx } = req.body;
 
     try {
-        const game = await db.collection("games").findOne({ _id: new ObjectId(gameId) });
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { players: 1, cards: 1, round: 1, lastRound: 1 } }
+        );
 
         if (!game) {
             return res.status(404).json({ error: "Game not found" });
@@ -2222,7 +4066,7 @@ app.post("/flip-row", authenticateToken, async (req, res) => {
         if (currentRound === lastFlippedRound) {
             return res.status(400).json({ error: "You can only flip one row per turn" });
         }
-        
+
         if (rowIdx < 1 || rowIdx > 5) {
             return res.status(400).json({ error: "Invalid row ID" });
         }
@@ -2231,7 +4075,7 @@ app.post("/flip-row", authenticateToken, async (req, res) => {
         let idx = 0;
 
         // Calculate the index where the row starts in the pyramid
-        for(let i=1; i < rowIdx; i++) {
+        for (let i = 1; i < rowIdx; i++) {
             idx += i;
         }
 
@@ -2252,6 +4096,13 @@ app.post("/flip-row", authenticateToken, async (req, res) => {
                 }
             }
         );
+
+        for(const player of game.players) {
+            await db.collection("users").updateOne(
+                { _id: new ObjectId(player.id) },
+                { $inc: { "statistics.rowsFlipped": 1 } }
+            );
+        }
 
         res.status(200).json({ message: `Row ${rowIdx} flipped` });
     }
@@ -2313,7 +4164,10 @@ app.post("/lay-card", authenticateToken, async (req, res) => {
     const { gameId, cardIdx } = req.body;
 
     try {
-        const game = await db.collection("games").findOne({ _id: new ObjectId(gameId) });
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { players: 1, cards: 1, activePlayer: 1, round: 1, drinkCount: 1 } }
+        );
 
         if (!game) {
             return res.status(404).json({ error: "Game not found" });
@@ -2326,8 +4180,8 @@ app.post("/lay-card", authenticateToken, async (req, res) => {
         const { players, cards, round, drinkCount } = game;
 
         const playerIndex = players.findIndex(p => p.id === userId);
-        if(playerIndex === -1) {
-            return res.status(404).json({error: "Player not in game"});
+        if (playerIndex === -1) {
+            return res.status(404).json({ error: "Player not in game" });
         }
 
         const player = players[playerIndex];
@@ -2340,7 +4194,7 @@ app.post("/lay-card", authenticateToken, async (req, res) => {
         let rowIdx = round;
 
         // Calculate the starting index of the current row
-        for(let i=1; i < rowIdx; i++) {
+        for (let i = 1; i < rowIdx; i++) {
             idx += i;
         }
 
@@ -2425,7 +4279,10 @@ app.post("/next-player", authenticateToken, async (req, res) => {
     const { gameId } = req.body;
 
     try {
-        const game = await db.collection("games").findOne({ _id: new ObjectId(gameId) });
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { players: 1, activePlayer: 1, round: 1, drinkCount: 1 } }
+        );
 
         if (!game) {
             return res.status(404).json({ error: "Game not found" });
@@ -2526,13 +4383,16 @@ app.post("/next-player", authenticateToken, async (req, res) => {
  */
 app.post("/start-phase2", authenticateToken, async (req, res) => {
     const userId = req.user.userId;
-    
-    const {gameId} = req.body;
+
+    const { gameId } = req.body;
 
     try {
-        const game = await db.collection("games").findOne({ _id: new ObjectId(gameId) });
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { players: 1 } }
+        );
 
-        if(!game) {
+        if (!game) {
             return res.status(404).json({ error: "Game not found" });
         }
 
@@ -2545,7 +4405,7 @@ app.post("/start-phase2", authenticateToken, async (req, res) => {
         let maxCards = 0;
         let busfahrer = [];
 
-        players.forEach(player => {
+        for (const player of players) {
             const unplayedCards = player.cards.filter(card => !card.played).length;
 
             if (unplayedCards > maxCards) {
@@ -2554,7 +4414,24 @@ app.post("/start-phase2", authenticateToken, async (req, res) => {
             } else if (unplayedCards === maxCards) {
                 busfahrer.push(player.id);
             }
-        });
+
+            const user = db.collection("users").findOne(
+                { _id: new ObjectId(player.id) },
+                { projection: { statistics: 1 } }
+            );
+
+            if(user.statistics.cardsLeft < unplayedCards) {
+                await db.collection("users").updateOne(
+                    { _id: new ObjectId(player.id) },
+                    { $set: { "statistics.cardsLeft": unplayedCards } }
+                );
+            }
+
+            await db.collection("users").updateOne(
+                { _id: new ObjectId(player.id) },
+                { $set: { "statistics.cardsPlayedPhase1": 10 - unplayedCards } }
+            );
+        };
 
         let phaseCards = [];
 
@@ -2599,17 +4476,17 @@ app.post("/start-phase2", authenticateToken, async (req, res) => {
                 { $set: { statistics: stats } }
             );
         }));
-        
-        
+
+
         const clients = activeGameConnections.get(gameId) || [];
         clients.forEach(client => {
-            if(client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify({type: "phase2"}));
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({ type: "phase2" }));
             }
         });
 
         res.status(200).json({ message: "Phase 2 started!" });
-    } 
+    }
     catch (error) {
         logError(`Error starting phase 2 for game ${gameId}: ${error.message}`);
         return res.status(500).json({ error: "Error starting Phase 2" });
@@ -2653,7 +4530,10 @@ app.post("/lay-card-phase", authenticateToken, async (req, res) => {
     const { gameId, cardIdx } = req.body;
 
     try {
-        const game = await db.collection("games").findOne({ _id: new ObjectId(gameId) });
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { players: 1, round: 1, phaseCards: 1, drinkCount: 1, activePlayer: 1 } }
+        );
 
         if (!game) {
             return res.status(404).json({ error: "Game not found" });
@@ -2759,7 +4639,10 @@ app.post("/next-player-phase", authenticateToken, async (req, res) => {
     const { gameId } = req.body;
 
     try {
-        const game = await db.collection("games").findOne({ _id: new ObjectId(gameId) });
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { players: 1, activePlayer: 1, round: 1, drinkCount: 1, statistics: 1 } }
+        );
 
         if (!game) {
             return res.status(404).json({ error: "Game not found" });
@@ -2797,6 +4680,23 @@ app.post("/next-player-phase", authenticateToken, async (req, res) => {
         if (game.round === 1) {
             stats.drinksSelf += game.drinkCount;
             stats.maxDrinksSelf = Math.max(game.drinkCount, stats.maxDrinksSelf);
+
+            const updatedStatistics = game.statistics;
+            const player = updatedStatistics.schluckePerPlayer.find(player => player.id.toString() === userId.toString());
+            player.drinks += game.drinkCount;
+
+            if(player.drinks > updatedStatistics.topDrinker.drinks) {
+                updatedStatistics.topDrinker = { id: userId, drinks: player.drinks };
+            }
+
+            if(player.drinks === updatedStatistics.topDrinker.drinks && userId !== updatedStatistics.topDrinker.id) {
+                updatedStatistics.topDrinker = {id: "", drinks: player.drinks};
+            }
+
+            await db.collection("games").updateOne(
+                { _id: new ObjectId(gameId) },
+                { $set: { statistics: updatedStatistics } }
+            );
         }
 
         if (game.round === 3) {
@@ -2864,10 +4764,13 @@ app.post("/next-player-phase", authenticateToken, async (req, res) => {
 app.post("/start-phase3", authenticateToken, async (req, res) => {
     const userId = req.user.userId;
 
-    const {gameId} = req.body;
+    const { gameId } = req.body;
 
     try {
-        const game = await db.collection("games").findOne({ _id: new ObjectId(gameId) });
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { players: 1 } }
+        );
 
         if (!game) {
             return res.status(404).json({ error: "Game not found" });
@@ -2899,19 +4802,75 @@ app.post("/start-phase3", authenticateToken, async (req, res) => {
                 }
             }
         );
-        
+
         const clients = activeGameConnections.get(gameId) || [];
         clients.forEach(client => {
-            if(client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify({type: "phase3"}));
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({ type: "phase3" }));
             }
         });
 
         return res.status(200).json({ message: "Phase 3 started!" });
-    } 
+    }
     catch (error) {
         logError(`Error starting Phase 3 for game ${gameId}: ${error.message}`);
         return res.status(500).json({ error: "Error starting Phase 3" });
+    }
+});
+
+/**
+ * @swagger
+ * /flip-phase3:
+ *   post:
+ *     summary: Reset flipped state of all pyramid cards except the first and last.
+ *     description: Sets all `flipped` fields in the game's `cards` array to `false`, except for the first and last cards which stay `true`.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               gameId:
+ *                 type: string
+ *                 description: The ID of the game to update.
+ *     responses:
+ *       200:
+ *         description: Cards flipped state updated successfully.
+ *       400:
+ *         description: Missing gameId or game not found.
+ *       500:
+ *         description: Internal server error.
+ */
+app.post("/flip-phase", authenticateToken, async (req, res) => {
+    const { gameId } = req.body;
+
+    try {
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { cards: 1 } }
+        );
+
+        if (!game) {
+            return res.status(404).json({ error: "Game not found" });
+        }
+
+        const updatedCards = game.cards.map((card, index) => ({
+            ...card,
+            flipped: index === 0 || index === game.cards.length - 1
+        }));
+
+        await db.collection("games").updateOne(
+            { _id: new ObjectId(gameId) },
+            { $set: { cards: updatedCards } }
+        );
+
+        return res.status(200).json({ message: "All cards flipped to false" });
+    } catch (error) {
+        logError(`Error flipping cards for game ${gameId}: ${error.message}`);
+        return res.status(500).json({ error: "Internal server error" });
     }
 });
 
@@ -2951,11 +4910,14 @@ app.post("/start-phase3", authenticateToken, async (req, res) => {
  */
 app.post("/retry-phase", authenticateToken, async (req, res) => {
     const userId = req.user.userId;
-    
-    const {gameId} = req.body;
+
+    const { gameId } = req.body;
 
     try {
-        const game = await db.collection("games").findOne({ _id: new ObjectId(gameId) });
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { players: 1, busfahrer: 1, statistics: 1 } }
+        );
 
         if (!game) {
             return res.status(404).json({ error: "Game not found" });
@@ -2968,6 +4930,13 @@ app.post("/retry-phase", authenticateToken, async (req, res) => {
         diamond[0].flipped = true;
         diamond[26].flipped = true;
 
+        //Need to wait so that the player doesn't see the new cards before their flipped state is reset
+        await new Promise(resolve => setTimeout(resolve, 120));
+
+        const updatedStatistics = game.statistics;
+        const player = updatedStatistics.roundsPerPlayer.find(player => player.id.toString() === userId.toString());
+        player.rounds++;
+
         await db.collection("games").updateOne(
             { _id: new ObjectId(gameId) },
             {
@@ -2978,12 +4947,21 @@ app.post("/retry-phase", authenticateToken, async (req, res) => {
                     round: 9,
                     lastCard: diamond[26],
                     endGame: false
-                }
+                },
+                $set: { statistics: updatedStatistics }
             }
         );
+        
+        for(const player of game.busfahrer) {
+
+            await db.collection("users").updateOne(
+                { _id: new ObjectId(player) },
+                { $inc: { "statistics.phase3Failed": 1 } }
+            );
+        }
 
         return res.status(200).json({ message: "Phase 3 retry!" });
-    } 
+    }
     catch (error) {
         logError(`Error retrying Phase 3 for game ${gameId}: ${error.message}`);
         return res.status(500).json({ error: "Error retrying Phase 3" });
@@ -3024,13 +5002,16 @@ app.post("/retry-phase", authenticateToken, async (req, res) => {
  *       500:
  *         description: Internal server error.
  */
-app.post("/open-new-game", authenticateToken, async (req,res) => {
+app.post("/open-new-game", authenticateToken, async (req, res) => {
     const userId = req.user.userId;
 
-    const {gameId} = req.body;
+    const { gameId } = req.body;
 
     try {
-        const oldGame = await db.collection("games").findOne({ _id: new ObjectId(gameId) });
+        const oldGame = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { players: 1, name: 1, private: 1, activePlayer: 1, statistics: 1 } }
+        );
 
         if (!oldGame) {
             return res.status(404).json({ error: "Game not found" });
@@ -3047,6 +5028,29 @@ app.post("/open-new-game", authenticateToken, async (req,res) => {
             drinks: 0,
             exen: false
         }));
+
+        const user = await db.collection("users").findOne({ _id: new ObjectId(userId) });
+
+        if(!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        const stats = game.statistics;
+        const player = stats.roundsPerPlayer.find(player => player.id.toString() === userId.toString());
+
+        let maxRounds = user.statistics.maxRounds;
+        if(maxRounds > player.rounds) {
+            maxRounds = player.rounds;
+        }
+        
+        
+        await db.collection("users").updateOne(
+            { _id: new ObjectId(stats.topDrinker.id) },
+            {
+                $inc: { "statistics.topDrinker": 1 },
+                $set: { "statistics.topDrinks": stats.topDrinker.drinks, "statistics.maxRounds": maxRounds, }
+            }
+        );
 
         const newGame = await db.collection("games").insertOne({
             name: oldGame.name,
@@ -3065,10 +5069,12 @@ app.post("/open-new-game", authenticateToken, async (req,res) => {
 
         const clients = activeGameConnections.get(gameId) || [];
         clients.forEach(client => {
-            if(client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify({type: "newGame", newId}));
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({ type: "newGame", newId }));
             }
         });
+
+        await db.collection("games").deleteOne({ _id: new ObjectId(gameId) });
 
         return res.status(200).json({ message: "Game restarted!" });
     }
@@ -3121,10 +5127,13 @@ app.post("/open-new-game", authenticateToken, async (req,res) => {
 app.post("/check-card", authenticateToken, async (req, res) => {
     const userId = req.user.userId;
 
-    const {gameId, cardIdx, btnType} = req.body;
+    const { gameId, cardIdx, btnType } = req.body;
 
     try {
-        const game = await db.collection("games").findOne({ _id: new ObjectId(gameId) });
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { cards: 1, lastCard: 1, drinkCount: 1, round: 1 } }
+        );
 
         if (!game) {
             return res.status(404).json({ error: "Game not found" });
@@ -3251,10 +5260,13 @@ app.post("/check-card", authenticateToken, async (req, res) => {
 app.post("/check-last-card", authenticateToken, async (req, res) => {
     const userId = req.user.userId;
 
-    const {gameId, cardIdx, btnType, lastType} = req.body;
+    const { gameId, cardIdx, btnType, lastType } = req.body;
 
     try {
-        const game = await db.collection("games").findOne({ _id: new ObjectId(gameId) });
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { cards: 1, lastCard: 1, drinkCount: 1, round: 1, busfahrer: 1 } }
+        );
 
         if (!game) {
             return res.status(404).json({ error: "Game not found" });
@@ -3315,6 +5327,13 @@ app.post("/check-last-card", authenticateToken, async (req, res) => {
                 }
             );
 
+            for(const player of game.busfahrer) {
+                await db.collection("users").updateOne(
+                    { _id: new ObjectId(player) },
+                    { $inc: { "statistics.gamesWon": 1 } }
+                );
+            }
+
             return res.status(200).json({ message: "Correct Card" });
         } else {
             const nextRound = -1;
@@ -3343,6 +5362,16 @@ app.post("/check-last-card", authenticateToken, async (req, res) => {
 
 // #endregion 
 
-app.listen(port, () => {
-    console.log(`Server running on ${process.env.BASE_URL}`);
+const apiServer = http2.createSecureServer(sslOptions, app);
+
+apiServer.listen(port, () => {
+    logInfo(`Server running on ${process.env.BASE_URL}`);
+});
+
+apiServer.on("error", (err) => {
+    logError(`Server error: ${err.message}`);
+});
+
+server.listen(wbsPort, () => {
+    logInfo(`WebSocket server running on ${process.env.WBS_URL}`);
 });

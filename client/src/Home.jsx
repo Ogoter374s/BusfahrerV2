@@ -1,89 +1,731 @@
-import BASE_URL from "./config";
+import BASE_URL, { WBS_URL } from './config';
 
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 function Home() {
+    const [selectedSound, setSelectedSound] = useState('/sounds/ui-click.mp3');
+    const soundRef = useRef(new Audio(selectedSound));
+
+    const [isChatOpen, setIsChatOpen] = useState(false);
+    const [pendingRequests, setPendingRequests] = useState([]);
+    const [friends, setFriends] = useState([]);
+    const [friendCode, setFriendCode] = useState('');
+    const [userFriendCode, setUserFriendCode] = useState('');
+    const [newMessage, setNewMessage] = useState('');
+    const [selectedChat, setSelectedChat] = useState('');
+    const selectedFriend = useRef('');
+
     const [isAuthenticated, setIsAuthenticated] = useState(false);
-    
+
     const navigate = useNavigate();
+    const wsRef = useRef(null);
+    const init = useRef(false);
 
     /**
-     * Checks the user's authentication status when the component mounts.
+     * Checks if the user is currently authenticated.
      *
-     * Sends a GET request to the backend API to verify if the current user session is valid.
-     * Updates the authentication state based on the response or logs an error if the request fails.
+     * Sends a GET request to the backend endpoint `/check-auth` using HttpOnly cookies.
+     * On success, updates the `isAuthenticated` state based on the server response.
+     * On failure, logs the error and sets `isAuthenticated` to false.
+     *
+     * @function checkAuth
+     * @async
+     * @throws {Error} If the fetch operation fails.
+     */
+    const checkAuth = async () => {
+        try {
+            const response = await fetch(`${BASE_URL}check-auth`, {
+                method: 'GET',
+                credentials: 'include',
+            });
+
+            const data = await response.json();
+            setIsAuthenticated(data.isAuthenticated);
+        } catch (error) {
+            console.error('Error checking authentication:', error);
+            setIsAuthenticated(false);
+        }
+    };
+
+    /**
+     * Fetches the user's selected click sound preference.
+     *
+     * Checks if the user is authenticated before making a request.
+     * Sends a GET request to the backend to retrieve the saved sound preference.
+     * Updates the selected sound state and sets the audio source accordingly.
+     * Uses HttpOnly cookies for authentication.
+     *
+     * @function fetchSoundPreference
+     * @async
+     * @throws {Error} If the fetch operation fails.
+     */
+    const fetchSoundPreference = async () => {
+        if (!isAuthenticated) return;
+
+        try {
+            const response = await fetch(`${BASE_URL}get-click-sound`, {
+                credentials: 'include',
+            });
+
+            const data = await response.json();
+
+            setSelectedSound(data.sound);
+            soundRef.current.src = `/sounds/${data.sound}`;
+        } catch (error) {
+            console.error('Error fetching sound preference:', error);
+        }
+    };
+
+    // #region Friend Functions
+
+    /**
+     * Fetches pending friend requests for the authenticated user.
+     *
+     * Sends a GET request to the backend endpoint `/get-friend-requests`
+     * using HttpOnly cookies for authentication. Updates the local state
+     * with the list of pending friend requests.
+     *
+     * @function fetchFriendRequests
+     * @async
+     * @throws {Error} If the fetch operation fails.
+     */
+    const fetchFriendRequests = async () => {
+        try {
+            const response = await fetch(`${BASE_URL}get-friend-requests`, {
+                credentials: 'include',
+            });
+            const data = await response.json();
+            setPendingRequests(data.pending || []);
+        } catch (error) {
+            console.error('Error fetching friend requests:', error);
+        }
+    };
+
+    /**
+     * Fetches the list of friends for the authenticated user.
+     *
+     * Sends a GET request to the backend endpoint `/get-friends`
+     * using HttpOnly cookies for authentication. Updates the local state
+     * with the list of friends retrieved from the server.
+     *
+     * @function fetchFriends
+     * @async
+     * @throws {Error} If the fetch operation fails.
+     */
+    const fetchFriends = async () => {
+        try {
+            const response = await fetch(`${BASE_URL}get-friends`, {
+                credentials: 'include',
+            });
+            const data = await response.json();
+            setFriends(data.friends || []);
+        } catch (error) {
+            console.error('Error fetching friend requests:', error);
+        }
+    };
+
+    /**
+     * Fetches the user's unique friend code.
+     *
+     * Sends a GET request to the backend endpoint `/get-friend-code`
+     * using HttpOnly cookies for authentication. Updates the local state
+     * with the retrieved friend code.
+     *
+     * @function fetchUserFriendCode
+     * @async
+     * @throws {Error} If the fetch operation fails.
+     */
+    const fetchUserFriendCode = async () => {
+        try {
+            const response = await fetch(`${BASE_URL}get-friend-code`, {
+                credentials: 'include',
+            });
+            const data = await response.json();
+            setUserFriendCode(data.friendCode);
+        } catch (error) {
+            console.error('Error fetching friend code:', error);
+        }
+    };
+
+    // #endregion
+
+    /**
+     * Initializes friend-related data and WebSocket connection on component mount or auth change.
+     *
+     * On mount or when `isAuthenticated` changes, this hook performs the following:
+     * - Fetches the user's selected sound preference.
+     * - If authenticated:
+     *   - Initializes the WebSocket connection (only once) for receiving real-time updates.
+     *   - Subscribes to the "account" channel to receive friend-related events.
+     *   - Updates friend list, pending requests, and friend code on `friendsUpdate`.
+     *   - Fetches initial friend data and the user's friend code.
+     * - Calls `checkAuth` to validate the authentication state.
+     * Cleans up by closing the WebSocket connection when the component unmounts or reloads.
+     *
+     * @function useEffect
      */
     useEffect(() => {
-        const checkAuth = async () => {
-            try {
-                const response = await fetch(`${BASE_URL}check-auth`, {
-                    method: "GET",
-                    credentials: "include",
-                });
+        fetchSoundPreference();
 
-                const data = await response.json();
-                setIsAuthenticated(data.isAuthenticated);
+        if (isAuthenticated) {
+            if (init.current) return;
+            init.current = true;
+
+            if (
+                !wsRef.current ||
+                wsRef.current.readyState === WebSocket.CLOSED
+            ) {
+                wsRef.current = new WebSocket(WBS_URL);
+
+                wsRef.current.onopen = () => {
+                    wsRef.current.send(JSON.stringify({ type: 'account' }));
+                };
+
+                wsRef.current.onmessage = (event) => {
+                    const message = JSON.parse(event.data);
+                    if (message.type === 'friendsUpdate') {
+                        setFriends(message.data.friends);
+                        setPendingRequests(message.data.pendingRequests);
+                        setUserFriendCode(message.data.friendCode);
+                    }
+                };
             }
-            catch(error) {
-                console.error("Error checking authentication:", error);
-                setIsAuthenticated(false);
-            }
-        };
+
+            fetchFriendRequests();
+            fetchFriends();
+            fetchUserFriendCode();
+        }
 
         checkAuth();
-    }, []);
 
+        window.addEventListener('beforeunload', () => {
+            if (wsRef.current.readyState === WebSocket.OPEN) {
+                wsRef.current.close();
+            }
+        });
+
+        return () => {
+            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                wsRef.current.close();
+            }
+        };
+    }, [isAuthenticated]);
+
+    /**
+     * Plays a cloned instance of the selected click sound effect.
+     *
+     * Clones the current audio element to allow overlapping playback,
+     * resets the clone's playback position, and plays the sound.
+     * Useful for rapid or repeated click feedback without delay.
+     *
+     * @function playClickSound
+     */
+    const playClickSound = () => {
+        const clickClone = soundRef.current.cloneNode();
+        clickClone.currentTime = 0;
+        clickClone.play();
+    };
+
+    /**
+     * Handles navigation to the settings or login page based on authentication state.
+     *
+     * Plays a click sound, then navigates to the account page if the user is authenticated,
+     * or to the login/access page if not.
+     *
+     * @function settings
+     */
+    const settings = () => {
+        playClickSound();
+        navigate(!isAuthenticated ? '/access' : '/account');
+    };
+
+    // #region Chat Functions
+
+    /**
+     * Toggles the visibility of the chat window.
+     *
+     * Plays a click sound and switches the chat open/close state.
+     *
+     * @function toggleChat
+     */
+    const toggleChat = () => {
+        playClickSound();
+        setIsChatOpen(!isChatOpen);
+    };
+
+    /**
+     * Sends a friend request to another user using their friend code.
+     *
+     * Validates that the input is not empty, then sends a POST request to the backend
+     * endpoint `/send-friend-request` with the friend code in the request body.
+     * On success, notifies the user and clears the input field.
+     * On failure, displays an error message.
+     *
+     * @function sendFriendRequest
+     * @async
+     * @throws {Error} If the fetch operation fails.
+     */
+    const sendFriendRequest = async () => {
+        if (!friendCode.trim()) return;
+
+        playClickSound();
+
+        try {
+            const response = await fetch(`${BASE_URL}send-friend-request`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ friendCode }),
+                credentials: 'include',
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                alert('Friend request sent!');
+                setFriendCode('');
+            } else {
+                alert(data.error);
+            }
+        } catch (error) {
+            console.error('Error sending request:', error);
+        }
+    };
+
+    /**
+     * Accepts a pending friend request from a specific user.
+     *
+     * Sends a POST request to the backend endpoint `/accept-friend-request`
+     * with the user ID in the request body. If successful, the friend is added;
+     * otherwise, an error message is displayed.
+     *
+     * @function acceptRequest
+     * @async
+     * @param {string} userId - The ID of the user whose friend request is being accepted.
+     * @throws {Error} If the fetch operation fails.
+     */
+    const acceptRequest = async (userId) => {
+        playClickSound();
+        try {
+            const response = await fetch(`${BASE_URL}accept-friend-request`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ userId }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                alert(data.error);
+            }
+        } catch (error) {
+            console.error('Error accepting friend request:', error);
+            alert('Failed to accept friend request. Please try again.');
+        }
+    };
+
+    /**
+     * Declines a pending friend request from a specific user.
+     *
+     * Sends a POST request to the backend endpoint `/decline-friend-request`
+     * with the user ID in the request body. If the request fails, an error message is shown.
+     *
+     * @function declineRequest
+     * @async
+     * @param {string} userId - The ID of the user whose friend request is being declined.
+     * @throws {Error} If the fetch operation fails.
+     */
+    const declineRequest = async (userId) => {
+        playClickSound();
+        try {
+            const response = await fetch(`${BASE_URL}decline-friend-request`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ userId }),
+            });
+
+            if (!response.ok) {
+                alert(data.error);
+            }
+        } catch (error) {
+            console.error('Error declining friend request:', error);
+            alert('Failed to decline friend request. Please try again.');
+        }
+    };
+
+    /**
+     * Removes a friend from the user's friend list.
+     *
+     * Prompts the user for confirmation before proceeding.
+     * Sends a POST request to the backend endpoint `/remove-friend`
+     * with the friend's ID in the request body. Displays an error
+     * message if the operation fails.
+     *
+     * @function removeFriend
+     * @async
+     * @param {string} friendId - The ID of the friend to be removed.
+     * @throws {Error} If the fetch operation fails.
+     */
+    const removeFriend = async (friendId) => {
+        playClickSound();
+        if (!window.confirm('Are you sure you want to remove this friend?'))
+            return;
+
+        try {
+            const response = await fetch(`${BASE_URL}remove-friend`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ friendId }),
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                alert(data.error);
+            }
+        } catch (error) {
+            console.error('Error removing friend:', error);
+            alert('Something went wrong.');
+        }
+    };
+
+    /**
+     * Fetches messages for a selected friend and marks them as read.
+     *
+     * Updates the selected chat state and stores the selected friend's ID.
+     * Sends a POST request to the backend endpoint `/mark-messages-read` to
+     * update the read status of messages. Then refreshes the friend list to
+     * reflect updated message indicators.
+     *
+     * @function fetchMessages
+     * @async
+     * @param {string} friendId - The ID of the friend whose messages are being fetched.
+     * @throws {Error} If the fetch operation fails.
+     */
+    const fetchMessages = async (friendId) => {
+        playClickSound();
+
+        selectedFriend.current = friendId;
+        setSelectedChat(friendId);
+
+        try {
+            await fetch(`${BASE_URL}mark-messages-read`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ friendId }),
+            });
+        } catch (error) {
+            console.error('Error marking messages as read:', error);
+        }
+
+        fetchFriends();
+    };
+
+    /**
+     * Sends a chat message to the selected friend.
+     *
+     * Validates that the message input is not empty. Sends a POST request to
+     * the backend endpoint `/send-message` with the selected friend's ID and
+     * the message content. Clears the input field on success, or displays an
+     * error message on failure.
+     *
+     * @function sendMessage
+     * @async
+     * @throws {Error} If the fetch operation fails.
+     */
+    const sendMessage = async () => {
+        if (!newMessage.trim()) return;
+
+        try {
+            const response = await fetch(`${BASE_URL}send-message`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    friendId: selectedFriend.current,
+                    message: newMessage,
+                }),
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                setNewMessage('');
+            } else {
+                alert(data.error);
+            }
+        } catch (error) {
+            console.error('Error sending message:', error);
+        }
+    };
+
+    // #endregion
+
+    /**
+     * Renders the main homepage UI with navigation, friend system, and chat sidebar.
+     *
+     * Includes the following interactive elements:
+     * - Play and Join Game buttons (only enabled when authenticated)
+     * - Settings button that routes to login or account settings
+     * - Sidebar toggle for chat and friend requests (only visible when authenticated)
+     * - Friend system with add, accept, decline, remove functionality
+     * - Real-time chat interface with message history and unread indicators
+     * - User's friend code display with clipboard copy option
+     *
+     * @returns {JSX.Element} Main homepage layout with friend and chat functionalities.
+     */
     return (
         <div className="overlay-cont">
-
             {/* Background overlay image */}
-            <img src="overlay.svg" alt="Overlay" className="overlay-img"/> 
+            <img src="overlay.svg" alt="Overlay" className="overlay-img" />
 
             {/* Main menu container */}
             <div className="main-menu">
-
                 {/* Game logo displayed prominently on the homepage */}
-                <img src="logo.svg" alt="Game Logo" className="home-logo"/>
+                <img src="logo.svg" alt="Game Logo" className="home-logo" />
 
                 {/* Main game title with highlighted sub-title */}
                 <h1 className="home-title">
                     Busfahrer
-                    <span className="highlight">
-                        Extreme
-                    </span>
+                    <span className="highlight">Extreme</span>
                 </h1>
 
                 {/* Button to create a new game; disabled if user is not authenticated */}
                 <div className="play-cont">
-                    <button 
-                        className={!isAuthenticated ? "btn-play-disabled" : "btn-play"} 
-                        onClick={() => navigate("/create")} 
+                    <button
+                        className={
+                            !isAuthenticated ? 'btn-play-disabled' : 'btn-play'
+                        }
+                        onClick={() => {
+                            playClickSound();
+                            navigate('/create');
+                        }}
                         disabled={!isAuthenticated}
                     >
-                        <img src={isAuthenticated ? "home.svg" : "button_disabled.svg"} alt="Create Game" className="play-icon"/>
+                        <img
+                            src={
+                                isAuthenticated
+                                    ? 'home.svg'
+                                    : 'button_disabled.svg'
+                            }
+                            alt="Create Game"
+                            className="play-icon"
+                        />
                         <p className="btn-text-play">Play Game</p>
                     </button>
                 </div>
 
                 {/* Button to join an existing game lobby; disabled if user is not authenticated */}
                 <div className="lobby-cont">
-                    <button 
-                        className={!isAuthenticated ? "btn-lobby-disabled" : "btn-lobby"} 
-                        onClick={() => navigate("/lobbys")} 
+                    <button
+                        className={
+                            !isAuthenticated
+                                ? 'btn-lobby-disabled'
+                                : 'btn-lobby'
+                        }
+                        onClick={() => {
+                            playClickSound();
+                            navigate('/lobbys');
+                        }}
                         disabled={!isAuthenticated}
                     >
-                        <img src={isAuthenticated ? "home.svg" : "button_disabled.svg"} alt="Create Game" className="lobby-icon"/>
+                        <img
+                            src={
+                                isAuthenticated
+                                    ? 'home.svg'
+                                    : 'button_disabled.svg'
+                            }
+                            alt="Create Game"
+                            className="lobby-icon"
+                        />
                         <p className="btn-text-lobby">Join Game</p>
                     </button>
                 </div>
+            </div>
 
-                {/* Settings button redirects to login/register page or account settings based on authentication status */}
-                <div className="settings-button">
-                    <button className="btn" onClick={() => navigate(!isAuthenticated ? "/access" : "/account")}>
-                        <img src="settings.svg" alt="Settings" className="settings-icon"/>
+            {/* Settings button redirects to login/register page or account settings based on authentication status */}
+            <div className="settings-button">
+                <button className="btn" onClick={settings}>
+                    <img
+                        src={!isAuthenticated ? 'login.svg' : 'settings.svg'}
+                        alt="Settings"
+                        className="settings-icon"
+                    />
+                </button>
+            </div>
+
+            {/* Sidebar Toggle Button (Only if Authenticated) */}
+            {isAuthenticated && (
+                <div
+                    className="chat-toggle-wrapper"
+                    style={{ left: isChatOpen ? '450px' : '0px' }}
+                >
+                    <button className="chat-toggle-button" onClick={toggleChat}>
+                        {isChatOpen ? '<' : '>'}
                     </button>
+
+                    {/* Notification Circles */}
+                    <div className="friend-request-circles">
+                        {pendingRequests.length > 0 && (
+                            <div className="circle-request">
+                                {pendingRequests.length}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Unread Message Circles */}
+                    <div className="unread-message-circles">
+                        {friends.reduce(
+                            (acc, f) => acc + (f.unreadCount || 0),
+                            0,
+                        ) > 0 && (
+                            <div className="circle-msg">
+                                {friends.reduce(
+                                    (acc, f) => acc + (f.unreadCount || 0),
+                                    0,
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
+            )}
+
+            {/* Sidebar Chat Window */}
+            <div className={`chat-sidebar ${isChatOpen ? 'open' : ''}`}>
+                {/* Pending Friend Requests Section */}
+                {pendingRequests.length > 0 && (
+                    <div className="pending-requests">
+                        {pendingRequests.map((request, index) => (
+                            <div key={index} className="friend-request">
+                                <span className="request-text">
+                                    {request.username} wants to be friends
+                                </span>
+
+                                <div className="request-actions">
+                                    <button
+                                        className="accept-btn"
+                                        onClick={() =>
+                                            acceptRequest(request.userId)
+                                        }
+                                    >
+                                        ✅
+                                    </button>
+                                    <button
+                                        className="decline-btn"
+                                        onClick={() =>
+                                            declineRequest(request.userId)
+                                        }
+                                    >
+                                        ❌
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* List of friends */}
+                <div className="friend-list">
+                    {friends.map((friend) => (
+                        <div
+                            className="friend"
+                            key={friend.userId}
+                            onClick={() => fetchMessages(friend.userId)}
+                        >
+                            <div className="friend-info">
+                                <img
+                                    src={`${BASE_URL}avatars/${friend.avatar}`}
+                                    alt="Avatar"
+                                    className="friend-avatar"
+                                />
+                                <p className="friend-text">{friend.username}</p>
+                                {friend.unreadCount > 0 && (
+                                    <span className="unread-indicator">
+                                        {friend.unreadCount}
+                                    </span>
+                                )}
+                            </div>
+
+                            <button
+                                className={'remove-friend-btn'}
+                                onClick={() => removeFriend(friend.userId)}
+                            />
+                        </div>
+                    ))}
+                </div>
+
+                {/* Input for Adding a Friend */}
+                <div className="add-friend-container">
+                    <input
+                        type="text"
+                        className="add-friend-input"
+                        placeholder="Enter friend code..."
+                        value={friendCode}
+                        onChange={(e) => setFriendCode(e.target.value)}
+                    />
+                    <button onClick={sendFriendRequest}>Add Friend</button>
+                </div>
+
+                {/* Chat Messages */}
+                <div className="message-area">
+                    {selectedFriend.current ? (
+                        (
+                            friends.find(
+                                (f) => f.userId === selectedFriend.current,
+                            )?.messages || []
+                        ).length > 0 ? (
+                            friends
+                                .find(
+                                    (f) => f.userId === selectedFriend.current,
+                                )
+                                .messages.map((msg, index) => (
+                                    <p
+                                        key={index}
+                                        className={
+                                            msg.name === 'You'
+                                                ? 'sent'
+                                                : 'received'
+                                        }
+                                    >
+                                        <strong>{msg.name}:</strong>{' '}
+                                        {msg.message}
+                                    </p>
+                                ))
+                        ) : (
+                            <p>No messages yet.</p>
+                        )
+                    ) : (
+                        <p>Select a friend to view messages.</p>
+                    )}
+                </div>
+
+                {/* Friend Code Display */}
+                <div className="friend-code-display">
+                    <p>
+                        Your Friend Code: <span>{userFriendCode}</span>
+                    </p>
+                    <img
+                        src="/clipboard.png"
+                        alt="Copy to clipboard"
+                        className="clipboard-icon"
+                        onClick={() => {
+                            playClickSound();
+                            navigator.clipboard.writeText(userFriendCode);
+                        }}
+                    />
+                </div>
+
+                {/* Input Box at the Bottom */}
+                <input
+                    type="text"
+                    className="message-input"
+                    placeholder="Type a message..."
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                    disabled={!selectedChat}
+                />
             </div>
         </div>
     );

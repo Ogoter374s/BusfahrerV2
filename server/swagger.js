@@ -11,11 +11,15 @@ const options = {
     },
     servers: [
       {
-        url: `${process.env.BASE_URL}`,
-        description: 'Backend server',
+        url: "https://localhost:3001",
+        description: "Local backend server",
       },
+      {
+        url: "http://www.busfahrer.life:3001",
+        description: "Production server"
+      }
     ],
-  },
+  }, 
   apis: ['./server.js'],
 };
 

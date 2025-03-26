@@ -1,5 +1,5 @@
 import BASE_URL, { WBS_URL } from './config';
-import GetCardThemeURL from './CardThemes';
+import { GetCardThemeURL } from './CardThemes';
 import ChatSidebar from './ChatSidebar';
 import AvatarInfo from "./AvatarInfo";
 
@@ -443,7 +443,7 @@ function Phase1() {
             />
 
             {/* Player avatars container */}
-            <PlayerAvatars players={players} currentPlayerId={currentPlayerId} />
+            <AvatarInfo players={players} currentPlayerId={currentPlayerId} />
 
             {/* Main Phase 1 container */}
             <div className="phase1-menu">

@@ -51,4 +51,4 @@ Thumbs.db
 *.pem
 
 # User Avatars
-.public/avatars/
+public/

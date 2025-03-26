@@ -1,5 +1,7 @@
 import BASE_URL, { WBS_URL } from './config';
-import { GetCardThemeURL } from './CardThemes';
+import GetCardThemeURL from './CardThemes';
+import ChatSidebar from './ChatSidebar';
+import AvatarInfo from "./AvatarInfo";
 
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -32,11 +34,31 @@ function Phase1() {
     const init = useRef(false);
 
     /**
-     * Fetches the player's cards from the backend API.
+     * Fetches the user's selected click sound preference.
      *
-     * Sends a GET request using HttpOnly cookie authentication.
-     * Updates the player's card state with the retrieved data.
+     * Sends a GET request to the backend to retrieve the saved sound preference.
+     * Updates the selected sound state and sets the audio source accordingly.
+     * Uses HttpOnly cookies for authentication.
+     *
+     * @function fetchSoundPreference
+     * @async
+     * @throws {Error} If the fetch operation fails.
      */
+    const fetchSoundPreference = async () => {
+        try {
+            const response = await fetch(`${BASE_URL}get-click-sound`, {
+                credentials: 'include',
+            });
+
+            const data = await response.json();
+
+            setSelectedSound(data.sound);
+            soundRef.current.src = `/sounds/${data.sound}`;
+        } catch (error) {
+            console.error('Error fetching sound preference:', error);
+        }
+    };
+
     const fetchPlayerCards = async () => {
         try {
             const response = await fetch(
@@ -59,12 +81,6 @@ function Phase1() {
         }
     };
 
-    /**
-     * Fetches the game’s pyramid cards from the backend API.
-     *
-     * Sends a GET request using HttpOnly cookie authentication.
-     * Organizes the game cards into a structured pyramid format and updates state.
-     */
     const fetchGameCards = async () => {
         try {
             const response = await fetch(
@@ -93,11 +109,6 @@ function Phase1() {
         }
     };
 
-    /**
-     * Determines if the game should transition to the next phase.
-     *
-     * Retrieves the current round number and checks if it has reached 6.
-     */
     const getIsNextPhase = async () => {
         try {
             const response = await fetch(
@@ -114,11 +125,6 @@ function Phase1() {
         }
     };
 
-    /**
-     * Fetches the current active player in the game.
-     *
-     * Uses HttpOnly authentication and updates the state with the current player details.
-     */
     const getCurrentPlayer = async () => {
         try {
             const response = await fetch(
@@ -140,11 +146,6 @@ function Phase1() {
         }
     };
 
-    /**
-     * Fetches the total drink count in the game.
-     *
-     * Retrieves the drink count from the backend and updates state.
-     */
     const getDrinkCount = async () => {
         try {
             const response = await fetch(
@@ -163,11 +164,6 @@ function Phase1() {
         }
     };
 
-    /**
-     * Checks if a row in the pyramid has been flipped.
-     *
-     * Retrieves the flip status and updates the state.
-     */
     const getIsRowFlipped = async () => {
         try {
             const response = await fetch(
@@ -185,12 +181,6 @@ function Phase1() {
         }
     };
 
-    /**
-     * Fetches the player's unique identifier from the backend.
-     *
-     * Sends a GET request using HttpOnly cookie authentication.
-     * Stores the fetched player ID in a React ref for comparison during events.
-     */
     const fetchPlayerId = async () => {
         try {
             const response = await fetch(`${BASE_URL}get-player-id`, {
@@ -207,11 +197,6 @@ function Phase1() {
         }
     };
 
-    /**
-     * Checks if the current player is the game master.
-     *
-     * Uses HttpOnly cookie authentication and updates the game master state.
-     */
     const checkGameMaster = async () => {
         try {
             const response = await fetch(
@@ -230,33 +215,6 @@ function Phase1() {
         }
     };
 
-    /**
-     * Fetches the user's selected click sound preference.
-     *
-     * Sends a GET request to the backend to retrieve the saved sound preference.
-     * Updates the selected sound state and sets the audio source accordingly.
-     * Uses HttpOnly cookies for authentication.
-     */
-    const fetchSoundPreference = async () => {
-        try {
-            const response = await fetch(`${BASE_URL}get-click-sound`, {
-                credentials: 'include',
-            });
-
-            const data = await response.json();
-
-            soundRef.current.src = '';
-
-            setSelectedSound(data.sound);
-            soundRef.current.src = `/sounds/${data.sound}`;
-        } catch (error) {
-            console.error('Error fetching sound preference:', error);
-        }
-    };
-
-    /**
-     * Fetches the user's selected card back theme.
-     */
     const fetchCardTheme = async () => {
         try {
             const response = await fetch(`${BASE_URL}get-card-theme`, {
@@ -292,13 +250,6 @@ function Phase1() {
         }
     };
 
-    /**
-     * Sets up a WebSocket connection to receive real-time game updates.
-     *
-     * Subscribes to game events and listens for updates, triggering appropriate state updates.
-     * Fetches initial game state, including player information, game cards, and round data.
-     * Cleans up by closing the WebSocket connection when the component unmounts.
-     */
     useEffect(() => {
         if (init.current) return;
         init.current = true;
@@ -377,22 +328,20 @@ function Phase1() {
     }, [gameId]);
 
     /**
-     * Plays a click sound effect.
+     * Plays a cloned instance of the selected click sound effect.
      *
-     * Resets the current playback time to the beginning and plays the sound.
-     * Ensures the sound plays from the start each time the function is called.
+     * Clones the current audio element to allow overlapping playback,
+     * resets the clone's playback position, and plays the sound.
+     * Useful for rapid or repeated click feedback without delay.
+     *
+     * @function playClickSound
      */
-    const playClickSound = () => {
-        soundRef.current.currentTime = 0;
-        soundRef.current.play();
+     const playClickSound = () => {
+        const clickClone = soundRef.current.cloneNode();
+        clickClone.currentTime = 0;
+        clickClone.play();
     };
 
-    /**
-     * Allows a player to leave the game.
-     *
-     * Sends a POST request to remove the player from the game.
-     * Navigates to the correct screen based on whether the player was the last one in the game.
-     */
     const leaveGame = async () => {
         playClickSound();
         try {
@@ -420,14 +369,6 @@ function Phase1() {
         }
     };
 
-    /**
-     * Handles the click event on a pyramid row to flip it.
-     *
-     * Sends a POST request to the backend API, using HttpOnly cookie authentication,
-     * to update the flipped state of the selected row.
-     *
-     * @param {number} rowIdx - The index of the row to be flipped.
-     */
     const handleRowClick = async (rowIdx) => {
         if (!gameMasterRef.current) return;
 
@@ -449,14 +390,6 @@ function Phase1() {
         }
     };
 
-    /**
-     * Handles the action of laying down a card.
-     *
-     * Sends a POST request to the backend API, using HttpOnly cookie authentication,
-     * to update the game state when a player plays a card.
-     *
-     * @param {number} cardIdx - The index of the card being played.
-     */
     const handleLayCard = async (cardIdx) => {
         if (!isCurrentPlayer.current) return;
 
@@ -478,13 +411,6 @@ function Phase1() {
         }
     };
 
-    /**
-     * Handles advancing to the next player or starting phase 2.
-     *
-     * If the game is not in the next phase, it advances to the next player.
-     * If the game has reached the next phase, it starts phase 2.
-     * Uses HttpOnly cookie authentication for security.
-     */
     const handleNextPlayer = async () => {
         playClickSound();
         try {
@@ -517,20 +443,7 @@ function Phase1() {
             />
 
             {/* Player avatars container */}
-            <div className="player-avatars">
-                {players.map((player) => (
-                    <div
-                        key={player.id}
-                        className={`avatar-container ${player.id === currentPlayerId ? 'active-player' : ''}`}
-                    >
-                        <img
-                            src={`${BASE_URL}avatars/${player.avatar}`}
-                            alt={player.name}
-                            className="avatar-image"
-                        />
-                    </div>
-                ))}
-            </div>
+            <PlayerAvatars players={players} currentPlayerId={currentPlayerId} />
 
             {/* Main Phase 1 container */}
             <div className="phase1-menu">
@@ -566,6 +479,7 @@ function Phase1() {
                                                         id: selectedTheme,
                                                     }),
                                             }}
+                                            draggable={false}
                                         />
                                     </div>
                                 );
@@ -618,49 +532,52 @@ function Phase1() {
                                     src={`/cards/${card.number}${card.type[0].toUpperCase()}.svg`}
                                     alt="Card Front"
                                 />
-                                <img className="back" />
+                                <img className="back" draggable={false} />
                             </div>
                         ))}
                 </div>
-
-                {/* Back button to leave the game */}
-                <div className="back-cont">
-                    <button className="btn-back" onClick={leaveGame}>
-                        <img
-                            src="/back.svg"
-                            alt="Back Button"
-                            className="back-icon"
-                        />
-                    </button>
-                </div>
-
-                {/* Next Player button (enabled only if conditions are met) */}
-                <div className="next-cont">
-                    <button
-                        className={
-                            isCurrentPlayer.current && isRowFlipped
-                                ? 'btn-next'
-                                : 'btn-next-disabled'
-                        }
-                        disabled={
-                            !isCurrentPlayer.current ? true : !isRowFlipped
-                        }
-                        onClick={handleNextPlayer}
-                    >
-                        <img
-                            src={
-                                isNextPhase && isCurrentPlayer.current
-                                    ? '/next_phase.svg'
-                                    : isCurrentPlayer.current && isRowFlipped
-                                      ? '/next.svg'
-                                      : '/next_disabled.svg'
-                            }
-                            alt="Next Button"
-                            className="next-icon"
-                        />
-                    </button>
-                </div>
             </div>
+
+            {/* Back button to leave the game */}
+            <div className="back-cont">
+                <button className="btn-back" onClick={leaveGame}>
+                    <img
+                        src="/back.svg"
+                        alt="Back Button"
+                        className="back-icon"
+                    />
+                </button>
+            </div>
+
+            {/* Next Player button (enabled only if conditions are met) */}
+            <div className="next-cont">
+                <button
+                    className={
+                        isCurrentPlayer.current && isRowFlipped
+                            ? 'btn-next'
+                            : 'btn-next-disabled'
+                    }
+                    disabled={
+                        !isCurrentPlayer.current ? true : !isRowFlipped
+                    }
+                    onClick={handleNextPlayer}
+                >
+                    <img
+                        src={
+                            isNextPhase && isCurrentPlayer.current
+                                ? '/next_phase.svg'
+                                : isCurrentPlayer.current && isRowFlipped
+                                  ? '/next.svg'
+                                  : '/next_disabled.svg'
+                        }
+                        alt="Next Button"
+                        className="next-icon"
+                    />
+                </button>
+            </div>
+
+            {/* Sidebar Toggle */}
+            <ChatSidebar />
         </div>
     );
 }

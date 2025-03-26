@@ -1,4 +1,5 @@
 import BASE_URL, { WBS_URL } from './config';
+import ChatSidebar from './ChatSidebar';
 
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -7,23 +8,45 @@ function Create() {
     const [selectedSound, setSelectedSound] = useState('ui-click.mp3');
     const soundRef = useRef(new Audio(selectedSound));
 
-    const [isChatOpen, setIsChatOpen] = useState(false);
-    const [pendingRequests, setPendingRequests] = useState([]);
-    const [friends, setFriends] = useState([]);
-    const [friendCode, setFriendCode] = useState('');
-    const [userFriendCode, setUserFriendCode] = useState('');
-    const [newMessage, setNewMessage] = useState('');
-    const [selectedChat, setSelectedChat] = useState('');
-    const selectedFriend = useRef('');
-
     const [gameName, setGameName] = useState('');
     const [playerName, setPlayerName] = useState('');
     const [isPrivate, setIsPrivate] = useState(false);
     const [gender, setGender] = useState('Male');
 
+    const [selectedShuffle, setSelectedShuffle] = useState('Fisher-Yates');
+    const [selectedCardMatch, setSelectedCardMatch] = useState('Number-only');
+    const [cardChaos, setCardChaos] = useState(false);
+    const [selectedTurnMode, setSelectedTurnMode] = useState('Default');
+    const [selectedBusfahrerMode, setSelectedBusfahrerMode] = useState('Default');
+    const [playerLimit, setPlayerLimit] = useState(10);
+
     const navigate = useNavigate();
-    const wsRef = useRef(null);
     const init = useRef(false);
+
+    const shuffleStyles = [
+        { name: 'Normal', type: 'Fisher-Yates' },
+        { name: 'Chaotic', type: 'Chaotic' },
+    ];
+
+    const cardMatchStyles = [
+        { name: 'Number-only', type: 'Number-only' },
+        { name: 'Type-only', type: 'Type-only'},
+        { name: 'Exact', type: 'Exact' },
+    ];
+
+    const turnModes = [
+        { name: 'Default', type: 'Default' },
+        { name: 'Timed', type: 'Timed' },
+        { name: 'Reverse', type: 'Reverse' },
+        { name: 'Random', type: 'Random' },
+    ];
+
+    const busfahrerSelectionMode = [
+        { name: 'Default', type: 'Default' },
+        { name: 'Reversed', type: 'Reverse' },
+        { name: 'Player Vote', type: 'Voted' },
+        { name: 'Random', type: 'Random' },
+    ];
 
     /**
      * Fetches the user's selected click sound preference.
@@ -51,117 +74,20 @@ function Create() {
         }
     };
 
-    // #region Friend Functions
-
     /**
-     * Fetches pending friend requests for the authenticated user.
+     * Initializes the component by fetching the user's sound preference.
      *
-     * Sends a GET request to the backend endpoint `/get-friend-requests`
-     * using HttpOnly cookies for authentication. Updates the local state
-     * with the list of pending friend requests.
+     * Ensures the fetch operation only runs once on mount using a ref flag.
+     * Retrieves the saved click sound preference from the backend and sets
+     * the local audio configuration accordingly.
      *
-     * @function fetchFriendRequests
-     * @async
-     * @throws {Error} If the fetch operation fails.
+     * @function useEffect
      */
-    const fetchFriendRequests = async () => {
-        try {
-            const response = await fetch(`${BASE_URL}get-friend-requests`, {
-                credentials: 'include',
-            });
-            const data = await response.json();
-            setPendingRequests(data.pending || []);
-        } catch (error) {
-            console.error('Error fetching friend requests:', error);
-        }
-    };
-
-    /**
-     * Fetches the list of friends for the authenticated user.
-     *
-     * Sends a GET request to the backend endpoint `/get-friends`
-     * using HttpOnly cookies for authentication. Updates the local state
-     * with the list of friends retrieved from the server.
-     *
-     * @function fetchFriends
-     * @async
-     * @throws {Error} If the fetch operation fails.
-     */
-    const fetchFriends = async () => {
-        try {
-            const response = await fetch(`${BASE_URL}get-friends`, {
-                credentials: 'include',
-            });
-            const data = await response.json();
-            setFriends(data.friends || []);
-        } catch (error) {
-            console.error('Error fetching friend requests:', error);
-        }
-    };
-
-    /**
-     * Fetches the user's unique friend code.
-     *
-     * Sends a GET request to the backend endpoint `/get-friend-code`
-     * using HttpOnly cookies for authentication. Updates the local state
-     * with the retrieved friend code.
-     *
-     * @function fetchUserFriendCode
-     * @async
-     * @throws {Error} If the fetch operation fails.
-     */
-    const fetchUserFriendCode = async () => {
-        try {
-            const response = await fetch(`${BASE_URL}get-friend-code`, {
-                credentials: 'include',
-            });
-            const data = await response.json();
-            setUserFriendCode(data.friendCode);
-        } catch (error) {
-            console.error('Error fetching friend code:', error);
-        }
-    };
-
-    // #endregion
-
     useEffect(() => {
         if (init.current) return;
         init.current = true;
 
-        if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
-            wsRef.current = new WebSocket(WBS_URL);
-
-            wsRef.current.onopen = () => {
-                wsRef.current.send(JSON.stringify({ type: 'account' }));
-            };
-
-            wsRef.current.onmessage = async (event) => {
-                const message = JSON.parse(event.data);
-                if (message.type === 'friendsUpdate') {
-                    setFriends(message.data.friends);
-                    setPendingRequests(message.data.pendingRequests);
-                    setUserFriendCode(message.data.friendCode);
-                }
-            };
-        }
-
-        fetchFriendRequests();
-        fetchFriends();
-        fetchUserFriendCode();
-
         fetchSoundPreference();
-
-        window.addEventListener('beforeunload', () => {
-            if (wsRef.current.readyState === WebSocket.OPEN) {
-                wsRef.current.close();
-            }
-        });
-
-        return () => {
-            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-                wsRef.current.close();
-            }
-        };
     }, []);
 
     /**
@@ -179,235 +105,25 @@ function Create() {
         clickClone.play();
     };
 
-    // #region Chat Functions
-
     /**
-     * Toggles the visibility of the chat window.
+     * Creates a new game session with custom settings and player information.
      *
-     * Plays a click sound and switches the chat open/close state.
+     * Validates user input for game and player names, ensuring both are non-empty.
+     * Trims and limits the length of both names to prevent input abuse.
+     * Constructs a request body containing the game configuration, including
+     * privacy mode, gender, shuffling method, card matching rules, chaos mode,
+     * turn system, busfahrer mode, and the player limit.
      *
-     * @function toggleChat
-     */
-    const toggleChat = () => {
-        playClickSound();
-        setIsChatOpen(!isChatOpen);
-    };
-
-    /**
-     * Sends a friend request to another user using their friend code.
+     * Sends a POST request to the backend `create-game` endpoint using
+     * HttpOnly cookies for session authentication. If the game is successfully
+     * created, navigates the user to the new game's lobby. Otherwise, it shows an error alert.
      *
-     * Validates that the input is not empty, then sends a POST request to the backend
-     * endpoint `/send-friend-request` with the friend code in the request body.
-     * On success, notifies the user and clears the input field.
-     * On failure, displays an error message.
+     * Plays a UI click sound before sending the request for interactive feedback.
      *
-     * @function sendFriendRequest
      * @async
-     * @throws {Error} If the fetch operation fails.
-     */
-    const sendFriendRequest = async () => {
-        if (!friendCode.trim()) return;
-
-        playClickSound();
-
-        try {
-            const response = await fetch(`${BASE_URL}send-friend-request`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ friendCode }),
-                credentials: 'include',
-            });
-
-            const data = await response.json();
-            if (response.ok) {
-                alert('Friend request sent!');
-                setFriendCode('');
-            } else {
-                alert(data.error);
-            }
-        } catch (error) {
-            console.error('Error sending request:', error);
-        }
-    };
-
-    /**
-     * Accepts a pending friend request from a specific user.
-     *
-     * Sends a POST request to the backend endpoint `/accept-friend-request`
-     * with the user ID in the request body. If successful, the friend is added;
-     * otherwise, an error message is displayed.
-     *
-     * @function acceptRequest
-     * @async
-     * @param {string} userId - The ID of the user whose friend request is being accepted.
-     * @throws {Error} If the fetch operation fails.
-     */
-    const acceptRequest = async (userId) => {
-        playClickSound();
-        try {
-            const response = await fetch(`${BASE_URL}accept-friend-request`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ userId }),
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                alert(data.error);
-            }
-        } catch (error) {
-            console.error('Error accepting friend request:', error);
-            alert('Failed to accept friend request. Please try again.');
-        }
-    };
-
-    /**
-     * Declines a pending friend request from a specific user.
-     *
-     * Sends a POST request to the backend endpoint `/decline-friend-request`
-     * with the user ID in the request body. If the request fails, an error message is shown.
-     *
-     * @function declineRequest
-     * @async
-     * @param {string} userId - The ID of the user whose friend request is being declined.
-     * @throws {Error} If the fetch operation fails.
-     */
-    const declineRequest = async (userId) => {
-        playClickSound();
-        try {
-            const response = await fetch(`${BASE_URL}decline-friend-request`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ userId }),
-            });
-
-            if (!response.ok) {
-                alert(data.error);
-            }
-        } catch (error) {
-            console.error('Error declining friend request:', error);
-            alert('Failed to decline friend request. Please try again.');
-        }
-    };
-
-    /**
-     * Removes a friend from the user's friend list.
-     *
-     * Prompts the user for confirmation before proceeding.
-     * Sends a POST request to the backend endpoint `/remove-friend`
-     * with the friend's ID in the request body. Displays an error
-     * message if the operation fails.
-     *
-     * @function removeFriend
-     * @async
-     * @param {string} friendId - The ID of the friend to be removed.
-     * @throws {Error} If the fetch operation fails.
-     */
-    const removeFriend = async (friendId) => {
-        playClickSound();
-        if (!window.confirm('Are you sure you want to remove this friend?'))
-            return;
-
-        try {
-            const response = await fetch(`${BASE_URL}remove-friend`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ friendId }),
-            });
-
-            const data = await response.json();
-            if (!response.ok) {
-                alert(data.error);
-            }
-        } catch (error) {
-            console.error('Error removing friend:', error);
-            alert('Something went wrong.');
-        }
-    };
-
-    /**
-     * Fetches messages for a selected friend and marks them as read.
-     *
-     * Updates the selected chat state and stores the selected friend's ID.
-     * Sends a POST request to the backend endpoint `/mark-messages-read` to
-     * update the read status of messages. Then refreshes the friend list to
-     * reflect updated message indicators.
-     *
-     * @function fetchMessages
-     * @async
-     * @param {string} friendId - The ID of the friend whose messages are being fetched.
-     * @throws {Error} If the fetch operation fails.
-     */
-    const fetchMessages = async (friendId) => {
-        playClickSound();
-
-        selectedFriend.current = friendId;
-        setSelectedChat(friendId);
-
-        try {
-            await fetch(`${BASE_URL}mark-messages-read`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ friendId }),
-            });
-        } catch (error) {
-            console.error('Error marking messages as read:', error);
-        }
-
-        fetchFriends();
-    };
-
-    /**
-     * Sends a chat message to the selected friend.
-     *
-     * Validates that the message input is not empty. Sends a POST request to
-     * the backend endpoint `/send-message` with the selected friend's ID and
-     * the message content. Clears the input field on success, or displays an
-     * error message on failure.
-     *
-     * @function sendMessage
-     * @async
-     * @throws {Error} If the fetch operation fails.
-     */
-    const sendMessage = async () => {
-        if (!newMessage.trim()) return;
-
-        try {
-            const response = await fetch(`${BASE_URL}send-message`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({
-                    friendId: selectedFriend.current,
-                    message: newMessage,
-                }),
-            });
-
-            const data = await response.json();
-            if (response.ok) {
-                setNewMessage('');
-            } else {
-                alert(data.error);
-            }
-        } catch (error) {
-            console.error('Error sending message:', error);
-        }
-    };
-
-    // #endregion
-
-    /**
-     * Creates a new game by sending the game details to the backend API.
-     *
-     * Sends a POST request with the game details, using HttpOnly cookie authentication.
-     * Redirects the user to the new game page upon successful creation.
-     * Alerts the user if authentication fails or if there's an error creating the game.
-     * Limits game name length to a maximum of 16 characters.
+     * @function createGame
+     * @returns {Promise<void>} A promise that resolves once the game is created or an error is handled.
+     * @throws {Error} If the request fails due to network issues or an unexpected server error.
      */
     const createGame = async () => {
         playClickSound();
@@ -425,18 +141,28 @@ function Create() {
         const trmPlayerName = playerName.trim().slice(0, 26);
 
         try {
+            const body = {
+                gameName: trmGameName,
+                playerName: trmPlayerName,
+                isPrivate,
+                gender,
+                settings: {
+                    shuffling: selectedShuffle,
+                    matching: selectedCardMatch,
+                    isChaos: cardChaos,
+                    turning: selectedTurnMode,
+                    busMode: selectedBusfahrerMode,
+                    playerLimit,
+                }
+            }
+
             const response = await fetch(`${BASE_URL}create-game`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 credentials: 'include',
-                body: JSON.stringify({
-                    gameName: trmGameName,
-                    playerName: trmPlayerName,
-                    isPrivate,
-                    gender,
-                }),
+                body: JSON.stringify(body),
             });
 
             const data = await response.json();
@@ -451,6 +177,80 @@ function Create() {
         }
     };
 
+    /**
+     * Handles the selection change for the shuffle mode setting.
+     *
+     * Retrieves the selected shuffle mode value from the event target
+     * and updates the local state with the new shuffle configuration.
+     * Also logs the selected value for debugging purposes.
+     *
+     * @function handleShuffleChange
+     * @returns {void}
+     */
+    const handleShuffleChange = () => {
+        const newShuffle = event.target.value;
+        console.log(newShuffle);
+        setSelectedShuffle(newShuffle);
+    };
+
+    /**
+     * Handles the selection change for the card matching rule.
+     *
+     * Updates the local state with the newly selected card matching mode
+     * based on the user's dropdown or radio input selection.
+     *
+     * @function handleCardMatchChange
+     * @returns {void}
+     */
+    const handleCardMatchChange = () => {
+        const newMatch = event.target.value;
+        setSelectedCardMatch(newMatch);
+    };
+
+    /**
+     * Handles the selection change for the turn-taking mode.
+     *
+     * Updates the local state with the selected mode for how player turns are processed
+     * (e.g., sequentially, randomly, or in custom order).
+     *
+     * @function handleTurnMode
+     * @returns {void}
+     */
+    const handleTurnMode = () => {
+        const newTurn = event.target.value;
+        setSelectedTurnMode(newTurn);
+    };
+
+    /**
+     * Handles the selection change for the Busfahrer game mode.
+     *
+     * Updates the local state with the selected Busfahrer variant (e.g., classic, extreme).
+     * Used for configuring the final game phase behavior.
+     *
+     * @function handleBusfahrerMode
+     * @returns {void}
+     */
+    const handleBusfahrerMode = () => {
+        const newMode = event.target.value;
+        setSelectedBusfahrerMode(newMode);
+    };
+
+    /**
+     * Renders the game creation UI screen.
+     *
+     * This component displays input fields for configuring a new game session,
+     * including game name, player name, gender, privacy toggle, and multiple
+     * gameplay settings such as shuffle style, card matching rules, chaos mode,
+     * turn system, busfahrer selection mode, and player limit.
+     *
+     * Provides a structured layout with branding, responsive form sections,
+     * and dynamically populated select inputs based on configuration arrays.
+     * Includes buttons for creating the game and returning to the homepage.
+     * Also features a persistent sidebar chat for communication.
+     *
+     * @function JSX Return Block
+     * @returns {JSX.Element} A complete React component that renders the game setup interface.
+     */
     return (
         <div className="overlay-cont">
             {/* Background decorative overlay image */}
@@ -511,10 +311,112 @@ function Create() {
                     </div>
                 </div>
 
+                {/* Container for game configuration options */}
                 <div className="create-options-box">
-                    <h2 className="create-options-title">Game Options</h2>
+                    <h2 className="create-options-title">
+                        Game
+                        <span className="highlight">Options</span>
+                    </h2>
     
-                    {/* Game options selection */}
+                    {/* Card Shuffle selection */}
+                    <div className="options-selection">
+                        <label htmlFor="optionsSelect">
+                            Shuffle Style
+                        </label>
+                        <select
+                            id="optionsSelect"
+                            value={selectedShuffle}
+                            onChange={handleShuffleChange}
+                        >
+                            {shuffleStyles.map((style) => (
+                                <option key={style.type} value={style.type}>
+                                    {style.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Card Match selection */}
+                    <div className="options-selection">
+                        <label htmlFor="optionsSelect">
+                            Card Match Rules
+                        </label>
+                        <select
+                            id="optionsSelect"
+                            value={selectedCardMatch}
+                            onChange={handleCardMatchChange}
+                        >
+                            {cardMatchStyles.map((style) => (
+                                <option key={style.type} value={style.type}>
+                                    {style.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Checkbox for marking game Chaos Mode */}
+                    <div className="options-selection">
+                        <label className="rustic-checkbox">
+                            <input
+                                type="checkbox"
+                                checked={cardChaos}
+                                onChange={() => setCardChaos(!cardChaos)}
+                            />
+                            Card Chaos Mode
+                        </label>
+                    </div>
+
+                    {/* Turn Mode selection */}
+                    <div className="options-selection">
+                        <label htmlFor="optionsSelect">
+                            Turn Mode
+                        </label>
+                        <select
+                            id="optionsSelect"
+                            value={selectedTurnMode}
+                            onChange={handleTurnMode}
+                        >
+                            {turnModes.map((style) => (
+                                <option key={style.type} value={style.type}>
+                                    {style.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    
+                    {/* Busfahrer Mode selection */}
+                    <div className="options-selection">
+                        <label htmlFor="optionsSelect">
+                            Busfahrer Selection Mode
+                        </label>
+                        <select
+                            id="optionsSelect"
+                            value={selectedBusfahrerMode}
+                            onChange={handleBusfahrerMode}
+                        >
+                            {busfahrerSelectionMode.map((style) => (
+                                <option key={style.type} value={style.type}>
+                                    {style.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Player limit per game */}
+                    <div className="options-selection">
+                        <label htmlFor="optionsSelect">
+                            Player Limit
+                        </label>
+                        <input
+                            type="number"
+                            className="limit-input"
+                            placeholder="Player Limit"
+                            min={2}
+                            max={10}
+                            value={playerLimit}
+                            onChange={(e) => setPlayerLimit(parseInt(e.target.value))}
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -547,174 +449,8 @@ function Create() {
                 </button>
             </div>
 
-            {/* Sidebar Toggle Button (Only if Authenticated) */}
-            <div
-                className="chat-toggle-wrapper"
-                style={{ left: isChatOpen ? '450px' : '0px' }}
-            >
-                <button className="chat-toggle-button" onClick={toggleChat}>
-                    {isChatOpen ? '<' : '>'}
-                </button>
-
-                {/* Notification Circles */}
-                <div className="friend-request-circles">
-                    {pendingRequests.length > 0 && (
-                        <div className="circle-request">
-                            {pendingRequests.length}
-                        </div>
-                    )}
-                </div>
-
-                {/* Unread Message Circles */}
-                <div className="unread-message-circles">
-                    {friends.reduce((acc, f) => acc + (f.unreadCount || 0), 0) >
-                        0 && (
-                        <div className="circle-msg">
-                            {friends.reduce(
-                                (acc, f) => acc + (f.unreadCount || 0),
-                                0,
-                            )}
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Sidebar Chat Window */}
-            <div className={`chat-sidebar ${isChatOpen ? 'open' : ''}`}>
-                {/* Pending Friend Requests Section */}
-                {pendingRequests.length > 0 && (
-                    <div className="pending-requests">
-                        {pendingRequests.map((request, index) => (
-                            <div key={index} className="friend-request">
-                                <span className="request-text">
-                                    {request.username} wants to be friends
-                                </span>
-
-                                <div className="request-actions">
-                                    <button
-                                        className="accept-btn"
-                                        onClick={() =>
-                                            acceptRequest(request.userId)
-                                        }
-                                    >
-                                        ✅
-                                    </button>
-                                    <button
-                                        className="decline-btn"
-                                        onClick={() =>
-                                            declineRequest(request.userId)
-                                        }
-                                    >
-                                        ❌
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-                {/* List of friends */}
-                <div className="friend-list">
-                    {friends.map((friend) => (
-                        <div
-                            className="friend"
-                            key={friend.userId}
-                            onClick={() => fetchMessages(friend.userId)}
-                        >
-                            <div className="friend-info">
-                                <img
-                                    src={`${BASE_URL}avatars/${friend.avatar}`}
-                                    alt="Avatar"
-                                    className="friend-avatar"
-                                />
-                                <p className="friend-text">{friend.username}</p>
-                                {friend.unreadCount > 0 && (
-                                    <span className="unread-indicator">
-                                        {friend.unreadCount}
-                                    </span>
-                                )}
-                            </div>
-
-                            <button
-                                className={'remove-friend-btn'}
-                                onClick={() => removeFriend(friend.userId)}
-                            />
-                        </div>
-                    ))}
-                </div>
-
-                {/* Input for Adding a Friend */}
-                <div className="add-friend-container">
-                    <input
-                        type="text"
-                        className="add-friend-input"
-                        placeholder="Enter friend code..."
-                        value={friendCode}
-                        onChange={(e) => setFriendCode(e.target.value)}
-                    />
-                    <button onClick={sendFriendRequest}>Add Friend</button>
-                </div>
-
-                {/* Chat Messages */}
-                <div className="message-area">
-                    {selectedFriend.current ? (
-                        (
-                            friends.find(
-                                (f) => f.userId === selectedFriend.current,
-                            )?.messages || []
-                        ).length > 0 ? (
-                            friends
-                                .find(
-                                    (f) => f.userId === selectedFriend.current,
-                                )
-                                .messages.map((msg, index) => (
-                                    <p
-                                        key={index}
-                                        className={
-                                            msg.name === 'You'
-                                                ? 'sent'
-                                                : 'received'
-                                        }
-                                    >
-                                        <strong>{msg.name}:</strong>{' '}
-                                        {msg.message}
-                                    </p>
-                                ))
-                        ) : (
-                            <p>No messages yet.</p>
-                        )
-                    ) : (
-                        <p>Select a friend to view messages.</p>
-                    )}
-                </div>
-
-                {/* Friend Code Display */}
-                <div className="friend-code-display">
-                    <p>
-                        Your Friend Code: <span>{userFriendCode}</span>
-                    </p>
-                    <img
-                        src="/clipboard.png"
-                        alt="Copy to clipboard"
-                        className="clipboard-icon"
-                        onClick={() => {
-                            playClickSound();
-                            navigator.clipboard.writeText(userFriendCode);
-                        }}
-                    />
-                </div>
-
-                {/* Input Box at the Bottom */}
-                <input
-                    type="text"
-                    className="message-input"
-                    placeholder="Type a message..."
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                    disabled={!selectedChat}
-                />
-            </div>
+            {/* Chat sidebar component */}
+            <ChatSidebar />
         </div>
     );
 }

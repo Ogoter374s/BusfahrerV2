@@ -1,4 +1,5 @@
 import BASE_URL, { WBS_URL } from './config';
+import ChatSidebar from './ChatSidebar';
 
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -6,15 +7,6 @@ import { useNavigate } from 'react-router-dom';
 function Lobbys() {
     const [selectedSound, setSelectedSound] = useState('ui-click.mp3');
     const soundRef = useRef(new Audio(selectedSound));
-
-    const [isChatOpen, setIsChatOpen] = useState(false);
-    const [pendingRequests, setPendingRequests] = useState([]);
-    const [friends, setFriends] = useState([]);
-    const [friendCode, setFriendCode] = useState('');
-    const [userFriendCode, setUserFriendCode] = useState('');
-    const [newMessage, setNewMessage] = useState('');
-    const [selectedChat, setSelectedChat] = useState('');
-    const selectedFriend = useRef('');
 
     const [games, setGames] = useState([]);
     const [privateCode, setPrivateCode] = useState('');
@@ -49,83 +41,21 @@ function Lobbys() {
         }
     };
 
-    // #region Friend Functions
-
     /**
-     * Fetches pending friend requests for the authenticated user.
+     * Fetches the list of waiting games from the backend API.
      *
-     * Sends a GET request to the backend endpoint `/get-friend-requests`
-     * using HttpOnly cookies for authentication. Updates the local state
-     * with the list of pending friend requests.
+     * Sends a GET request to the `get-waiting-games` endpoint to retrieve all games
+     * that are in a waiting state (i.e., available to join). The request includes
+     * HttpOnly cookies for session authentication.
      *
-     * @function fetchFriendRequests
+     * On successful response, updates the local game state with the retrieved data
+     * and logs the result to the console.
+     *
      * @async
-     * @throws {Error} If the fetch operation fails.
-     */
-    const fetchFriendRequests = async () => {
-        try {
-            const response = await fetch(`${BASE_URL}get-friend-requests`, {
-                credentials: 'include',
-            });
-            const data = await response.json();
-            setPendingRequests(data.pending || []);
-        } catch (error) {
-            console.error('Error fetching friend requests:', error);
-        }
-    };
-
-    /**
-     * Fetches the list of friends for the authenticated user.
-     *
-     * Sends a GET request to the backend endpoint `/get-friends`
-     * using HttpOnly cookies for authentication. Updates the local state
-     * with the list of friends retrieved from the server.
-     *
-     * @function fetchFriends
-     * @async
-     * @throws {Error} If the fetch operation fails.
-     */
-    const fetchFriends = async () => {
-        try {
-            const response = await fetch(`${BASE_URL}get-friends`, {
-                credentials: 'include',
-            });
-            const data = await response.json();
-            setFriends(data.friends || []);
-        } catch (error) {
-            console.error('Error fetching friend requests:', error);
-        }
-    };
-
-    /**
-     * Fetches the user's unique friend code.
-     *
-     * Sends a GET request to the backend endpoint `/get-friend-code`
-     * using HttpOnly cookies for authentication. Updates the local state
-     * with the retrieved friend code.
-     *
-     * @function fetchUserFriendCode
-     * @async
-     * @throws {Error} If the fetch operation fails.
-     */
-    const fetchUserFriendCode = async () => {
-        try {
-            const response = await fetch(`${BASE_URL}get-friend-code`, {
-                credentials: 'include',
-            });
-            const data = await response.json();
-            setUserFriendCode(data.friendCode);
-        } catch (error) {
-            console.error('Error fetching friend code:', error);
-        }
-    };
-
-    // #endregion
-
-    /**
-     * Fetches the initial list of available games from the backend API.
-     *
-     * Sends a GET request to retrieve lobby data and updates the games state.
+     * @function fetchGames
+     * @returns {Promise<void>} A promise that resolves once the game data is fetched and applied to state.
+     * @throws {TypeError} If the response cannot be parsed as JSON.
+     * @throws {Error} If the fetch request fails due to network or server issues.
      */
     const fetchGames = async () => {
         const response = await fetch(`${BASE_URL}get-waiting-games`, {
@@ -134,16 +64,25 @@ function Lobbys() {
 
         const data = await response.json();
         setGames(data);
+
+        console.log(data);
     };
 
     /**
      * Sets up a WebSocket connection to receive real-time lobby updates.
      *
-     * Initializes the WebSocket, sends a lobby identification message upon opening,
-     * and listens for incoming messages. On receiving a lobby update message,
-     * updates the games state with new lobby data.
-     * Additionally, fetches the initial list of games from the backend API upon mounting.
-     * Cleans up by closing the WebSocket connection when the component unmounts.
+     * Initializes a WebSocket connection to the backend using the `WBS_URL`.
+     * Sends a subscription message identifying the client as a lobby listener.
+     * Listens for `lobbysUpdate` messages from the server and updates the local
+     * game state accordingly.
+     *
+     * Also triggers initial data fetches for the list of waiting games and
+     * the user's sound preferences.
+     *
+     * Cleans up the WebSocket connection when the component unmounts or when
+     * the browser window is closed, to prevent memory leaks and dangling connections.
+     *
+     * @function useEffect
      */
     useEffect(() => {
         if (init.current) return;
@@ -154,7 +93,6 @@ function Lobbys() {
 
             wsRef.current.onopen = () => {
                 wsRef.current.send(JSON.stringify({ type: 'lobby' }));
-                wsRef.current.send(JSON.stringify({ type: 'account' }));
             };
 
             wsRef.current.onmessage = async (event) => {
@@ -162,20 +100,10 @@ function Lobbys() {
                 if (message.type === 'lobbysUpdate') {
                     setGames(message.data);
                 }
-
-                if (message.type === 'friendsUpdate') {
-                    setFriends(message.data.friends);
-                    setPendingRequests(message.data.pendingRequests);
-                    setUserFriendCode(message.data.friendCode);
-                }
             };
         }
 
         fetchGames();
-
-        fetchFriendRequests();
-        fetchFriends();
-        fetchUserFriendCode();
 
         fetchSoundPreference();
 
@@ -207,236 +135,21 @@ function Lobbys() {
         clickClone.play();
     };
 
-    // #region Chat Functions
-
-    /**
-     * Toggles the visibility of the chat window.
+   /**
+     * Attempts to join a specified game by verifying the game ID with the backend.
      *
-     * Plays a click sound and switches the chat open/close state.
+     * Sends a POST request to the `check-game-code` endpoint with the provided `gameId`.
+     * If the backend validates the game ID successfully, the user is redirected to the join page.
+     * Otherwise, an error message is displayed to the user.
      *
-     * @function toggleChat
-     */
-    const toggleChat = () => {
-        playClickSound();
-        setIsChatOpen(!isChatOpen);
-    };
-
-    /**
-     * Sends a friend request to another user using their friend code.
+     * Plays a click sound before making the request to enhance UX feedback.
+     * Uses HttpOnly cookies for secure authentication.
      *
-     * Validates that the input is not empty, then sends a POST request to the backend
-     * endpoint `/send-friend-request` with the friend code in the request body.
-     * On success, notifies the user and clears the input field.
-     * On failure, displays an error message.
-     *
-     * @function sendFriendRequest
      * @async
-     * @throws {Error} If the fetch operation fails.
-     */
-    const sendFriendRequest = async () => {
-        if (!friendCode.trim()) return;
-
-        playClickSound();
-
-        try {
-            const response = await fetch(`${BASE_URL}send-friend-request`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ friendCode }),
-                credentials: 'include',
-            });
-
-            const data = await response.json();
-            if (response.ok) {
-                alert('Friend request sent!');
-                setFriendCode('');
-            } else {
-                alert(data.error);
-            }
-        } catch (error) {
-            console.error('Error sending request:', error);
-        }
-    };
-
-    /**
-     * Accepts a pending friend request from a specific user.
-     *
-     * Sends a POST request to the backend endpoint `/accept-friend-request`
-     * with the user ID in the request body. If successful, the friend is added;
-     * otherwise, an error message is displayed.
-     *
-     * @function acceptRequest
-     * @async
-     * @param {string} userId - The ID of the user whose friend request is being accepted.
-     * @throws {Error} If the fetch operation fails.
-     */
-    const acceptRequest = async (userId) => {
-        playClickSound();
-        try {
-            const response = await fetch(`${BASE_URL}accept-friend-request`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ userId }),
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                alert(data.error);
-            }
-        } catch (error) {
-            console.error('Error accepting friend request:', error);
-            alert('Failed to accept friend request. Please try again.');
-        }
-    };
-
-    /**
-     * Declines a pending friend request from a specific user.
-     *
-     * Sends a POST request to the backend endpoint `/decline-friend-request`
-     * with the user ID in the request body. If the request fails, an error message is shown.
-     *
-     * @function declineRequest
-     * @async
-     * @param {string} userId - The ID of the user whose friend request is being declined.
-     * @throws {Error} If the fetch operation fails.
-     */
-    const declineRequest = async (userId) => {
-        playClickSound();
-        try {
-            const response = await fetch(`${BASE_URL}decline-friend-request`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ userId }),
-            });
-
-            if (!response.ok) {
-                alert(data.error);
-            }
-        } catch (error) {
-            console.error('Error declining friend request:', error);
-            alert('Failed to decline friend request. Please try again.');
-        }
-    };
-
-    /**
-     * Removes a friend from the user's friend list.
-     *
-     * Prompts the user for confirmation before proceeding.
-     * Sends a POST request to the backend endpoint `/remove-friend`
-     * with the friend's ID in the request body. Displays an error
-     * message if the operation fails.
-     *
-     * @function removeFriend
-     * @async
-     * @param {string} friendId - The ID of the friend to be removed.
-     * @throws {Error} If the fetch operation fails.
-     */
-    const removeFriend = async (friendId) => {
-        playClickSound();
-        if (!window.confirm('Are you sure you want to remove this friend?'))
-            return;
-
-        try {
-            const response = await fetch(`${BASE_URL}remove-friend`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ friendId }),
-            });
-
-            const data = await response.json();
-            if (!response.ok) {
-                alert(data.error);
-            }
-        } catch (error) {
-            console.error('Error removing friend:', error);
-            alert('Something went wrong.');
-        }
-    };
-
-    /**
-     * Fetches messages for a selected friend and marks them as read.
-     *
-     * Updates the selected chat state and stores the selected friend's ID.
-     * Sends a POST request to the backend endpoint `/mark-messages-read` to
-     * update the read status of messages. Then refreshes the friend list to
-     * reflect updated message indicators.
-     *
-     * @function fetchMessages
-     * @async
-     * @param {string} friendId - The ID of the friend whose messages are being fetched.
-     * @throws {Error} If the fetch operation fails.
-     */
-    const fetchMessages = async (friendId) => {
-        playClickSound();
-
-        selectedFriend.current = friendId;
-        setSelectedChat(friendId);
-
-        try {
-            await fetch(`${BASE_URL}mark-messages-read`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ friendId }),
-            });
-        } catch (error) {
-            console.error('Error marking messages as read:', error);
-        }
-
-        fetchFriends();
-    };
-
-    /**
-     * Sends a chat message to the selected friend.
-     *
-     * Validates that the message input is not empty. Sends a POST request to
-     * the backend endpoint `/send-message` with the selected friend's ID and
-     * the message content. Clears the input field on success, or displays an
-     * error message on failure.
-     *
-     * @function sendMessage
-     * @async
-     * @throws {Error} If the fetch operation fails.
-     */
-    const sendMessage = async () => {
-        if (!newMessage.trim()) return;
-
-        try {
-            const response = await fetch(`${BASE_URL}send-message`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({
-                    friendId: selectedFriend.current,
-                    message: newMessage,
-                }),
-            });
-
-            const data = await response.json();
-            if (response.ok) {
-                setNewMessage('');
-            } else {
-                alert(data.error);
-            }
-        } catch (error) {
-            console.error('Error sending message:', error);
-        }
-    };
-
-    // #endregion
-
-    /**
-     * Navigates the user to join the selected game lobby.
-     *
-     * Checks if the user is authenticated via HttpOnly cookie.
-     * If authenticated, redirects the user to the specified game's join page.
-     * Otherwise, alerts the user to log in first.
-     *
-     * @param {string} gameId - The ID of the game to join.
+     * @function joinGame
+     * @param {string} gameId - The unique identifier of the game the user wants to join.
+     * @returns {Promise<void>} A promise that resolves after the join operation completes or fails.
+     * @throws {Error} If the fetch request fails or encounters a network/server issue.
      */
     const joinGame = async (gameId) => {
         playClickSound();
@@ -462,10 +175,20 @@ function Lobbys() {
     };
 
     /**
-     * Joins a private game using a provided game code.
+     * Attempts to join a private game using a manually entered game code.
      *
-     * Checks if the user is authenticated, sends the private game code to the backend
-     * for verification, and navigates the user to the game page upon success.
+     * Validates that a non-empty game code has been entered, then sends a POST request
+     * to the `check-game-code` endpoint with the code as the `gameId`. If the game code
+     * is valid and the backend returns a success response, the user is redirected to the join page.
+     * Otherwise, an error message is shown.
+     *
+     * Plays a click sound for UI feedback before initiating the request.
+     * Uses HttpOnly cookies for secure session authentication.
+     *
+     * @async
+     * @function joinPrivateGame
+     * @returns {Promise<void>} A promise that resolves when the join operation completes or fails.
+     * @throws {Error} If the fetch request fails due to a network or server error.
      */
     const joinPrivateGame = async () => {
         playClickSound();
@@ -495,6 +218,19 @@ function Lobbys() {
         }
     };
 
+    /**
+     * Renders the Join Game screen UI.
+     *
+     * Displays a list of public games available to join, each showing a preview of player avatars,
+     * the game name, and a button to join. If the game has more than three players, it appends an
+     * ellipsis to indicate more participants. Also includes a section for joining private games
+     * by manually entering a game code.
+     *
+     * Provides a back button to navigate to the homepage and includes a sidebar chat component.
+     *
+     * @function JSX Return Block
+     * @returns {JSX.Element} A React component representing the join game lobby UI.
+     */
     return (
         <div className="overlay-cont">
             {/* Background overlay image */}
@@ -512,11 +248,27 @@ function Lobbys() {
                 <div className="game-list">
                     {games.map((game) => (
                         <div key={game.id} className="game-item">
-                            <span>
-                                {game.name} - {game.playerCount}{' '}
-                                {game.playerCount === 1 ? 'Player' : 'Players'}
-                            </span>
-                            <button onClick={() => joinGame(game.id)} />
+                            <div className="game-info">
+
+                                {/* Avatars + "..." if more than 3 */}
+                                <div className="game-avatars">
+                                    {game.avatars.slice(0, 3).map((avatar, index) => (
+                                    <img key={index} src={`${BASE_URL}avatars/${avatar}`} alt={`Player ${index + 1}`} className="avatar-preview" />
+                                    ))}
+                                    {game.playerCount > 3 && <span className="more-players">...</span>}
+                                </div>
+
+                                {/* Game name */}
+                                <span className="game-name">{game.name}</span>
+                            </div>
+
+                            {/* Join button and player count next to it */}
+                            <div className="game-join">
+                                <span className="game-count">
+                                {game.playerCount} / {game.settings.playerLimit}
+                                </span>
+                                <button onClick={() => joinGame(game.id)}/>
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -551,174 +303,8 @@ function Lobbys() {
                 </button>
             </div>
 
-            {/* Sidebar Toggle Button (Only if Authenticated) */}
-            <div
-                className="chat-toggle-wrapper"
-                style={{ left: isChatOpen ? '450px' : '0px' }}
-            >
-                <button className="chat-toggle-button" onClick={toggleChat}>
-                    {isChatOpen ? '<' : '>'}
-                </button>
-
-                {/* Notification Circles */}
-                <div className="friend-request-circles">
-                    {pendingRequests.length > 0 && (
-                        <div className="circle-request">
-                            {pendingRequests.length}
-                        </div>
-                    )}
-                </div>
-
-                {/* Unread Message Circles */}
-                <div className="unread-message-circles">
-                    {friends.reduce((acc, f) => acc + (f.unreadCount || 0), 0) >
-                        0 && (
-                        <div className="circle-msg">
-                            {friends.reduce(
-                                (acc, f) => acc + (f.unreadCount || 0),
-                                0,
-                            )}
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Sidebar Chat Window */}
-            <div className={`chat-sidebar ${isChatOpen ? 'open' : ''}`}>
-                {/* Pending Friend Requests Section */}
-                {pendingRequests.length > 0 && (
-                    <div className="pending-requests">
-                        {pendingRequests.map((request, index) => (
-                            <div key={index} className="friend-request">
-                                <span className="request-text">
-                                    {request.username} wants to be friends
-                                </span>
-
-                                <div className="request-actions">
-                                    <button
-                                        className="accept-btn"
-                                        onClick={() =>
-                                            acceptRequest(request.userId)
-                                        }
-                                    >
-                                        ✅
-                                    </button>
-                                    <button
-                                        className="decline-btn"
-                                        onClick={() =>
-                                            declineRequest(request.userId)
-                                        }
-                                    >
-                                        ❌
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-                {/* List of friends */}
-                <div className="friend-list">
-                    {friends.map((friend) => (
-                        <div
-                            className="friend"
-                            key={friend.userId}
-                            onClick={() => fetchMessages(friend.userId)}
-                        >
-                            <div className="friend-info">
-                                <img
-                                    src={`${BASE_URL}avatars/${friend.avatar}`}
-                                    alt="Avatar"
-                                    className="friend-avatar"
-                                />
-                                <p className="friend-text">{friend.username}</p>
-                                {friend.unreadCount > 0 && (
-                                    <span className="unread-indicator">
-                                        {friend.unreadCount}
-                                    </span>
-                                )}
-                            </div>
-
-                            <button
-                                className={'remove-friend-btn'}
-                                onClick={() => removeFriend(friend.userId)}
-                            />
-                        </div>
-                    ))}
-                </div>
-
-                {/* Input for Adding a Friend */}
-                <div className="add-friend-container">
-                    <input
-                        type="text"
-                        className="add-friend-input"
-                        placeholder="Enter friend code..."
-                        value={friendCode}
-                        onChange={(e) => setFriendCode(e.target.value)}
-                    />
-                    <button onClick={sendFriendRequest}>Add Friend</button>
-                </div>
-
-                {/* Chat Messages */}
-                <div className="message-area">
-                    {selectedFriend.current ? (
-                        (
-                            friends.find(
-                                (f) => f.userId === selectedFriend.current,
-                            )?.messages || []
-                        ).length > 0 ? (
-                            friends
-                                .find(
-                                    (f) => f.userId === selectedFriend.current,
-                                )
-                                .messages.map((msg, index) => (
-                                    <p
-                                        key={index}
-                                        className={
-                                            msg.name === 'You'
-                                                ? 'sent'
-                                                : 'received'
-                                        }
-                                    >
-                                        <strong>{msg.name}:</strong>{' '}
-                                        {msg.message}
-                                    </p>
-                                ))
-                        ) : (
-                            <p>No messages yet.</p>
-                        )
-                    ) : (
-                        <p>Select a friend to view messages.</p>
-                    )}
-                </div>
-
-                {/* Friend Code Display */}
-                <div className="friend-code-display">
-                    <p>
-                        Your Friend Code: <span>{userFriendCode}</span>
-                    </p>
-                    <img
-                        src="/clipboard.png"
-                        alt="Copy to clipboard"
-                        className="clipboard-icon"
-                        onClick={() => {
-                            playClickSound();
-                            navigator.clipboard.writeText(userFriendCode);
-                        }}
-                    />
-                </div>
-
-                {/* Input Box at the Bottom */}
-                <input
-                    type="text"
-                    className="message-input"
-                    placeholder="Type a message..."
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                    disabled={!selectedChat}
-                />
-            </div>
+            {/* Sidebar Toggle */}
+            <ChatSidebar />
         </div>
     );
 }

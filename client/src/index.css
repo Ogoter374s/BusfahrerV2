@@ -24,6 +24,22 @@
     user-select: none;
 }
 
+.overlay-pyramid-img {
+    position: absolute;
+    top: -5px;
+    width: 70%;
+    z-index: 1;
+    filter: drop-shadow(10px 10px 30px rgba(0, 0, 0, 1));
+    pointer-events: none;
+    user-select: none;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
 /* #region Chat */
 
 /* #region Friend Wrapper */
@@ -88,6 +104,7 @@
     transition: left 0.3s ease-in-out;
     display: flex;
     flex-direction: column;
+    z-index: 1000;
 }
 
 .chat-sidebar.open {
@@ -436,6 +453,8 @@
   margin-left: 15px;
 }
 
+/* #region Input Fields */
+
 .rustic-input {
   background: url('/wood_blue.svg');
   background-size: cover;
@@ -469,6 +488,168 @@
   margin-bottom: 15px;
   width: 100%;
 }
+
+/* #endregion */
+
+/* #region Option Select */
+
+.options-selection {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 15px 0;
+}
+
+.options-selection label {
+    font-size: 25px;
+    font-weight: bold;
+    margin-bottom: 5px;
+    user-select: none;
+}
+
+#optionsSelect {
+    width: 200px;
+    padding: 8px;
+    border-radius: 8px;
+    border: 2px solid #a65a2e;
+    background-color: #222;
+    color: #fff;
+    font-size: 20px;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+#optionsSelect:hover {
+    border-color: #e33e3e;
+}
+
+#optionsSelect option {
+    background-color: #333;
+    color: #fff;
+    font-size: 14px;
+}
+
+/* #endregion */
+
+/* #region Avatar Icons */
+
+.player-avatars {
+    position: absolute;
+    left: 15px;
+    top: 2.5%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.avatar-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.avatar-image {
+    width: 85px;
+    height: 85px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+}
+
+.active-player .avatar-image {
+    border-color: red;
+}
+
+/* #endregion */
+
+.turn-info {
+    font-family: 'Luckiest Guy', cursive;
+    position: absolute;
+    font-size: 37px;
+    color: #f5e1a4;
+    bottom: 220px;
+    user-select: none;
+}
+
+.current-player {
+    color: #a65a2e;
+    font-weight: bold;
+}
+
+.drink-count {
+    color: #a12727;
+    font-weight: bold;
+}
+
+.player-cards {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    justify-content: center;
+    position: absolute;
+    bottom: 10px;
+}
+
+/* #region Next Player Button */
+
+.next-cont {
+    position: absolute;
+    display: inline-block;
+    bottom: 150px;
+    right: 150px;
+}
+
+.next-cont button {
+    position: absolute;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.1s ease-in-out;
+}
+
+.btn-next-disabled {
+    position: absolute;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.1s ease-in-out;
+}
+
+.btn-next img {
+    width: 135px;
+    height: auto;
+    display: block;
+    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.4);
+    border-radius: 70px;
+    transition: all 0.1s ease-in-out;
+    user-select: none;
+    pointer-events: none;
+}
+
+.btn-next-disabled img {
+    width: 135px;
+    height: auto;
+    display: block;
+    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.4);
+    border-radius: 70px;
+    transition: all 0.1s ease-in-out;
+    user-select: none;
+    pointer-events: none;
+}
+
+.btn-next:hover img {
+    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
+    transform: translateY(-3px);
+}
+
+.btn-next:active img {
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    transform: translateY(2px);
+}
+
+/* #endregion */
 
 /* #endregion */
 
@@ -893,43 +1074,6 @@
 
 .avatar:hover {
     transform: scale(1.1);
-}
-
-.options-selection {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin: 15px 0;
-}
-
-.options-selection label {
-    font-size: 25px;
-    font-weight: bold;
-    margin-bottom: 5px;
-    pointer-events: none;
-    user-select: none;
-}
-
-#optionsSelect {
-    width: 200px;
-    padding: 8px;
-    border-radius: 8px;
-    border: 2px solid #a65a2e;
-    background-color: #222;
-    color: #fff;
-    font-size: 20px;
-    outline: none;
-    transition: all 0.3s ease;
-}
-
-#optionsSelect:hover {
-    border-color: #e33e3e;
-}
-
-#optionsSelect option {
-    background-color: #333;
-    color: #fff;
-    font-size: 14px;
 }
 
 .dropdown-style {
@@ -1440,6 +1584,8 @@
 .achievement-icon {
     width: 60px;
     height: 60px;
+    user-select: none;
+    pointer-events: none;
 }
 
 .achievement-name {
@@ -1501,6 +1647,7 @@
   align-items: center;
   width: 320px;
   margin-left: 120px;
+  user-select: none;
 }
 
 .create-options-box {
@@ -1509,6 +1656,9 @@
   width: 500px;
   color: white;
   font-family: 'Georgia', serif;
+  margin-top: -160px;
+  color: #f5e1a4;
+  user-select: none;
 }
 
 .create-options-title {
@@ -1516,12 +1666,15 @@
   font-weight: bold;
   text-align: center;
   margin-bottom: 15px;
+  color: white;
 }
 
 .create-logo {
     position: absolute;
     width: 11%;
     top: 70px;
+    user-select: none;
+    pointer-events: none;
 }
 
 .create-title {
@@ -1552,6 +1705,21 @@
   accent-color: #5a3e22;
 }
 
+.limit-input {
+    background-color: #222;         
+  color: white;                  
+  border: 2px solid #a65a2e;    
+  border-radius: 4px;           
+  padding: 6px 10px;
+  font-size: 16px;
+  outline: none;
+  width: 100px;
+}
+
+.limit-input:hover {
+    border-color: #e33e3e;       
+}
+
 /* #region Create Button */
 
 .create-cont {
@@ -1577,6 +1745,8 @@
   box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2);
   border-radius: 10px;
   transition: all 0.1s ease-in-out;
+  user-select: none;
+  pointer-events: none;
 }
 
 .btn-text {
@@ -1610,25 +1780,7 @@
 
 /* #endregion */
 
-.overlay-pyramid-img {
-    position: absolute;
-    top: -5px;
-    width: 70%;
-    z-index: 1;
-    filter: drop-shadow(10px 10px 30px rgba(0, 0, 0, 1));
-    pointer-events: none;
-    user-select: none;
-}
-
-.overlay-diamond-img {
-    position: absolute;
-    top: -3px;
-    width: 89%;
-    z-index: 1;
-    filter: drop-shadow(10px 10px 30px rgba(0, 0, 0, 1));
-    pointer-events: none;
-    user-select: none;
-}
+/* #region Lobbys Page */
 
 .lobbys-menu {
     text-align: center;
@@ -1641,6 +1793,174 @@
     z-index: 2;
 }
 
+.lobbys-title {
+    position: absolute;
+    font-family: serif;
+    font-size: 4rem;
+    margin-bottom: 10%;
+    top: 30px;
+    user-select: none;
+}
+
+.game-list {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    top: 170px;
+}
+
+/* #region Game Item */
+
+.game-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(to right, #5a3e2b, #3b2a1a);
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: 1px solid #8b5e3b;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+    font-size: 25px;
+    color: #f5deb3;
+    font-family: 'Luckiest Guy', cursive;
+    width: 500px;
+    height: 25px;
+    user-select: none;
+}
+
+.game-item span {
+    flex-grow: 1;
+}
+
+.game-item button {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background-color: #c1272d;
+    border: none;
+    background-image: url('/join.svg');
+    background-size: 85% auto;
+    background-position: center;
+    background-repeat: no-repeat;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    text-shadow: 1px 1px 2px black;
+    margin-right: -15px;
+}
+
+.game-item button:hover {
+    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
+    transform: translateY(-2px);
+}
+
+.game-item button:active {
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    transform: translateY(2px);
+}
+
+.game-avatars {
+    display: flex;
+    gap: 4px;
+    pointer-events: none;
+}
+  
+.avatar-preview {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid #ccc;
+}
+
+.more-players {
+    color: #fff;
+    margin-left: 4px;
+    font-size: 18px;
+    font-weight: bold;
+    margin-top: 14px;
+    margin-left: -5px;
+}
+  
+.game-name {
+    margin-left: 12px;
+    color: #ffe2a7;
+    font-size: 20px;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.game-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.game-join {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 100%;
+}
+
+/* #endregion */
+
+/* #region Private Game Code */
+
+.private-game-cont {
+    position: absolute;
+    display: inline-block;
+    bottom: 10%;
+}
+
+.private-game-cont button {
+    position: absolute;
+    width: 55px;
+    height: 55px;
+    border-radius: 10px;
+    background-color: #c1272d;
+    border: none;
+    background-image: url('/join.svg');
+    background-size: 85% auto;
+    background-position: center;
+    background-repeat: no-repeat;
+    cursor: pointer;
+    transition: all 0.1s ease-in-out;
+    margin-top: -2.5px;
+}
+
+.private-game {
+    background: url('/wood_green.svg');
+    background-size: cover;
+    font-family: 'Cinzel', serif;
+    font-size: 27px;
+    color: #f5e1a4;
+    box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.6);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    border-radius: 5px;
+    outline: none;
+    height: 45px;
+    margin-right: 20px;
+}
+
+.btn-private:hover {
+    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
+    transform: translateY(-3px);
+}
+
+.btn-private:active {
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    transform: translateY(2px);
+}
+
+/* #endregion */
+
+/* #endregion */
+
+/* #region Join Page */
+
 .join-menu {
     text-align: center;
     color: white;
@@ -1650,52 +1970,15 @@
     justify-content: center;
     align-items: center;
     z-index: 2;
-}
-
-.game-menu {
-    text-align: center;
-    color: white;
-    height: 98vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 2;
-}
-
-.phase1-menu {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    z-index: 2;
-}
-
-.phase2-menu {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    z-index: 2;
-}
-
-.phase3-menu {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    z-index: 2;
+    user-select: none;
 }
 
 .join-logo {
     position: absolute;
     width: 12%;
     top: 70px;
-}
-
-.lobbys-title {
-    position: absolute;
-    font-family: serif;
-    font-size: 4rem;
-    margin-bottom: 10%;
-    top: 30px;
+    user-select: none;
+    pointer-events: none;
 }
 
 .join-title {
@@ -1706,51 +1989,15 @@
     top: 310px;
 }
 
-.game-title {
+.rustic-form-join {
     position: absolute;
-    font-family: serif;
-    font-size: 4rem;
-    margin-bottom: 5%;
-    top: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    top: 450px;
 }
 
-.menu-button {
-    font-family: 'Luckiest Guy', cursive;
-    padding: 8px 16px;
-    font-size: 2.8rem;
-    margin: 10px;
-    border-radius: 10px;
-    width: 100%;
-    background-color: #a68a64;
-    color: white;
-    cursor: pointer;
-    transition: all 0.1s ease-in-out;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.4);
-}
-
-.menu-button-disabled {
-    font-family: 'Luckiest Guy', cursive;
-    padding: 8px 16px;
-    font-size: 2.8rem;
-    margin: 10px;
-    border-radius: 10px;
-    width: 100%;
-    background-color: grey;
-    color: white;
-    cursor: default;
-    transition: all 0.1s ease-in-out;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.4);
-}
-
-.menu-button:hover {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
-    transform: translateY(-3px);
-}
-
-.menu-button:active {
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    transform: translateY(2px);
-}
+/* #region Join Button */
 
 .join-cont {
     position: absolute;
@@ -1774,6 +2021,7 @@
     box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2);
     border-radius: 10px;
     transition: all 0.1s ease-in-out;
+    pointer-events: none;
 }
 
 .btn-text-join {
@@ -1803,292 +2051,30 @@
     transform: translateY(-3px);
 }
 
-.startGame-cont {
-    position: absolute;
-    display: inline-block;
-    bottom: 80px;
-}
+/* #endregion */
 
-.startGame-cont button {
-    position: relative;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    transition: all 0.1s ease-in-out;
-}
+/* #endregion */
 
-.btn-startGame-disabled {
-    position: relative;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: default;
-    transition: all 0.1s ease-in-out;
-}
+/* #region Game Page */
 
-.btn-startGame img {
-    width: 310px;
-    height: auto;
-    display: block;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2);
-    border-radius: 10px;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-startGame-disabled img {
-    width: 310px;
-    height: auto;
-    display: block;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2);
-    border-radius: 10px;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-text-startGame {
-    position: absolute;
-    top: -17%;
-    left: 19%;
-    font-family: 'Luckiest Guy', cursive;
-    font-size: 35px;
+.game-menu {
+    text-align: center;
     color: white;
-    text-shadow: 3px 3px 8px rgba(0, 0, 0, 0.7);
-    pointer-events: none;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-startGame:hover img {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
-    transform: translateY(-3px);
-}
-
-.btn-startGame:active img {
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    transform: translateY(2px);
-}
-
-.btn-startGame:hover p {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0);
-    transform: translateY(-3px);
-}
-
-.rustic-form-join {
-    position: absolute;
+    height: 98vh;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    top: 450px;
-}
-
-.next-cont {
-    position: absolute;
-    display: inline-block;
-    bottom: 150px;
-    right: 150px;
-}
-
-.next-cont button {
-    position: absolute;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-next-disabled {
-    position: absolute;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-next img {
-    width: 135px;
-    height: auto;
-    display: block;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.4);
-    border-radius: 70px;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-next-disabled img {
-    width: 135px;
-    height: auto;
-    display: block;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.4);
-    border-radius: 70px;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-next:hover img {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
-    transform: translateY(-3px);
-}
-
-.btn-next:active img {
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    transform: translateY(2px);
-}
-
-.try-cont {
-    position: absolute;
-    display: inline-block;
-    bottom: 150px;
-    right: 150px;
-}
-
-.try-cont button {
-    position: absolute;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-try-disabled {
-    position: absolute;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-try img {
-    width: 135px;
-    height: auto;
-    display: block;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.4);
-    border-radius: 70px;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-try-disabled img {
-    width: 135px;
-    height: auto;
-    display: block;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.4);
-    border-radius: 70px;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-try:hover img {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
-    transform: translateY(-3px);
-}
-
-.btn-try:active img {
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    transform: translateY(2px);
-}
-
-form {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.private-game-cont {
-    position: absolute;
-    display: inline-block;
-    bottom: 10%;
-}
-
-.private-game {
-    background: url('/wood_green.svg');
-    background-size: cover;
-    font-family: 'Cinzel', serif;
-    font-size: 27px;
-    color: #f5e1a4;
-    box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.6);
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-    border-radius: 5px;
-    outline: none;
-    height: 45px;
-    margin-right: 20px;
-}
-
-.private-game-cont button {
-    position: absolute;
-    width: 55px;
-    height: 55px;
-    border-radius: 10px;
-    background-color: #c1272d;
-    border: none;
-    background-image: url('/join.svg');
-    background-size: 85% auto;
-    background-position: center;
-    background-repeat: no-repeat;
-    cursor: pointer;
-    transition: all 0.1s ease-in-out;
-    margin-top: -2.5px;
-}
-
-.btn-private:hover {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
-    transform: translateY(-3px);
-}
-
-.btn-private:active {
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    transform: translateY(2px);
-}
-
-.game-list {
-    position: absolute;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    top: 170px;
-}
-
-.game-item {
-    display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
-    background: linear-gradient(to right, #5a3e2b, #3b2a1a);
-    padding: 12px 20px;
-    border-radius: 8px;
-    border: 1px solid #8b5e3b;
-    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
-    font-size: 25px;
-    color: #f5deb3;
-    font-family: 'Luckiest Guy', cursive;
-    width: 400px;
-    height: 25px;
+    z-index: 2;
+    user-select: none;
 }
 
-.game-item span {
-    flex-grow: 1;
-}
-
-.game-item button {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    background-color: #c1272d;
-    border: none;
-    background-image: url('/join.svg');
-    background-size: 85% auto;
-    background-position: center;
-    background-repeat: no-repeat;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-    text-shadow: 1px 1px 2px black;
-}
-
-.game-item button:hover {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
-    transform: translateY(-2px);
-}
-
-.game-item button:active {
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    transform: translateY(2px);
+.game-title {
+    position: absolute;
+    font-family: serif;
+    font-size: 4rem;
+    margin-bottom: 5%;
+    top: 40px;
 }
 
 .player-list {
@@ -2098,6 +2084,8 @@ form {
     gap: 10px;
     top: 190px;
 }
+
+/* #region Player Item */
 
 .player-item {
     display: flex;
@@ -2114,6 +2102,35 @@ form {
     width: 400px;
     height: 40px;
 }
+
+.player-avatar {
+    width: 55px;
+    height: 55px;
+    border-radius: 50%;
+    margin-right: 10px;
+    object-fit: cover;
+    pointer-events: none;
+}
+
+.player-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-left: 10px;
+    flex: 1;
+}
+
+.player-name {
+    font-size: 1.4rem;
+    font-weight: bold;
+    margin-bottom: -4px; /* Pull the name slightly up */
+}
+
+.player-title {
+    font-size: 1rem;
+    font-weight: 500;
+}
+
 
 .player-item span {
     flex-grow: 1;
@@ -2159,13 +2176,92 @@ form {
     transform: translateY(2px);
 }
 
-.player-cards {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    justify-content: center;
+/* #endregion */
+
+/* #region Start Game Button */
+
+.startGame-cont {
     position: absolute;
-    bottom: 10px;
+    display: inline-block;
+    bottom: 80px;
+}
+
+.startGame-cont button {
+    position: relative;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.1s ease-in-out;
+}
+
+.btn-startGame-disabled {
+    position: relative;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: default;
+    transition: all 0.1s ease-in-out;
+}
+
+.btn-startGame img {
+    width: 310px;
+    height: auto;
+    display: block;
+    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    transition: all 0.1s ease-in-out;
+    pointer-events: none;
+}
+
+.btn-startGame-disabled img {
+    width: 310px;
+    height: auto;
+    display: block;
+    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    transition: all 0.1s ease-in-out;
+    pointer-events: none;
+}
+
+.btn-text-startGame {
+    position: absolute;
+    top: -17%;
+    left: 19%;
+    font-family: 'Luckiest Guy', cursive;
+    font-size: 35px;
+    color: white;
+    text-shadow: 3px 3px 8px rgba(0, 0, 0, 0.7);
+    pointer-events: none;
+    transition: all 0.1s ease-in-out;
+}
+
+.btn-startGame:hover img {
+    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
+    transform: translateY(-3px);
+}
+
+.btn-startGame:active img {
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    transform: translateY(2px);
+}
+
+.btn-startGame:hover p {
+    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0);
+    transform: translateY(-3px);
+}
+
+/* #endregion */
+
+/* #endregion */
+
+/* #region Phase 1 Page */
+
+.phase1-menu {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 2;
 }
 
 .phase1-cards {
@@ -2174,22 +2270,7 @@ form {
     align-items: center;
     margin-top: 50px;
     justify-content: center;
-}
-
-.phase2-cards {
-    display: flex;
-    gap: 15px;
-    align-items: center;
-    margin-top: 0px;
-    justify-content: center;
-}
-
-.phase3-cards {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    margin-top: -10px;
+    user-select: none;
 }
 
 .phase-row {
@@ -2204,6 +2285,10 @@ form {
     width: 110px;
     transform: rotate(90deg);
 }
+
+/* #endregion */
+
+/* #region Card */
 
 .card {
     height: 200px;
@@ -2264,6 +2349,101 @@ form {
     transform: rotateY(180deg);
 }
 
+/* #endregion */
+
+.overlay-diamond-img {
+    position: absolute;
+    top: -3px;
+    width: 89%;
+    z-index: 1;
+    filter: drop-shadow(10px 10px 30px rgba(0, 0, 0, 1));
+    pointer-events: none;
+    user-select: none;
+}
+
+.phase2-menu {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 2;
+}
+
+.phase3-menu {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 2;
+}
+
+.try-cont {
+    position: absolute;
+    display: inline-block;
+    bottom: 150px;
+    right: 150px;
+}
+
+.try-cont button {
+    position: absolute;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.1s ease-in-out;
+}
+
+.btn-try-disabled {
+    position: absolute;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.1s ease-in-out;
+}
+
+.btn-try img {
+    width: 135px;
+    height: auto;
+    display: block;
+    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.4);
+    border-radius: 70px;
+    transition: all 0.1s ease-in-out;
+}
+
+.btn-try-disabled img {
+    width: 135px;
+    height: auto;
+    display: block;
+    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.4);
+    border-radius: 70px;
+    transition: all 0.1s ease-in-out;
+}
+
+.btn-try:hover img {
+    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
+    transform: translateY(-3px);
+}
+
+.btn-try:active img {
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    transform: translateY(2px);
+}
+
+.phase2-cards {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    margin-top: 0px;
+    justify-content: center;
+}
+
+.phase3-cards {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-top: -10px;
+}
+
 .card-buttons {
     position: absolute;
     top: 50%;
@@ -2314,37 +2494,12 @@ form {
     transform: rotate(90deg) translateX(2px);
 }
 
-.turn-info {
-    font-family: 'Luckiest Guy', cursive;
-    position: absolute;
-    font-size: 37px;
-    color: #f5e1a4;
-    bottom: 220px;
-}
-
 .turn-info-phase3 {
     font-family: 'Luckiest Guy', cursive;
     position: absolute;
     font-size: 37px;
     color: #f5e1a4;
     bottom: 25px;
-}
-
-.current-player {
-    color: #a65a2e;
-    font-weight: bold;
-}
-
-.drink-count {
-    color: #a12727;
-    font-weight: bold;
-}
-
-.dragging {
-    position: absolute;
-    pointer-events: none;
-    z-index: 999;
-    transform: scale(1.1);
 }
 
 .busfahrer-cont {
@@ -2412,13 +2567,6 @@ form {
     margin-left: 125px;
 }
 
-.player-name {
-    font-size: 45px;
-    font-weight: bold;
-    color: #a12727;
-    border-bottom: 2px solid #a12727;
-}
-
 .upload-section {
     display: flex;
     flex-direction: column;
@@ -2431,39 +2579,4 @@ form {
     height: 100%;
     object-fit: cover;
     border-radius: 9px;
-}
-
-.player-avatar {
-    width: 55px;
-    height: 55px;
-    border-radius: 50%;
-    margin-right: 10px;
-    object-fit: cover;
-}
-
-.player-avatars {
-    position: absolute;
-    left: 15px;
-    top: 2.5%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-}
-
-.avatar-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.avatar-image {
-    width: 85px;
-    height: 85px;
-    border-radius: 50%;
-    border: 3px solid transparent;
-}
-
-.active-player .avatar-image {
-    border-color: red;
 }

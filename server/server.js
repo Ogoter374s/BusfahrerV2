@@ -17,6 +17,7 @@ import { WebSocket, WebSocketServer } from "ws";
 import { swaggerUi, swaggerSpec } from "./swagger.js";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
+import { title } from "process";
 
 dotenv.config();
 
@@ -299,7 +300,7 @@ async function generateUniqueFriendCode() {
  * @function createDeck
  * @returns {Array} A shuffled array of card objects, where each card has a `number` (value) and `type` (suit).
  */
-const createDeck = () => {
+const createDeck = (type) => {
     const suits = ["hearts", "diamonds", "clubs", "spades"];
     const values = Array.from({ length: 13 }, (_, i) => i + 2);
     let deck = [];
@@ -312,7 +313,7 @@ const createDeck = () => {
         });
     }
 
-    return shuffleDeck(deck);
+    return shuffleDeck(deck, type);
 };
 
 /**
@@ -323,7 +324,52 @@ const createDeck = () => {
  * @param {Array} deck - The array of card objects to shuffle.
  * @returns {Array} The shuffled deck.
  */
-const shuffleDeck = (deck) => {
+const shuffleDeck = (deck, type) => {
+    switch (type) {
+        case 'Fisher-Yates':
+            FisherYatesShuffle(deck);
+            break;
+        case 'Chaotic':
+            ChaoticShuffle(deck);
+            break;
+        default:
+            FisherYatesShuffle(deck);
+            break;
+    }
+    return deck;
+};
+
+const ChaoticShuffle = (deck) => {
+    const shuffled = [];
+    const copy = [...deck];
+
+    while (copy.length > 0) {
+        let index;
+
+        // Favor pulling the last added card again (streaks)
+        if (shuffled.length > 0 && Math.random() < 0.3) {
+            const last = shuffled[shuffled.length - 1];
+            const similarIndexes = copy
+                .map((card, idx) => (card.number === last.number || card.type === last.type ? idx : -1))
+                .filter(idx => idx !== -1);
+
+            if (similarIndexes.length > 0) {
+                index = similarIndexes[Math.floor(Math.random() * similarIndexes.length)];
+            } else {
+                index = Math.floor(Math.random() * copy.length);
+            }
+        } else {
+            index = Math.floor(Math.random() * copy.length);
+        }
+
+        const [card] = copy.splice(index, 1);
+        shuffled.push(card);
+    }
+
+    return shuffled;
+};
+
+const FisherYatesShuffle = (deck) => {
     for (let i = deck.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [deck[i], deck[j]] = [deck[j], deck[i]];
@@ -374,7 +420,7 @@ const checkFaceCard = (player, card) => {
  * @returns {Promise<string[]>} A list of newly unlocked achievement IDs.
  * @throws {Error} If database operations fail or the user is not found.
  */
-const checkAchievements = async(user) => {
+const checkAchievements = async (user) => {
     const unlocked = [];
     const allAchievements = await db.collection("achievements").find({}).toArray();
 
@@ -552,29 +598,29 @@ let globalAccountStream = null;
  * @returns {void}
  */
 const watchGlobalAccounts = async () => {
-    if(globalAccountStream) return;
+    if (globalAccountStream) return;
 
     try {
         const collection = db.collection("users");
         globalAccountStream = collection.watch();
 
         globalAccountStream.on("change", async (change) => {
-            if(!change.documentKey || !change.documentKey._id) return;
+            if (!change.documentKey || !change.documentKey._id) return;
 
             const userId = change.documentKey._id.toString();
             const clients = accountConnections.get(userId) || [];
 
-            if(clients.length === 0) return;
+            if (clients.length === 0) return;
 
             const user = await collection.findOne(
                 { _id: new ObjectId(userId) },
-                { 
-                    projection: { 
-                        statistics: 1, 
-                        avatar: 1, 
-                        uploadedAvatar: 1, 
-                        clickSound: 1, 
-                        cardTheme: 1, 
+                {
+                    projection: {
+                        statistics: 1,
+                        avatar: 1,
+                        uploadedAvatar: 1,
+                        clickSound: 1,
+                        cardTheme: 1,
                         titles: 1,
                         friends: 1,
                         pendingRequests: 1,
@@ -585,7 +631,7 @@ const watchGlobalAccounts = async () => {
                 }
             );
 
-            if(!user) return;
+            if (!user) return;
 
             const format = user.titles || [];
             const active = format.find(title => title.active) || null;
@@ -616,22 +662,22 @@ const watchGlobalAccounts = async () => {
 
             const isUpdate = change.operationType === "update";
 
-            if(!isUpdate) return;
+            if (!isUpdate) return;
 
             const updatedFields = change.updateDescription.updatedFields || {};
             const updatedKeys = Object.keys(updatedFields);
 
-            const isStatisticUpdate = updatedKeys.some(key => 
+            const isStatisticUpdate = updatedKeys.some(key =>
                 key.startsWith("statistics")
             );
 
-            if(isStatisticUpdate) {
+            if (isStatisticUpdate) {
                 const newTitles = await checkAchievements(user);
 
-                if(newTitles.length > 0) {
+                if (newTitles.length > 0) {
                     const updatedTitles = user.titles.filter(title => newTitles.includes(title._id));
                     clients.forEach(client => {
-                        if(client.readyState === WebSocket.OPEN) {
+                        if (client.readyState === WebSocket.OPEN) {
                             client.send(JSON.stringify({
                                 type: "titlesUpdate",
                                 data: updatedTitles
@@ -641,17 +687,17 @@ const watchGlobalAccounts = async () => {
                 }
             }
 
-            const isAchievementUpdate = updatedKeys.some(key => 
+            const isAchievementUpdate = updatedKeys.some(key =>
                 key === "achievements"
             );
 
-            if(isAchievementUpdate) {
+            if (isAchievementUpdate) {
                 const updatedAchievements = user.achievements;
 
                 //Get All Achievements, check if unlocked and format them so the client can display them
 
                 clients.forEach(client => {
-                    if(client.readyState === WebSocket.OPEN) {
+                    if (client.readyState === WebSocket.OPEN) {
                         client.send(JSON.stringify({
                             type: "achievementsUpdate",
                             data: updatedAchievements
@@ -667,12 +713,13 @@ const watchGlobalAccounts = async () => {
                 key.startsWith("avatar")
             );
 
-            if(!isFriendUpdate) return;
+            if (!isFriendUpdate) return;
 
             const friendsData = {
                 friends: user.friends.map(friend => ({
                     ...friend,
-                    messages: (friend.messages || []).slice(-13)})),
+                    messages: (friend.messages || []).slice(-13)
+                })),
                 pendingRequests: user.pendingRequests || [],
                 sentRequests: user.sentRequests || [],
                 friendCode: user.friendCode || "",
@@ -721,17 +768,32 @@ const watchLobbyUpdates = async () => {
                         _id: 1,
                         name: 1,
                         players: 1,
+                        settings: 1,
                     },
                 }
             ).toArray();
 
             if (!games) return;
 
-            const format = games.map(game => ({
-                id: game._id.toString(),
-                name: game.name,
-                playerCount: game.players ? game.players.length : 0,
-            })).filter(game => game.playerCount < 10);
+            const format = await Promise.all(
+                games
+                .filter(game => game.settings && game.players?.length < game.settings.playerLimit)
+                .map(async (game) => {
+                    const avatars = await Promise.all(
+                        game.players.slice(0, 3).map(async (playerId) => {
+                            return playerId?.avatar || "default.svg";
+                        })
+                    );
+                
+                    return {
+                        id: game._id.toString(),
+                        name: game.name,
+                        playerCount: game.players.length,
+                        settings: game.settings,
+                        avatars,
+                    };
+                })
+            );
 
             waitingGameConnections.forEach((client) => {
                 if (client.readyState === WebSocket.OPEN) {
@@ -759,18 +821,19 @@ let globalGameStream = null;
  * @throws {Error} Logs an error if the change stream fails to start or encounters an issue.
  */
 const watchGlobalGames = async () => {
-    if(globalGameStream) return;
+    if (globalGameStream) return;
 
     try {
         const collection = db.collection("games");
         globalGameStream = collection.watch();
 
         globalGameStream.on("change", async (change) => {
+
             const gameId = change.documentKey._id.toString();
-            if(!gameId) return;
+            if (!gameId) return;
 
             const clients = activeGameConnections.get(gameId) || [];
-            if(clients.length === 0) return;
+            if (clients.length === 0) return;
 
             const isUpdate = change.operationType === "update";
             const updatedFields = isUpdate ? change.updateDescription.updatedFields || {} : {};
@@ -797,13 +860,19 @@ const watchGlobalGames = async () => {
             if (!game) return;
 
             //Game Update
-            if(!isUpdate || Object.keys(updatedFields).some(field => 
-                ["round", "lastRound", "activePlayer", "phase", "busfahrer", "endGame", "players"].includes(field))) {
-                
+            if (!isUpdate || Object.keys(updatedFields).some(field =>
+                ["round", "lastRound", "activePlayer", "phase", "busfahrer", "endGame", "players"].includes(field)) ||
+                Object.keys(updatedFields).some(field =>
+                    ["round", "lastRound", "activePlayer", "phase", "busfahrer", "endGame", "players"].some(key =>
+                      field.startsWith(key)
+                    )
+                  )
+            ) {
                 const playerInfo = game.players.map(p => ({
                     id: p.id,
                     name: p.name,
                     avatar: p.avatar,
+                    title: p.title,
                 }));
 
                 const busfahrerIds = game.busfahrer || [];
@@ -811,7 +880,7 @@ const watchGlobalGames = async () => {
                     .map(id => game.players.find(p => p.id === id)?.name)
                     .filter(Boolean)
                     .join(" & ");
-                
+
                 const data = {
                     players: playerInfo,
                     round: game.round,
@@ -831,12 +900,12 @@ const watchGlobalGames = async () => {
             }
 
             //Player Update
-            if(isUpdate && Object.keys(updatedFields).some(field => field.startsWith("players"))) {
+            if (isUpdate && Object.keys(updatedFields).some(field => field.startsWith("players"))) {
                 const player = game.players.find(p => p.id === game.activePlayer);
-                if(player && player.exen !== undefined) {
+                if (player && player.exen !== undefined) {
                     const data = { exen: player.exen };
                     clients.forEach(client => {
-                        if(client.readyState === WebSocket.OPEN) {
+                        if (client.readyState === WebSocket.OPEN) {
                             client.send(JSON.stringify({ type: "playersUpdate", data }));
                         }
                     });
@@ -844,19 +913,19 @@ const watchGlobalGames = async () => {
             }
 
             //Drink Count Update
-            if(isUpdate && updatedFields.hasOwnProperty("drinkCount")) {
+            if (isUpdate && updatedFields.hasOwnProperty("drinkCount")) {
                 const data = { drinks: game.drinkCount };
                 clients.forEach(client => {
-                    if(client.readyState === WebSocket.OPEN) {
+                    if (client.readyState === WebSocket.OPEN) {
                         client.send(JSON.stringify({ type: "drinkUpdate", data }));
                     }
                 });
             }
 
             //Cards / Phase Cards Update
-            if(isUpdate && Object.keys(updatedFields).some(field => 
+            if (isUpdate && Object.keys(updatedFields).some(field =>
                 field.startsWith("cards") || field.startsWith("phaseCards"))) {
-        
+
                 const phaseRows = [];
                 for (let row = 0; row < 3; row++) {
                     phaseRows.push(game.phaseCards?.[row]?.cards || []);
@@ -1073,7 +1142,7 @@ app.get("/get-friends", authenticateToken, async (req, res) => {
                 username: profile.username || "Unknown",
             });
         });
-    
+
         const syncedFriends = friendsRaw.map(friend => {
             const profile = friendMap.get(friend.userId.toString()) || {};
             return {
@@ -1295,7 +1364,7 @@ app.get("/get-click-sound", authenticateToken, async (req, res) => {
             { projection: { clickSound: 1 } }
         );
 
-        if(!user) {
+        if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
 
@@ -1435,14 +1504,28 @@ app.get("/get-waiting-games", authenticateToken, async (req, res) => {
     try {
         const games = await db.collection("games")
             .find({ status: "waiting" })
-            .project({ _id: 1, name: 1, players: 1 })
+            .project({ _id: 1, name: 1, players: 1, settings: 1 })
             .toArray();
 
-        const format = games.map(game => ({
-            id: game._id.toString(),
-            name: game.name,
-            playerCount: game.players ? game.players.length : 0,
-        })).filter(game => game.playerCount < 10);
+        const format = await Promise.all(
+            games
+            .filter(game => game.settings && game.players?.length < game.settings.playerLimit)
+            .map(async (game) => {
+                const avatars = await Promise.all(
+                    game.players.slice(0, 3).map(async (playerId) => {
+                        return playerId?.avatar || "default.svg";
+                    })
+                );
+            
+                return {
+                    id: game._id.toString(),
+                    name: game.name,
+                    playerCount: game.players.length,
+                    settings: game.settings,
+                    avatars,
+                };
+            })
+        );
 
         res.json(format);
     } catch (error) {
@@ -1537,6 +1620,7 @@ app.get("/get-players/:gameId", async (req, res) => {
             id: player.id,
             name: player.name,
             avatar: player.avatar,
+            title: player.title,
         }));
 
         const data = {
@@ -2404,7 +2488,7 @@ app.post("/register", async (req, res) => {
             statistics: stats,
             titles: [{
                 name: "None",
-                color: "#ffffff",
+                color: "#f5deb3",
                 active: true,
             }],
             friendCode,
@@ -2488,13 +2572,13 @@ app.post("/login", async (req, res) => {
         const lastLogin = user.lastLogin ? new Date(user.lastLogin) : null;
 
         let newStreak = 1;
-        if(lastLogin) {
+        if (lastLogin) {
             const diffInTime = now.getTime() - lastLogin.getTime();
             const diffInDays = Math.floor(diffInTime / (1000 * 3600 * 24));
 
-            if(diffInDays === 1) {
+            if (diffInDays === 1) {
                 newStreak = (user.statistics?.dailyLoginStreak || 1) + 1;
-            } else if(diffInDays === 0) {
+            } else if (diffInDays === 0) {
                 newStreak = user.statistics?.dailyLoginStreak || 1;
             } else {
                 newStreak = 1;
@@ -2509,7 +2593,7 @@ app.post("/login", async (req, res) => {
 
         await usersCollection.updateOne(
             { _id: user._id },
-            { 
+            {
                 $set: {
                     lastLogin: now,
                     "statistics.dailyLoginStreak": newStreak
@@ -2685,7 +2769,7 @@ app.post("/accept-friend-request", authenticateToken, async (req, res) => {
         // Remove from pending requests
         await db.collection("users").updateOne(
             { _id: new ObjectId(userId) },
-            { 
+            {
                 $pull: { pendingRequests: { userId: new ObjectId(friendId) } },
                 $push: { friends: { userId: friend._id, username: friend.username, avatar: friend.avatar, messages: [] } }
             }
@@ -2694,7 +2778,7 @@ app.post("/accept-friend-request", authenticateToken, async (req, res) => {
         // Remove from sent requests & add to friends
         await db.collection("users").updateOne(
             { _id: new ObjectId(friendId) },
-            { 
+            {
                 $pull: { sentRequests: { userId: new ObjectId(userId) } },
                 $push: { friends: { userId: user._id, username: user.username, avatar: user.avatar, messages: [] } }
             }
@@ -2907,7 +2991,7 @@ app.post("/send-message", authenticateToken, async (req, res) => {
 
         await db.collection("users").updateOne(
             { _id: new ObjectId(friendId), "friends.userId": new ObjectId(userId) },
-            { 
+            {
                 $push: { "friends.$.messages": recieverMessage },
                 $inc: { "friends.$.unreadCount": 1 }
             }
@@ -3028,7 +3112,7 @@ app.post("/upload-avatar", authenticateToken, upload.single("avatar"), async (re
 
         await db.collection("users").updateMany(
             { "friends.userId": new ObjectId(userId) },
-            { 
+            {
                 $set: { "friends.$[elem].avatar": newAvatarUrl },
                 $inc: { "statistics.uploadedAvatar": 1 },
             },
@@ -3145,7 +3229,7 @@ app.post("/set-click-sound", authenticateToken, async (req, res) => {
 
         await db.collection("users").updateOne(
             { _id: new ObjectId(userId) },
-            { 
+            {
                 $set: { clickSound: sound },
                 $inc: { "statistics.changedSound": 1 },
             },
@@ -3197,7 +3281,7 @@ app.post("/set-card-theme", authenticateToken, async (req, res) => {
 
         await db.collection("users").updateOne(
             { _id: new ObjectId(userId) },
-            { 
+            {
                 $set: { cardTheme: theme, color1: color1, color2: color2 },
                 $inc: { "statistics.changedTheme": 1 },
             },
@@ -3257,7 +3341,7 @@ app.post("/set-title", authenticateToken, async (req, res) => {
 
         const titleIndex = user.titles.findIndex(t => t.name === title);
 
-        if (titleIndex === -1 ) {
+        if (titleIndex === -1) {
             return res.status(400).json({ error: "Title not found" });
         }
 
@@ -3363,29 +3447,29 @@ app.post('/logout', (req, res) => {
  */
 app.post("/add-achievement", async (req, res) => {
     try {
-      const { name, description, icon, titleUnlocked, conditions } = req.body;
-  
-      if (!name || !description || !icon || !titleUnlocked || !conditions) {
-        return res.status(400).json({ error: "Missing required fields." });
-      }
-  
-      const newAchievement = {
-        name,
-        description,
-        icon,
-        titleUnlocked: {
-          name: titleUnlocked.name,
-          color: titleUnlocked.color
-        },
-        conditions
-      };
-  
-      await db.collection("achievements").insertOne(newAchievement);
-  
-      res.status(200).json({ message: "Achievement added successfully." });
+        const { name, description, icon, titleUnlocked, conditions } = req.body;
+
+        if (!name || !description || !icon || !titleUnlocked || !conditions) {
+            return res.status(400).json({ error: "Missing required fields." });
+        }
+
+        const newAchievement = {
+            name,
+            description,
+            icon,
+            titleUnlocked: {
+                name: titleUnlocked.name,
+                color: titleUnlocked.color
+            },
+            conditions
+        };
+
+        await db.collection("achievements").insertOne(newAchievement);
+
+        res.status(200).json({ message: "Achievement added successfully." });
     } catch (error) {
-      console.error("Error adding achievement:", error);
-      res.status(500).json({ error: "Internal server error" });
+        console.error("Error adding achievement:", error);
+        res.status(500).json({ error: "Internal server error" });
     }
 });
 
@@ -3435,22 +3519,24 @@ app.post("/add-achievement", async (req, res) => {
 app.post("/create-game", authenticateToken, async (req, res) => {
     const userId = req.user.userId;
 
-    const { gameName, playerName, isPrivate, gender } = req.body;
+    const { gameName, playerName, isPrivate, gender, settings } = req.body;
 
     try {
         const user = await db.collection("users").findOne(
             { _id: new ObjectId(userId) },
-            { projection: { avatar: 1, } }
+            { projection: { avatar: 1, titles: 1, } }
         );
 
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
 
+        const activeTitle = user.titles?.find(title => title.active) || null;
+
         const statistics = {
             topDrinker: { drinks: 0, id: "" },
             schluckePerPlayer: [
-              { id: userId, drinks: 0 }  
+                { id: userId, drinks: 0 }
             ],
             roundsPerPlayer: [
                 { id: userId, rounds: 1 }
@@ -3468,6 +3554,7 @@ app.post("/create-game", authenticateToken, async (req, res) => {
                 drinks: 0,
                 exen: false,
                 avatar: user.avatar,
+                title: activeTitle,
             }],
             status: "waiting",
             private: isPrivate,
@@ -3479,6 +3566,7 @@ app.post("/create-game", authenticateToken, async (req, res) => {
             phase: "phase1",
             createdAt: new Date(),
             statistics,
+            settings,
         };
 
         const result = await db.collection("games").insertOne(newGame);
@@ -3638,12 +3726,14 @@ app.post("/join-game/:gameId", authenticateToken, async (req, res) => {
 
         const user = await db.collection("users").findOne(
             { _id: new ObjectId(userId) },
-            { projection: { avatar: 1, } }
+            { projection: { avatar: 1, titles: 1, } }
         );
 
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
+
+        const activeTitle = user.titles?.find(title => title.active) || null;
 
         const result = await db.collection("games").updateOne(
             { _id: new ObjectId(gameId) },
@@ -3658,6 +3748,7 @@ app.post("/join-game/:gameId", authenticateToken, async (req, res) => {
                         drinks: 0,
                         exen: false,
                         avatar: user.avatar,
+                        title: activeTitle,
                     },
                     "statistics.schluckePerPlayer": {
                         id: userId,
@@ -3832,7 +3923,7 @@ app.post("/start-game", authenticateToken, async (req, res) => {
     try {
         const game = await db.collection("games").findOne(
             { _id: new ObjectId(gameId) },
-            { projection: { players: 1, activePlayer: 1 } }
+            { projection: { players: 1, activePlayer: 1, settings: 1 } }
         );
 
         if (!game) {
@@ -3843,7 +3934,9 @@ app.post("/start-game", authenticateToken, async (req, res) => {
             return res.status(403).json({ error: "Only the Game Master can start the game" });
         }
 
-        let deck = createDeck();
+        const settings = game.settings;
+
+        let deck = createDeck(settings.shuffle);
         const updatedPlayers = game.players.map((player) => {
             const playerCards = deck.splice(0, 10).map(card => ({ ...card, played: false }));
             return { ...player, cards: playerCards };
@@ -4097,7 +4190,7 @@ app.post("/flip-row", authenticateToken, async (req, res) => {
             }
         );
 
-        for(const player of game.players) {
+        for (const player of game.players) {
             await db.collection("users").updateOne(
                 { _id: new ObjectId(player.id) },
                 { $inc: { "statistics.rowsFlipped": 1 } }
@@ -4420,7 +4513,7 @@ app.post("/start-phase2", authenticateToken, async (req, res) => {
                 { projection: { statistics: 1 } }
             );
 
-            if(user.statistics.cardsLeft < unplayedCards) {
+            if (user.statistics.cardsLeft < unplayedCards) {
                 await db.collection("users").updateOne(
                     { _id: new ObjectId(player.id) },
                     { $set: { "statistics.cardsLeft": unplayedCards } }
@@ -4685,12 +4778,12 @@ app.post("/next-player-phase", authenticateToken, async (req, res) => {
             const player = updatedStatistics.schluckePerPlayer.find(player => player.id.toString() === userId.toString());
             player.drinks += game.drinkCount;
 
-            if(player.drinks > updatedStatistics.topDrinker.drinks) {
+            if (player.drinks > updatedStatistics.topDrinker.drinks) {
                 updatedStatistics.topDrinker = { id: userId, drinks: player.drinks };
             }
 
-            if(player.drinks === updatedStatistics.topDrinker.drinks && userId !== updatedStatistics.topDrinker.id) {
-                updatedStatistics.topDrinker = {id: "", drinks: player.drinks};
+            if (player.drinks === updatedStatistics.topDrinker.drinks && userId !== updatedStatistics.topDrinker.id) {
+                updatedStatistics.topDrinker = { id: "", drinks: player.drinks };
             }
 
             await db.collection("games").updateOne(
@@ -4769,7 +4862,7 @@ app.post("/start-phase3", authenticateToken, async (req, res) => {
     try {
         const game = await db.collection("games").findOne(
             { _id: new ObjectId(gameId) },
-            { projection: { players: 1 } }
+            { projection: { players: 1, settings: 1 } }
         );
 
         if (!game) {
@@ -4780,7 +4873,9 @@ app.post("/start-phase3", authenticateToken, async (req, res) => {
             return res.status(403).json({ error: "Only the Game Master can start the next phase" });
         }
 
-        let deck = createDeck();
+        const settings = game.settings;
+
+        let deck = createDeck(settings.shuffle);
         const diamond = deck.splice(0, 27).map(card => ({ ...card, flipped: false }));
 
         // Flip the first and last card of the diamond
@@ -4916,14 +5011,16 @@ app.post("/retry-phase", authenticateToken, async (req, res) => {
     try {
         const game = await db.collection("games").findOne(
             { _id: new ObjectId(gameId) },
-            { projection: { players: 1, busfahrer: 1, statistics: 1 } }
+            { projection: { players: 1, busfahrer: 1, statistics: 1, settings: 1 } }
         );
 
         if (!game) {
             return res.status(404).json({ error: "Game not found" });
         }
 
-        let deck = createDeck();
+        const settings = game.settings;
+
+        let deck = createDeck(settings.shuffle);
         const diamond = deck.splice(0, 27).map(card => ({ ...card, flipped: false }));
 
         // Flip the first and last card in the diamond
@@ -4951,8 +5048,8 @@ app.post("/retry-phase", authenticateToken, async (req, res) => {
                 $set: { statistics: updatedStatistics }
             }
         );
-        
-        for(const player of game.busfahrer) {
+
+        for (const player of game.busfahrer) {
 
             await db.collection("users").updateOne(
                 { _id: new ObjectId(player) },
@@ -5031,7 +5128,7 @@ app.post("/open-new-game", authenticateToken, async (req, res) => {
 
         const user = await db.collection("users").findOne({ _id: new ObjectId(userId) });
 
-        if(!user) {
+        if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
 
@@ -5039,11 +5136,11 @@ app.post("/open-new-game", authenticateToken, async (req, res) => {
         const player = stats.roundsPerPlayer.find(player => player.id.toString() === userId.toString());
 
         let maxRounds = user.statistics.maxRounds;
-        if(maxRounds > player.rounds) {
+        if (maxRounds > player.rounds) {
             maxRounds = player.rounds;
         }
-        
-        
+
+
         await db.collection("users").updateOne(
             { _id: new ObjectId(stats.topDrinker.id) },
             {
@@ -5327,7 +5424,7 @@ app.post("/check-last-card", authenticateToken, async (req, res) => {
                 }
             );
 
-            for(const player of game.busfahrer) {
+            for (const player of game.busfahrer) {
                 await db.collection("users").updateOne(
                     { _id: new ObjectId(player) },
                     { $inc: { "statistics.gamesWon": 1 } }

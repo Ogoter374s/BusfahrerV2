@@ -1,5 +1,6 @@
 import BASE_URL, { WBS_URL } from './config';
 import Cropper from 'react-easy-crop';
+import ChatSidebar from './ChatSidebar';
 
 import { useState, useEffect, useRef, use } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -848,6 +849,9 @@ function Account() {
                     </div>
                 </div>
             )}
+
+            {/* Sidebar Toggle */}
+            <ChatSidebar />
         </div>
     );
 }

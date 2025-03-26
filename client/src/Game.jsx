@@ -1,4 +1,5 @@
 import BASE_URL, { WBS_URL } from './config';
+import ChatSidebar from './ChatSidebar';
 
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -18,10 +19,18 @@ function Game() {
     const init = useRef(false);
 
     /**
-     * Fetches the player's unique identifier from the backend.
+     * Fetches the current player's unique identifier from the backend.
      *
-     * Sends a GET request using HttpOnly cookie authentication.
-     * Stores the fetched player ID in a React ref for comparison during events.
+     * Sends a GET request to the `get-player-id` endpoint using HttpOnly cookies
+     * for secure session authentication. On success, stores the player ID in a
+     * React ref (`playerIdRef`) for persistent access throughout the component's lifecycle.
+     *
+     * Logs an error to the console if the request fails due to network or server issues.
+     *
+     * @async
+     * @function fetchPlayerId
+     * @returns {Promise<void>} A promise that resolves once the player ID is fetched and stored.
+     * @throws {Error} If the fetch request fails or returns invalid JSON.
      */
     const fetchPlayerId = async () => {
         try {
@@ -39,9 +48,18 @@ function Game() {
     };
 
     /**
-     * Fetches the list of players currently in the game.
+     * Fetches the list of players currently in the specified game.
      *
-     * Sends a GET request to retrieve player data and updates the state.
+     * Sends a GET request to the `get-players/:gameId` endpoint using HttpOnly cookies
+     * for session authentication. On success, updates the local `players` state with
+     * the array of player objects returned from the server.
+     *
+     * Logs any errors that occur during the fetch operation to the console.
+     *
+     * @async
+     * @function fetchPlayers
+     * @returns {Promise<void>} A promise that resolves once the players list is successfully fetched and updated.
+     * @throws {Error} If the request fails due to network or server issues.
      */
     const fetchPlayers = async () => {
         try {
@@ -58,9 +76,18 @@ function Game() {
     };
 
     /**
-     * Checks if the current player is the game master.
+     * Checks whether the current player is the game master for the specified game.
      *
-     * Sends a GET request using HttpOnly authentication and updates game master state.
+     * Sends a GET request to the `is-game-master` endpoint with the `gameId` as a query parameter,
+     * using HttpOnly cookies for secure session authentication. On success, updates the
+     * local `isGameMaster` state with the boolean result returned by the server.
+     *
+     * Logs any errors encountered during the request to the console.
+     *
+     * @async
+     * @function checkGameMaster
+     * @returns {Promise<void>} A promise that resolves after the game master status is determined and stored.
+     * @throws {Error} If the fetch request fails due to network or server issues.
      */
     const checkGameMaster = async () => {
         try {
@@ -86,6 +113,10 @@ function Game() {
      * Sends a GET request to the backend to retrieve the saved sound preference.
      * Updates the selected sound state and sets the audio source accordingly.
      * Uses HttpOnly cookies for authentication.
+     *
+     * @function fetchSoundPreference
+     * @async
+     * @throws {Error} If the fetch operation fails.
      */
     const fetchSoundPreference = async () => {
         try {
@@ -105,12 +136,25 @@ function Game() {
     };
 
     /**
-     * Sets up a WebSocket connection to receive real-time game updates.
+     * Sets up a WebSocket connection to manage real-time game lobby updates.
      *
-     * Subscribes to a game WebSocket channel, listens for different game-related events,
-     * and updates the local state accordingly. Handles player removal, game closure,
-     * and phase transitions. Also fetches and updates the list of players in the game.
-     * Cleans up by closing the WebSocket connection when the component unmounts.
+     * Establishes a WebSocket connection using the provided `WBS_URL` and subscribes
+     * to updates for the specified `gameId`. Listens for multiple event types:
+     * - `gameUpdate`: Updates the list of players in the lobby.
+     * - `kicked`: Redirects the user if they were removed from the game.
+     * - `close`: Redirects users if the game has been closed by the host.
+     * - `start`: Navigates users to Phase 1 when the game begins.
+     *
+     * Also fetches initial game-related data, including:
+     * - Player list via `fetchPlayers`
+     * - Player ID via `fetchPlayerId`
+     * - Game master status via `checkGameMaster`
+     * - Sound preference via `fetchSoundPreference`
+     *
+     * Adds a cleanup listener for the `beforeunload` event to close the WebSocket connection
+     * and performs additional cleanup on component unmount to prevent memory leaks.
+     *
+     * @function useEffect
      */
     useEffect(() => {
         if (init.current) return;
@@ -178,22 +222,35 @@ function Game() {
     }, [gameId]);
 
     /**
-     * Plays a click sound effect.
+     * Plays a cloned instance of the selected click sound effect.
      *
-     * Resets the current playback time to the beginning and plays the sound.
-     * Ensures the sound plays from the start each time the function is called.
+     * Clones the current audio element to allow overlapping playback,
+     * resets the clone's playback position, and plays the sound.
+     * Useful for rapid or repeated click feedback without delay.
+     *
+     * @function playClickSound
      */
     const playClickSound = () => {
-        soundRef.current.currentTime = 0;
-        soundRef.current.play();
+        const clickClone = soundRef.current.cloneNode();
+        clickClone.currentTime = 0;
+        clickClone.play();
     };
 
     /**
-     * Kicks a player from the game.
+     * Kicks a player from the current game session.
      *
-     * Sends a POST request to remove a player from the game. The game master must be authenticated.
-     * Updates the local player list upon successful removal.
-     * @param {string} id - The ID of the player to be removed.
+     * Sends a POST request to the `kick-player` endpoint with the `gameId` and the ID of the
+     * player to be removed. Uses HttpOnly cookies for authentication to ensure only the game
+     * master can perform this action.
+     *
+     * Plays a UI click sound before initiating the request. If the server responds with an error,
+     * an alert is shown to the user. Any unexpected errors are logged to the console.
+     *
+     * @async
+     * @function kickPlayer
+     * @param {string} id - The unique identifier of the player to kick from the game.
+     * @returns {Promise<void>} A promise that resolves once the kick operation is complete.
+     * @throws {Error} If the request fails due to a network or server issue.
      */
     const kickPlayer = async (id) => {
         playClickSound();
@@ -217,10 +274,19 @@ function Game() {
     };
 
     /**
-     * Starts the game if the user is the game master.
+     * Starts the game session if the current user is the game master.
      *
-     * Sends a POST request to change the game status to "active".
-     * The game must be in a joinable state before it can start.
+     * Validates that the user is authorized (i.e., the game master) before proceeding.
+     * Sends a POST request to the `start-game` endpoint with the `gameId` in the request body.
+     * Uses HttpOnly cookies for authentication.
+     *
+     * Plays a UI click sound before sending the request. On failure, displays an error
+     * alert with a relevant message. Unexpected errors are logged to the console.
+     *
+     * @async
+     * @function startGame
+     * @returns {Promise<void>} A promise that resolves once the game start process completes or fails.
+     * @throws {Error} If the request fails due to a network or server issue.
      */
     const startGame = async () => {
         playClickSound();
@@ -246,10 +312,20 @@ function Game() {
     };
 
     /**
-     * Allows a player to leave the game.
+     * Allows the current player to leave the game session.
      *
-     * Sends a POST request to remove the player from the game.
-     * Navigates to the correct screen based on whether the player was the last one in the game.
+     * Sends a POST request to the `leave-game` endpoint with the `gameId` in the request body.
+     * Uses HttpOnly cookies for session authentication. Based on the server's response:
+     * - If the player was the last one in the game (`data.message === 'one'`), navigates to the lobby screen.
+     * - Otherwise, navigates to the homepage.
+     *
+     * Plays a click sound before initiating the request to provide UI feedback.
+     * Displays an alert if the response indicates an error or if an unexpected failure occurs.
+     *
+     * @async
+     * @function leaveGame
+     * @returns {Promise<void>} A promise that resolves once the player has successfully left the game or an error is handled.
+     * @throws {Error} If the fetch request fails due to a network or server issue.
      */
     const leaveGame = async () => {
         playClickSound();
@@ -278,6 +354,20 @@ function Game() {
         }
     };
 
+    /**
+     * Renders the game lobby UI where players can prepare before the game starts.
+     *
+     * Displays the game title and a list of all joined players, including their avatar,
+     * display name, and title badge (if set). Each player entry includes a kick button
+     * that is only enabled for the game master.
+     *
+     * Provides a "Start Game" button that allows the game master to begin the session,
+     * and a "Leave Game" button for players to exit the lobby. Also includes a chat
+     * sidebar component for pre-game communication.
+     *
+     * @function JSX Return Block
+     * @returns {JSX.Element} A React component representing the game lobby screen.
+     */
     return (
         <div className="overlay-cont">
             {/* Background overlay image */}
@@ -295,6 +385,7 @@ function Game() {
                 <div className="player-list">
                     {players.map((player) => (
                         <div key={player.id} className="player-item">
+                            
                             {/* Avatar Image */}
                             <img
                                 src={`${BASE_URL}avatars/${player.avatar}`}
@@ -302,8 +393,18 @@ function Game() {
                                 className="player-avatar"
                             />
 
-                            {/* Display player name */}
-                            <span>{player.name}</span>
+                            {/* Name and Title Container */}
+                            <div className="player-text">
+                                <span className="player-name" style={{ color: player.title.color }}>{player.name}</span>
+                                {player.title && (
+                                    <span
+                                        className="player-title"
+                                        style={{ color: player.title.color }}
+                                    >
+                                        {player.title.name !== "None" ? player.title.name : ""}
+                                    </span>
+                                )}
+                            </div>
 
                             {/* Kick button (only enabled for game master) */}
                             <button
@@ -337,23 +438,25 @@ function Game() {
                                     : '/button.svg'
                             }
                             alt="Logout"
-                            className="startGame-icon"
                         />
                         <p className="btn-text-startGame">Start Game</p>
                     </button>
                 </div>
-
-                {/* Leave game button, navigates player back */}
-                <div className="back-cont">
-                    <button className="btn-back" onClick={leaveGame}>
-                        <img
-                            src="/back.svg"
-                            alt="Back Button"
-                            className="back-icon"
-                        />
-                    </button>
-                </div>
             </div>
+
+            {/* Leave game button, navigates player back */}
+            <div className="back-cont">
+                <button className="btn-back" onClick={leaveGame}>
+                    <img
+                        src="/back.svg"
+                        alt="Back Button"
+                        className="back-icon"
+                    />
+                </button>
+            </div>
+
+            {/* Sidebar Toggle */}
+            <ChatSidebar />
         </div>
     );
 }

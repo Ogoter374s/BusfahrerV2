@@ -1,4 +1,5 @@
-import BASE_URL, { WBS_URL } from './config';
+import BASE_URL from './config';
+import ChatSidebar from './ChatSidebar';
 
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -7,92 +8,13 @@ function Join() {
     const [selectedSound, setSelectedSound] = useState('ui-click.mp3');
     const soundRef = useRef(new Audio(selectedSound));
 
-    const [isChatOpen, setIsChatOpen] = useState(false);
-    const [pendingRequests, setPendingRequests] = useState([]);
-    const [friends, setFriends] = useState([]);
-    const [friendCode, setFriendCode] = useState('');
-    const [userFriendCode, setUserFriendCode] = useState('');
-    const [newMessage, setNewMessage] = useState('');
-    const [selectedChat, setSelectedChat] = useState('');
-    const selectedFriend = useRef('');
-
     const { gameId } = useParams();
 
     const [playerName, setPlayerName] = useState('');
     const [gender, setGender] = useState('Male');
 
     const navigate = useNavigate();
-    const wsRef = useRef(null);
     const init = useRef(false);
-
-    /**
-     * Fetches pending friend requests for the authenticated user.
-     *
-     * Sends a GET request to the backend endpoint `/get-friend-requests`
-     * using HttpOnly cookies for authentication. Updates the local state
-     * with the list of pending friend requests.
-     *
-     * @function fetchFriendRequests
-     * @async
-     * @throws {Error} If the fetch operation fails.
-     */
-    const fetchFriendRequests = async () => {
-        try {
-            const response = await fetch(`${BASE_URL}get-friend-requests`, {
-                credentials: 'include',
-            });
-            const data = await response.json();
-            setPendingRequests(data.pending || []);
-        } catch (error) {
-            console.error('Error fetching friend requests:', error);
-        }
-    };
-
-    /**
-     * Fetches the list of friends for the authenticated user.
-     *
-     * Sends a GET request to the backend endpoint `/get-friends`
-     * using HttpOnly cookies for authentication. Updates the local state
-     * with the list of friends retrieved from the server.
-     *
-     * @function fetchFriends
-     * @async
-     * @throws {Error} If the fetch operation fails.
-     */
-    const fetchFriends = async () => {
-        try {
-            const response = await fetch(`${BASE_URL}get-friends`, {
-                credentials: 'include',
-            });
-            const data = await response.json();
-            setFriends(data.friends || []);
-        } catch (error) {
-            console.error('Error fetching friend requests:', error);
-        }
-    };
-
-    /**
-     * Fetches the user's unique friend code.
-     *
-     * Sends a GET request to the backend endpoint `/get-friend-code`
-     * using HttpOnly cookies for authentication. Updates the local state
-     * with the retrieved friend code.
-     *
-     * @function fetchUserFriendCode
-     * @async
-     * @throws {Error} If the fetch operation fails.
-     */
-    const fetchUserFriendCode = async () => {
-        try {
-            const response = await fetch(`${BASE_URL}get-friend-code`, {
-                credentials: 'include',
-            });
-            const data = await response.json();
-            setUserFriendCode(data.friendCode);
-        } catch (error) {
-            console.error('Error fetching friend code:', error);
-        }
-    };
 
     /**
      * Fetches the user's selected click sound preference.
@@ -123,6 +45,14 @@ function Join() {
         }
     };
 
+    /**
+     * Initializes the join screen by fetching the user's sound preference on first render.
+     *
+     * Ensures the sound preference is fetched only once using a ref-based initialization flag.
+     * Retrieves the saved click sound from the backend to personalize audio feedback during interactions.
+     *
+     * @function useEffect
+     */
     useEffect(() => {
         if (init.current) return;
         init.current = true;
@@ -131,22 +61,37 @@ function Join() {
     }, []);
 
     /**
-     * Plays a click sound effect.
+     * Plays a cloned instance of the selected click sound effect.
      *
-     * Resets the current playback time to the beginning and plays the sound.
-     * Ensures the sound plays from the start each time the function is called.
+     * Clones the current audio element to allow overlapping playback,
+     * resets the clone's playback position, and plays the sound.
+     * Useful for rapid or repeated click feedback without delay.
+     *
+     * @function playClickSound
      */
     const playClickSound = () => {
-        soundRef.current.currentTime = 0;
-        soundRef.current.play();
+        const clickClone = soundRef.current.cloneNode();
+        clickClone.currentTime = 0;
+        clickClone.play();
     };
 
     /**
-     * Handles joining a game by sending the player's details to the backend.
+     * Handles the process of joining a game with a given player name and gender.
      *
-     * Validates that the player name is provided. Sends a POST request to the backend
-     * with the player's name and gender. Authentication is handled via an HttpOnly cookie.
-     * Navigates to the game page if successful or displays an error message otherwise.
+     * Validates the player name to ensure it is not empty, then trims and limits it
+     * to 26 characters to enforce length constraints. Sends a POST request to the
+     * backend `join-game/:gameId` endpoint with the player's name and selected gender.
+     * Uses HttpOnly cookies for secure session authentication.
+     *
+     * On success, navigates the player to the game lobby. If the backend returns an error,
+     * displays an appropriate alert message to the user.
+     *
+     * Plays a click sound before initiating the request to enhance user feedback.
+     *
+     * @async
+     * @function handleJoin
+     * @returns {Promise<void>} A promise that resolves after the join operation completes or fails.
+     * @throws {Error} If the fetch request encounters a network or server error.
      */
     const handleJoin = async () => {
         playClickSound();
@@ -180,8 +125,22 @@ function Join() {
         }
     };
 
+    /**
+     * Renders the Join Game screen UI for entering player details and joining an existing game.
+     *
+     * Displays a structured form for the user to input their player name and select a gender.
+     * Includes a "Join Game" button that triggers the join request, along with a navigation
+     * button to return to the lobby list. Branding elements like the game logo and overlay
+     * are included to maintain visual consistency.
+     *
+     * Also includes the ChatSidebar component for ongoing communication.
+     *
+     * @function JSX Return Block
+     * @returns {JSX.Element} A React component that renders the join game interface.
+     */
     return (
         <div className="overlay-cont">
+
             {/* Background decorative overlay */}
             <img src="/overlay.svg" alt="Overlay" className="overlay-img" />
 
@@ -230,24 +189,27 @@ function Join() {
                         <p className="btn-text-join">Join Game</p>
                     </button>
                 </div>
-
-                {/* Navigation button to go back to the lobby selection screen */}
-                <div className="back-cont">
-                    <button
-                        className="btn-back"
-                        onClick={() => {
-                            playClickSound();
-                            navigate('/lobbys');
-                        }}
-                    >
-                        <img
-                            src="/back.svg"
-                            alt="Back Button"
-                            className="back-icon"
-                        />
-                    </button>
-                </div>
             </div>
+
+            {/* Navigation button to go back to the lobby selection screen */}
+            <div className="back-cont">
+                <button
+                    className="btn-back"
+                    onClick={() => {
+                        playClickSound();
+                        navigate('/lobbys');
+                    }}
+                >
+                    <img
+                        src="/back.svg"
+                        alt="Back Button"
+                        className="back-icon"
+                    />
+                </button>
+            </div>
+
+            {/* Sidebar Toggle */}
+            <ChatSidebar />
         </div>
     );
 }

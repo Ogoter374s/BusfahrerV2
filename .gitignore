@@ -48,3 +48,7 @@ Thumbs.db
 # Certificates
 *.cert
 *.key
+*.pem
+
+# User Avatars
+.public/avatars/

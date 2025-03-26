@@ -1,4 +1,5 @@
 import BASE_URL, { WBS_URL } from './config';
+import ChatSidebar from './ChatSidebar';
 
 import { useState, useEffect, useRef, use } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -242,6 +243,9 @@ function Achievements() {
                     />
                 </button>
             </div>
+
+            {/* Sidebar Toggle */}
+            <ChatSidebar />
         </div>
     );
 }

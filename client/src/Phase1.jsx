@@ -22,9 +22,8 @@ function Phase1() {
     const [drinkCount, setDrinkCount] = useState(0);
     const [isNextPhase, setIsNextPhase] = useState(false);
     const [isRowFlipped, setIsRowFlipped] = useState(false);
-    const [players, setPlayers] = useState([]);
-    const [currentPlayerId, setCurrentPlayerId] = useState(null);
-    const [ws, setWs] = useState(null);
+    const [drinksGiven, setDrinksGiven] = useState(false);
+    const [drinksReceived, setDrinksReceived] = useState(0);
 
     const navigate = useNavigate();
     const playerIdRef = useRef(null);
@@ -234,19 +233,39 @@ function Phase1() {
         }
     };
 
-    const fetchPlayers = async () => {
+    const fetchDrinksReceived = async () => {
         try {
-            const response = await fetch(`${BASE_URL}get-players/${gameId}`, {
-                credentials: 'include',
-            });
+            const response = await fetch(
+                `${BASE_URL}get-drinks-received?gameId=${gameId}`,
+                {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                },
+            );
 
-            if (!response.ok) throw new Error('Failed to fetch players');
-
-            const data = await response.json();
-            setPlayers(data.players);
-            setCurrentPlayerId(data.currentPlayer);
+            const drinks = await response.json();
+            setDrinksReceived(drinks);
         } catch (error) {
-            console.error('Error fetching players:', error);
+            console.error('Error fetching drinks received:', error);
+        }
+    }
+
+    const fetchDrinksGiven = async () => {
+        try {
+            const response = await fetch(
+                `${BASE_URL}drinks-given?gameId=${gameId}`,
+                {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                },
+            );
+
+            const given = await response.json();
+            setDrinksGiven(given);
+        } catch (error) {
+            console.error('Error fetching drinks given status:', error);
         }
     };
 
@@ -267,7 +286,11 @@ function Phase1() {
                 const message = JSON.parse(event.data);
 
                 if (message.type === 'playersUpdate') {
-                    if (isCurrentPlayer.current) fetchPlayerCards();
+                    if (isCurrentPlayer.current) {
+                        fetchPlayerCards();
+                        fetchDrinksGiven();
+                        fetchDrinksReceived();
+                    }
                 }
 
                 if (message.type === 'drinkUpdate') {
@@ -281,9 +304,7 @@ function Phase1() {
                 if (message.type === 'gameUpdate') {
                     setIsNextPhase(message.data.round === 6);
                     setIsRowFlipped(message.data.flipped);
-
-                    setPlayers(message.data.players);
-                    setCurrentPlayerId(message.data.currentPlayer);
+                    fetchDrinksReceived();
 
                     getCurrentPlayer();
                 }
@@ -309,10 +330,11 @@ function Phase1() {
         getCurrentPlayer();
         getDrinkCount();
         checkGameMaster();
+        fetchDrinksGiven();
+        fetchDrinksReceived();
 
         fetchSoundPreference();
         fetchCardTheme();
-        fetchPlayers();
 
         window.addEventListener('beforeunload', () => {
             if (wsRef.current.readyState === WebSocket.OPEN) {
@@ -372,8 +394,6 @@ function Phase1() {
     const handleRowClick = async (rowIdx) => {
         if (!gameMasterRef.current) return;
 
-        playClickSound();
-
         try {
             const response = await fetch(`${BASE_URL}flip-row`, {
                 method: 'POST',
@@ -382,7 +402,9 @@ function Phase1() {
                 body: JSON.stringify({ gameId, rowIdx }),
             });
 
-            if (!response.ok) {
+            if (response.ok) {
+                playClickSound();
+            } else {
                 throw new Error('Failed to flip row');
             }
         } catch (error) {
@@ -393,8 +415,6 @@ function Phase1() {
     const handleLayCard = async (cardIdx) => {
         if (!isCurrentPlayer.current) return;
 
-        playClickSound();
-
         try {
             const response = await fetch(`${BASE_URL}lay-card`, {
                 method: 'POST',
@@ -403,7 +423,9 @@ function Phase1() {
                 body: JSON.stringify({ gameId, cardIdx }),
             });
 
-            if (!response.ok) {
+            if (response.ok) {
+                playClickSound();
+            } else {
                 throw new Error('Failed to lay card');
             }
         } catch (error) {
@@ -443,7 +465,7 @@ function Phase1() {
             />
 
             {/* Player avatars container */}
-            <AvatarInfo players={players} currentPlayerId={currentPlayerId} />
+            <AvatarInfo gameId={gameId}/>
 
             {/* Main Phase 1 container */}
             <div className="phase1-menu">
@@ -509,12 +531,29 @@ function Phase1() {
                             darf
                             <span className="drink-count">
                                 {' '}
-                                {drinkCount}{' '}
+                                {drinkCount}
                             </span>{' '}
                             Schlucke verteilen
                         </>
                     )}
                 </p>
+
+                {/* Display the number of drinks given */}
+                <div className="given-info">
+                    {drinksReceived > 0 && (
+                        <>
+                            <span className="current-player">
+                                Du
+                            </span>{' '}
+                            musst
+                            <span className="drink-count">
+                                {' '}
+                                {drinksReceived}
+                            </span>{' '}
+                            Schlucke trinken
+                        </>
+                    )}
+                </div>
 
                 {/* Player's available cards for selection */}
                 <div className="player-cards">
@@ -566,7 +605,7 @@ function Phase1() {
                         src={
                             isNextPhase && isCurrentPlayer.current
                                 ? '/next_phase.svg'
-                                : isCurrentPlayer.current && isRowFlipped
+                                : (isCurrentPlayer.current && isRowFlipped && drinksGiven)
                                   ? '/next.svg'
                                   : '/next_disabled.svg'
                         }
@@ -575,6 +614,7 @@ function Phase1() {
                     />
                 </button>
             </div>
+
 
             {/* Sidebar Toggle */}
             <ChatSidebar />

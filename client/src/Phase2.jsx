@@ -1,4 +1,6 @@
 import BASE_URL, { WBS_URL } from './config';
+import ChatSidebar from './ChatSidebar';
+import AvatarInfo from "./AvatarInfo";
 
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -17,11 +19,8 @@ function Phase2() {
     const [isNextPhase, setIsNextPhase] = useState(false);
     const [allCardsPlayed, setAllCardsPlayed] = useState(false);
     const [hasToEx, setHasToEx] = useState(false);
-    const [players, setPlayers] = useState([]);
-    const [currentPlayerId, setCurrentPlayerId] = useState(null);
     const [currentRound, setCurrentRound] = useState(1);
-    const [ws, setWs] = useState(null);
-
+    
     const navigate = useNavigate();
     const playerIdRef = useRef(null);
     const gameMasterRef = useRef(null);
@@ -32,11 +31,31 @@ function Phase2() {
     const init = useRef(false);
 
     /**
-     * Fetches the player's card data from the backend.
+     * Fetches the user's selected click sound preference.
      *
-     * Retrieves the player's current hand from the game state.
-     * Uses HttpOnly cookie authentication.
+     * Sends a GET request to the backend to retrieve the saved sound preference.
+     * Updates the selected sound state and sets the audio source accordingly.
+     * Uses HttpOnly cookies for authentication.
+     *
+     * @function fetchSoundPreference
+     * @async
+     * @throws {Error} If the fetch operation fails.
      */
+    const fetchSoundPreference = async () => {
+        try {
+            const response = await fetch(`${BASE_URL}get-click-sound`, {
+                credentials: 'include',
+            });
+
+            const data = await response.json();
+
+            setSelectedSound(data.sound);
+            soundRef.current.src = `/sounds/${data.sound}`;
+        } catch (error) {
+            console.error('Error fetching sound preference:', error);
+        }
+    };
+
     const fetchPlayerCards = async () => {
         try {
             const response = await fetch(
@@ -55,11 +74,6 @@ function Phase2() {
         }
     };
 
-    /**
-     * Fetches the game's phase card data.
-     *
-     * Retrieves the phase-specific game cards from the backend.
-     */
     const fetchGameCards = async () => {
         try {
             const response = await fetch(
@@ -84,11 +98,6 @@ function Phase2() {
         }
     };
 
-    /**
-     * Determines if the game should transition to the next phase.
-     *
-     * Retrieves the current round number and checks if it has reached 6.
-     */
     const getIsNextPhase = async () => {
         try {
             const response = await fetch(
@@ -108,11 +117,6 @@ function Phase2() {
         }
     };
 
-    /**
-     * Fetches the current active player in the game.
-     *
-     * Uses HttpOnly authentication and updates the state with the current player details.
-     */
     const getCurrentPlayer = async () => {
         try {
             const response = await fetch(
@@ -134,11 +138,6 @@ function Phase2() {
         }
     };
 
-    /**
-     * Fetches the total drink count in the game.
-     *
-     * Retrieves the drink count from the backend and updates state.
-     */
     const getDrinkCount = async () => {
         try {
             const response = await fetch(
@@ -157,12 +156,6 @@ function Phase2() {
         }
     };
 
-    /**
-     * Fetches all played cards in the game.
-     *
-     * Retrieves the list of all cards that have been played and updates state.
-     * Uses HTTP-only cookies for authentication.
-     */
     const getAllCardsPlayed = async () => {
         try {
             const response = await fetch(
@@ -187,12 +180,6 @@ function Phase2() {
         }
     };
 
-    /**
-     * Fetches the list of players who must drink.
-     *
-     * Retrieves the data from the backend that determines which players must drink.
-     * Uses HTTP-only cookies for authentication.
-     */
     const getHasToEx = async () => {
         try {
             const response = await fetch(
@@ -217,12 +204,6 @@ function Phase2() {
         }
     };
 
-    /**
-     * Fetches the Busfahrer details.
-     *
-     * Retrieves the busfahrer ID and name from the backend and updates state.
-     * Uses HTTP-only cookies for authentication.
-     */
     const getBusfahrer = async () => {
         try {
             const response = await fetch(
@@ -245,12 +226,6 @@ function Phase2() {
         }
     };
 
-    /**
-     * Fetches the player's unique identifier from the backend.
-     *
-     * Sends a GET request using HttpOnly cookie authentication.
-     * Stores the fetched player ID in a React ref for comparison during events.
-     */
     const fetchPlayerId = async () => {
         try {
             const response = await fetch(`${BASE_URL}get-player-id`, {
@@ -267,11 +242,6 @@ function Phase2() {
         }
     };
 
-    /**
-     * Checks if the current player is the game master.
-     *
-     * Uses HttpOnly cookie authentication and updates the game master state.
-     */
     const checkGameMaster = async () => {
         try {
             const response = await fetch(
@@ -290,53 +260,6 @@ function Phase2() {
         }
     };
 
-    /**
-     * Fetches the user's selected click sound preference.
-     *
-     * Sends a GET request to the backend to retrieve the saved sound preference.
-     * Updates the selected sound state and sets the audio source accordingly.
-     * Uses HttpOnly cookies for authentication.
-     */
-    const fetchSoundPreference = async () => {
-        try {
-            const response = await fetch(`${BASE_URL}get-click-sound`, {
-                credentials: 'include',
-            });
-
-            const data = await response.json();
-
-            setSelectedSound(data.sound);
-            soundRef.current.src = `/sounds/${data.sound}`;
-        } catch (error) {
-            console.error('Error fetching sound preference:', error);
-        }
-    };
-
-    const fetchPlayers = async () => {
-        try {
-            const response = await fetch(`${BASE_URL}get-players/${gameId}`, {
-                credentials: 'include',
-            });
-
-            if (!response.ok) throw new Error('Failed to fetch players');
-
-            const data = await response.json();
-            setPlayers(data.players);
-            setCurrentPlayerId(data.currentPlayer);
-        } catch (error) {
-            console.error('Error fetching players:', error);
-        }
-    };
-
-    /**
-     * Sets up a WebSocket connection to receive real-time game updates.
-     *
-     * Establishes a WebSocket connection to listen for updates related to the game state,
-     * including player actions, card updates, and phase transitions. It also fetches
-     * necessary game data on mount and updates the state accordingly.
-     *
-     * Cleans up by closing the WebSocket connection when the component unmounts.
-     */
     useEffect(() => {
         if (init.current) return;
         init.current = true;
@@ -378,8 +301,7 @@ function Phase2() {
 
                     setBusfahrerName(message.data.busfahrerName);
 
-                    setPlayers(message.data.players);
-                    setCurrentPlayerId(message.data.currentPlayer);
+                    getHasToEx();
 
                     getAllCardsPlayed();
                     getCurrentPlayer();
@@ -408,7 +330,6 @@ function Phase2() {
         getBusfahrer();
         checkGameMaster();
         fetchPlayerId();
-        fetchPlayers();
 
         fetchSoundPreference();
 
@@ -426,22 +347,20 @@ function Phase2() {
     }, [gameId]);
 
     /**
-     * Plays a click sound effect.
+     * Plays a cloned instance of the selected click sound effect.
      *
-     * Resets the current playback time to the beginning and plays the sound.
-     * Ensures the sound plays from the start each time the function is called.
+     * Clones the current audio element to allow overlapping playback,
+     * resets the clone's playback position, and plays the sound.
+     * Useful for rapid or repeated click feedback without delay.
+     *
+     * @function playClickSound
      */
     const playClickSound = () => {
-        soundRef.current.currentTime = 0;
-        soundRef.current.play();
+        const clickClone = soundRef.current.cloneNode();
+        clickClone.currentTime = 0;
+        clickClone.play();
     };
 
-    /**
-     * Allows a player to leave the game.
-     *
-     * Sends a POST request to remove the player from the game.
-     * Navigates to the correct screen based on whether the player was the last one in the game.
-     */
     const leaveGame = async () => {
         playClickSound();
 
@@ -470,21 +389,10 @@ function Phase2() {
         }
     };
 
-    /**
-     * Handles laying down a card in the game.
-     *
-     * Sends a request to the backend to lay a card during the current game phase.
-     * Ensures only the current player can play, except in round 2 where all can play.
-     * Uses HTTP-only cookies for authentication.
-     *
-     * @param {number} cardIdx - The index of the card in the player's hand.
-     */
     const handleLayCard = async (cardIdx) => {
         if (roundRef.current !== 2 && !isCurrentPlayer.current) {
             return;
         }
-
-        playClickSound();
 
         try {
             const res = await fetch(`${BASE_URL}lay-card-phase`, {
@@ -496,7 +404,9 @@ function Phase2() {
                 body: JSON.stringify({ gameId, cardIdx }),
             });
 
-            if (!res.ok) {
+            if (res.ok) {
+                playClickSound();
+            } else {
                 throw new Error(`Failed to lay card: ${res.statusText}`);
             }
         } catch (error) {
@@ -504,13 +414,6 @@ function Phase2() {
         }
     };
 
-    /**
-     * Handles advancing to the next player or starting Phase 3.
-     *
-     * Sends a request to the backend to either move to the next player in the current phase
-     * or transition to Phase 3 if the game has reached that stage.
-     * Uses HTTP-only cookies for authentication.
-     */
     const handleNextPlayer = async () => {
         playClickSound();
         try {
@@ -554,20 +457,7 @@ function Phase2() {
             />
 
             {/* Player avatars container */}
-            <div className="player-avatars">
-                {players.map((player) => (
-                    <div
-                        key={player.id}
-                        className={`avatar-container ${player.id === currentPlayerId || roundRef.current === 2 ? 'active-player' : ''}`}
-                    >
-                        <img
-                            src={`${BASE_URL}avatars/${player.avatar}`}
-                            alt={player.name}
-                            className="avatar-image"
-                        />
-                    </div>
-                ))}
-            </div>
+            <AvatarInfo gameId={gameId}/>
 
             {/* Main Phase 2 container */}
             <div className="phase2-menu">
@@ -593,27 +483,25 @@ function Phase2() {
                 <div className="phase2-cards">
                     {gameCards.map((card, colIdx) =>
                         card[0] && card[0].type ? (
-                            <div>
-                                <div
-                                    key={`${card.number}-${card.type}-${colIdx}`}
-                                    className="card show"
-                                >
-                                    {/* Front image of the card */}
-                                    <img
-                                        className="front"
-                                        src={`/cards/${card[0].number}${card[0].type[0].toUpperCase()}.svg`}
-                                        alt="Card Front"
-                                    />
-                                    {/* Back of the card */}
-                                    <img className="back" />
-                                </div>
+                            <div
+                                key={colIdx}
+                                className="card show"
+                            >
+                                {/* Front image of the card */}
+                                <img
+                                    className="front"
+                                    src={`/cards/${card[0].number}${card[0].type[0].toUpperCase()}.svg`}
+                                    alt="Card Front"
+                                />
+                                {/* Back of the card */}
+                                <img className="back" draggable={false} />
                             </div>
                         ) : null,
                     )}
                 </div>
 
                 {/* Display turn information based on the phase and round */}
-                <p className="turn-info">
+                <p className="turn-info-phase2">
                     {isNextPhase ? (
                         <>
                             <span className="current-player">Phase 3 </span>{' '}
@@ -670,49 +558,52 @@ function Phase2() {
                                     alt="Card Front"
                                 />
                                 {/* Back of the card */}
-                                <img className="back" />
+                                <img className="back" draggable={false} />
                             </div>
                         ))}
                 </div>
-
-                {/* Back button to leave the game */}
-                <div className="back-cont">
-                    <button className="btn-back" onClick={leaveGame}>
-                        <img
-                            src="/back.svg"
-                            alt="Back Button"
-                            className="back-icon"
-                        />
-                    </button>
-                </div>
-
-                {/* Next Player button (enabled only if conditions are met) */}
-                <div className="next-cont">
-                    <button
-                        className={
-                            isCurrentPlayer.current && allCardsPlayed
-                                ? 'btn-next'
-                                : 'btn-next-disabled'
-                        }
-                        disabled={
-                            !isCurrentPlayer.current ? true : !allCardsPlayed
-                        }
-                        onClick={handleNextPlayer}
-                    >
-                        <img
-                            src={
-                                isNextPhase && isCurrentPlayer.current
-                                    ? '/next_phase.svg'
-                                    : isCurrentPlayer.current && allCardsPlayed
-                                      ? '/next.svg'
-                                      : '/next_disabled.svg'
-                            }
-                            alt="Next Button"
-                            className="next-icon"
-                        />
-                    </button>
-                </div>
             </div>
+
+            {/* Back button to leave the game */}
+            <div className="back-cont">
+                <button className="btn-back" onClick={leaveGame}>
+                    <img
+                        src="/back.svg"
+                        alt="Back Button"
+                        className="back-icon"
+                    />
+                </button>
+            </div>
+
+            {/* Next Player button (enabled only if conditions are met) */}
+            <div className="next-cont">
+                <button
+                    className={
+                        isCurrentPlayer.current && allCardsPlayed
+                            ? 'btn-next'
+                            : 'btn-next-disabled'
+                    }
+                    disabled={
+                        !isCurrentPlayer.current ? true : !allCardsPlayed
+                    }
+                    onClick={handleNextPlayer}
+                >
+                    <img
+                        src={
+                            isNextPhase && isCurrentPlayer.current
+                                ? '/next_phase.svg'
+                                : isCurrentPlayer.current && allCardsPlayed
+                                  ? '/next.svg'
+                                  : '/next_disabled.svg'
+                        }
+                        alt="Next Button"
+                        className="next-icon"
+                    />
+                </button>
+            </div>
+
+            {/* Sidebar Toggle */}
+            <ChatSidebar />
         </div>
     );
 }

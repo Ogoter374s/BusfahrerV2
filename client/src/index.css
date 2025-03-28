@@ -28,7 +28,7 @@
     position: absolute;
     top: -5px;
     width: 70%;
-    z-index: 1;
+    z-index: -100;
     filter: drop-shadow(10px 10px 30px rgba(0, 0, 0, 1));
     pointer-events: none;
     user-select: none;
@@ -40,7 +40,277 @@ form {
     gap: 12px;
 }
 
+/* #region Back Button */
+
+.back-cont {
+    position: absolute;
+    display: inline-block;
+    bottom: 145px;
+    left: 15px;
+    z-index: 999;
+}
+
+.back-cont button {
+    position: absolute;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.1s ease-in-out;
+}
+
+.btn-back img {
+    width: 125px;
+    height: auto;
+    display: block;
+    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.4);
+    border-radius: 70px;
+    transition: all 0.1s ease-in-out;
+    pointer-events: none;
+    user-select: none;
+}
+
+.btn-back:hover img {
+    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
+    transform: translateY(-3px);
+}
+
+.btn-back:active img {
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    transform: translateY(2px);
+}
+
+/* #endregion */
+
+.highlight {
+  color: red;
+  margin-left: 15px;
+}
+
+/* #region Input Fields */
+
+.rustic-input {
+  background: url('/wood_blue.svg');
+  background-size: cover;
+  font-family: 'Cinzel', serif;
+  font-size: 27px;
+  color: #f5e1a4;
+  box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.6);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  border-radius: 5px;
+  outline: none;
+  height: 45px;
+}
+
+.rustic-input:focus {
+  border-color: #c49a6c;
+  box-shadow: 0 0 8px rgba(196, 154, 108, 0.8);
+}
+
+.rustic-label {
+  font-family: 'Cinzel', serif;
+  font-size: 27px;
+  color: #f5e1a4;
+}
+
+.gender-select {
+  padding: 8px;
+  font-size: 20px;
+  font-family: 'Cinzel', serif;
+  border-radius: 5px;
+  border: none;
+  margin-bottom: 15px;
+  width: 100%;
+}
+
+/* #endregion */
+
+/* #region Option Select */
+
+.options-selection {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 15px 0;
+}
+
+.options-selection label {
+    font-size: 25px;
+    font-weight: bold;
+    margin-bottom: 5px;
+    user-select: none;
+}
+
+#optionsSelect {
+    width: 200px;
+    padding: 8px;
+    border-radius: 8px;
+    border: 2px solid #a65a2e;
+    background-color: #222;
+    color: #fff;
+    font-size: 20px;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+#optionsSelect:hover {
+    border-color: #e33e3e;
+}
+
+#optionsSelect option {
+    background-color: #333;
+    color: #fff;
+    font-size: 14px;
+}
+
+/* #endregion */
+
+.current-player {
+    color: #a65a2e;
+    font-weight: bold;
+}
+
+.drink-count {
+    color: #a12727;
+    font-weight: bold;
+}
+
+.player-cards {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    justify-content: center;
+    position: absolute;
+    bottom: 10px;
+}
+
+/* #region Next Player Button */
+
+.next-cont {
+    position: absolute;
+    display: inline-block;
+    bottom: 150px;
+    right: 150px;
+}
+
+.next-cont button {
+    position: absolute;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.1s ease-in-out;
+}
+
+.btn-next-disabled {
+    position: absolute;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.1s ease-in-out;
+}
+
+.btn-next img {
+    width: 135px;
+    height: auto;
+    display: block;
+    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.4);
+    border-radius: 70px;
+    transition: all 0.1s ease-in-out;
+    user-select: none;
+    pointer-events: none;
+}
+
+.btn-next-disabled img {
+    width: 135px;
+    height: auto;
+    display: block;
+    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.4);
+    border-radius: 70px;
+    transition: all 0.1s ease-in-out;
+    user-select: none;
+    pointer-events: none;
+}
+
+.btn-next:hover img {
+    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
+    transform: translateY(-3px);
+}
+
+.btn-next:active img {
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    transform: translateY(2px);
+}
+
+/* #endregion */
+
+.busfahrer-cont {
+    text-align: center;
+    color: white;
+    font-family: 'Vollkorn', serif;
+    color: #1b0e1e;
+    user-select: none;
+}
+
+.busfahrer-title {
+    font-family: 'Luckiest Guy', cursive;
+    font-size: 40px;
+    color: #f5e1a4;
+    font-weight: bold;
+    margin-top: 35px;
+}
+
+.busfahrer-name {
+    color: #a65a2e;
+    font-weight: bold;
+}
+
+/* #endregion */
+
 /* #region Chat */
+
+.message-area {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px;
+    border-radius: 6px;
+    overflow-y: auto;
+}
+  
+.message-wrapper {
+    display: flex;
+}
+  
+.sent-wrapper {
+    justify-content: flex-end;
+}
+  
+.received-wrapper {
+    justify-content: flex-start;
+}
+  
+.message-bubble {
+    display: inline-block;
+    max-width: 80%;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 14px;
+    word-break: break-word;
+}
+  
+.sent {
+    background-color: #2196f3;
+    color: white;
+    text-align: right;
+}
+  
+.received {
+    background-color: #444;
+    color: white;
+    text-align: left;
+}
 
 /* #region Friend Wrapper */
 
@@ -99,7 +369,7 @@ form {
     top: 0;
     width: 450px;
     height: 100vh;
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(0, 0, 0, 0.95);
     color: white;
     transition: left 0.3s ease-in-out;
     display: flex;
@@ -109,6 +379,11 @@ form {
 
 .chat-sidebar.open {
     left: 0px;
+}
+
+
+.chat-sidebar.open + .chat-toggle-button {
+    left: 450px;
 }
 
 .chat-toggle-button {
@@ -128,8 +403,33 @@ form {
     justify-content: center;
 }
 
-.chat-sidebar.open + .chat-toggle-button {
-    left: 450px;
+.chat-tabs {
+    display: flex;
+    width: 100%;
+    height: 40px;
+    border-bottom: 2px solid #444;
+}
+  
+.chat-tab-btn {
+    flex: 1;
+    height: 100%;
+    border: none;
+    background: #222;
+    color: #fff;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+  
+.chat-tab-btn.active {
+    background: #333;
+    border-bottom: 2px solid #c1272d;
+}
+  
+.chat-tab-btn:disabled {
+    background: #111;
+    opacity: 0.5;
+    cursor: not-allowed; 
 }
 
 /* #endregion */
@@ -340,6 +640,9 @@ form {
 }
 
 .message-area p {
+    line-height: 1.4;
+    word-wrap: break-word;
+    word-break: break-word;
     padding: 5px 10px;
     margin: 5px 0;
     border-radius: 5px;
@@ -361,6 +664,23 @@ form {
 
 /* #endregion */
 
+/* #region Game Chat */
+
+.game-chat-section {
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.4);
+}
+  
+.chat-title {
+    font-size: 50px;
+    font-weight: bold;
+    color: #c1272d;
+    margin-left: 10px;
+    user-select: none;
+}
+
+/* #endregion */
+
 /* #region Self Code */
 
 .friend-code-display {
@@ -371,7 +691,6 @@ form {
     font-size: 25px;
     font-weight: bold;
     color: white;
-    margin-bottom: -10px;
     user-select: none;
 }
 
@@ -407,129 +726,7 @@ form {
 
 /* #endregion */
 
-/* #region Back Button */
-
-.back-cont {
-    position: absolute;
-    display: inline-block;
-    bottom: 145px;
-    left: 15px;
-}
-
-.back-cont button {
-    position: absolute;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-back img {
-    width: 125px;
-    height: auto;
-    display: block;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.4);
-    border-radius: 70px;
-    transition: all 0.1s ease-in-out;
-    pointer-events: none;
-    user-select: none;
-}
-
-.btn-back:hover img {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
-    transform: translateY(-3px);
-}
-
-.btn-back:active img {
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    transform: translateY(2px);
-}
-
-/* #endregion */
-
-.highlight {
-  color: red;
-  margin-left: 15px;
-}
-
-/* #region Input Fields */
-
-.rustic-input {
-  background: url('/wood_blue.svg');
-  background-size: cover;
-  font-family: 'Cinzel', serif;
-  font-size: 27px;
-  color: #f5e1a4;
-  box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.6);
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-  border-radius: 5px;
-  outline: none;
-  height: 45px;
-}
-
-.rustic-input:focus {
-  border-color: #c49a6c;
-  box-shadow: 0 0 8px rgba(196, 154, 108, 0.8);
-}
-
-.rustic-label {
-  font-family: 'Cinzel', serif;
-  font-size: 27px;
-  color: #f5e1a4;
-}
-
-.gender-select {
-  padding: 8px;
-  font-size: 20px;
-  font-family: 'Cinzel', serif;
-  border-radius: 5px;
-  border: none;
-  margin-bottom: 15px;
-  width: 100%;
-}
-
-/* #endregion */
-
-/* #region Option Select */
-
-.options-selection {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin: 15px 0;
-}
-
-.options-selection label {
-    font-size: 25px;
-    font-weight: bold;
-    margin-bottom: 5px;
-    user-select: none;
-}
-
-#optionsSelect {
-    width: 200px;
-    padding: 8px;
-    border-radius: 8px;
-    border: 2px solid #a65a2e;
-    background-color: #222;
-    color: #fff;
-    font-size: 20px;
-    outline: none;
-    transition: all 0.3s ease;
-}
-
-#optionsSelect:hover {
-    border-color: #e33e3e;
-}
-
-#optionsSelect option {
-    background-color: #333;
-    color: #fff;
-    font-size: 14px;
-}
-
-/* #endregion */
+/* #region Avatar Info */
 
 /* #region Avatar Icons */
 
@@ -541,12 +738,14 @@ form {
     flex-direction: column;
     align-items: center;
     gap: 10px;
+    user-select: none;
 }
 
 .avatar-container {
     display: flex;
     flex-direction: column;
     align-items: center;
+    z-index: 10;
 }
 
 .avatar-image {
@@ -554,6 +753,7 @@ form {
     height: 85px;
     border-radius: 50%;
     border: 3px solid transparent;
+    z-index: 1;
 }
 
 .active-player .avatar-image {
@@ -562,94 +762,102 @@ form {
 
 /* #endregion */
 
-.turn-info {
-    font-family: 'Luckiest Guy', cursive;
+.avatar-popup {
     position: absolute;
-    font-size: 37px;
-    color: #f5e1a4;
-    bottom: 220px;
-    user-select: none;
-}
-
-.current-player {
-    color: #a65a2e;
-    font-weight: bold;
-}
-
-.drink-count {
-    color: #a12727;
-    font-weight: bold;
-}
-
-.player-cards {
+    top: 3px;
+    left: 100%;
+    margin-left: -50px;
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 12px;
+    min-width: 220px;
+    height: 85px;
     display: flex;
+    flex-direction: row;
     align-items: center;
-    gap: 5px;
+    justify-content: space-between;
+    box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.6);
+    animation: slideIn 0.2s ease-out;
+}
+
+.popup-content {
+    display: flex;
+    flex-direction: column;
     justify-content: center;
-    position: absolute;
-    bottom: 10px;
+    color: white;
+    margin-left: 55px;
+    font-family: 'Luckiest Guy', cursive;
 }
 
-/* #region Next Player Button */
+.popup-name {
+    font-size: 25px;
+    font-weight: bold;
+    margin-top: 20px;
+}
 
-.next-cont {
-    position: absolute;
+.popup-title {
+    font-size: 16px;
+    text-align: center;
+    margin-top: -20px;
+}
+
+.popup-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-right: 10px;
+    align-items: center;
+    justify-content: center;
+}
+
+.popup-actions button {
+    background-color: #ff4b4b;
+    border: none;
+    color: white;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    align-content: center;
+    line-height: 15px;
+    padding: 0px;
+    text-align: center;
+}
+
+.popup-actions button:hover {
+    transform: scale(1.1);
+}
+
+.popup-actions button:active {
+    transform: scale(1);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(-10px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.arrow-up,
+.arrow-down {
     display: inline-block;
-    bottom: 150px;
-    right: 150px;
-}
-
-.next-cont button {
-    position: absolute;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-next-disabled {
-    position: absolute;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-next img {
-    width: 135px;
-    height: auto;
-    display: block;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.4);
-    border-radius: 70px;
-    transition: all 0.1s ease-in-out;
-    user-select: none;
-    pointer-events: none;
-}
-
-.btn-next-disabled img {
-    width: 135px;
-    height: auto;
-    display: block;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.4);
-    border-radius: 70px;
-    transition: all 0.1s ease-in-out;
-    user-select: none;
-    pointer-events: none;
-}
-
-.btn-next:hover img {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
     transform: translateY(-3px);
 }
 
-.btn-next:active img {
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    transform: translateY(2px);
+.avatar-image:hover {
+    transform: scale(1.1);
 }
 
-/* #endregion */
+.avatar-image:active {
+    transform: scale(1);
+}
 
 /* #endregion */
 
@@ -1656,7 +1864,7 @@ form {
   width: 500px;
   color: white;
   font-family: 'Georgia', serif;
-  margin-top: -160px;
+  margin-top: -50px;
   color: #f5e1a4;
   user-select: none;
 }
@@ -2286,6 +2494,24 @@ form {
     transform: rotate(90deg);
 }
 
+.turn-info {
+    font-family: 'Luckiest Guy', cursive;
+    position: absolute;
+    font-size: 37px;
+    color: #f5e1a4;
+    bottom: 255px;
+    user-select: none;
+}
+
+.given-info {
+    font-family: 'Luckiest Guy', cursive;
+    position: absolute;
+    font-size: 32px;
+    color: #f5e1a4;
+    bottom: 255px;
+    user-select: none;
+}
+
 /* #endregion */
 
 /* #region Card */
@@ -2351,15 +2577,7 @@ form {
 
 /* #endregion */
 
-.overlay-diamond-img {
-    position: absolute;
-    top: -3px;
-    width: 89%;
-    z-index: 1;
-    filter: drop-shadow(10px 10px 30px rgba(0, 0, 0, 1));
-    pointer-events: none;
-    user-select: none;
-}
+/* #region Phase 2 Page */
 
 .phase2-menu {
     display: flex;
@@ -2368,64 +2586,18 @@ form {
     z-index: 2;
 }
 
-.phase3-menu {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    z-index: 2;
+.busfahrer-subtitle {
+    font-size: 35px;
+    font-weight: bolder;
+    margin-top: -30px;
 }
 
-.try-cont {
-    position: absolute;
-    display: inline-block;
-    bottom: 150px;
-    right: 150px;
-}
-
-.try-cont button {
-    position: absolute;
-    background: none;
-    border: none;
+.busfahrer-rules {
+    list-style-type: none;
     padding: 0;
-    cursor: pointer;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-try-disabled {
-    position: absolute;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-try img {
-    width: 135px;
-    height: auto;
-    display: block;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.4);
-    border-radius: 70px;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-try-disabled img {
-    width: 135px;
-    height: auto;
-    display: block;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.4);
-    border-radius: 70px;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-try:hover img {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
-    transform: translateY(-3px);
-}
-
-.btn-try:active img {
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    transform: translateY(2px);
+    font-size: 27px;
+    margin-top: -40px;
+    font-weight: bold;
 }
 
 .phase2-cards {
@@ -2436,6 +2608,36 @@ form {
     justify-content: center;
 }
 
+.turn-info-phase2 {
+    font-family: 'Luckiest Guy', cursive;
+    position: absolute;
+    font-size: 37px;
+    color: #f5e1a4;
+    bottom: 220px;
+    user-select: none;
+}
+
+/* #endregion */
+
+/* #region Phase 3 Page */
+
+.overlay-diamond-img {
+    position: absolute;
+    top: -3px;
+    width: 89%;
+    z-index: 1;
+    filter: drop-shadow(10px 10px 30px rgba(0, 0, 0, 1));
+    pointer-events: none;
+    user-select: none;
+}
+
+.phase3-menu {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 2;
+}
+
 .phase3-cards {
     display: flex;
     flex-direction: column;
@@ -2443,6 +2645,43 @@ form {
     justify-content: center;
     margin-top: -10px;
 }
+
+/* #region Phase 3 Row */
+
+.phase3-row {
+    display: flex;
+    justify-content: center;
+    gap: 42.5px;
+    margin-top: -37.5px;
+}
+
+.phase3-row .card {
+    height: 120px;
+    width: 80px;
+    transform: rotate(90deg);
+}
+
+.phase3-row .card {
+    height: 120px;
+    width: 80px;
+    transform: rotate(90deg);
+}
+
+.phase3-row .flipped {
+    transform: rotateZ(90deg) rotateY(180deg);
+}
+
+.phase3-row:first-child {
+    margin-left: -125px;
+}
+
+.phase3-row:last-child {
+    margin-left: 125px;
+}
+
+/* #endregion */
+
+/* #region Phase 3 Card */
 
 .card-buttons {
     position: absolute;
@@ -2494,6 +2733,8 @@ form {
     transform: rotate(90deg) translateX(2px);
 }
 
+/* #endregion */
+
 .turn-info-phase3 {
     font-family: 'Luckiest Guy', cursive;
     position: absolute;
@@ -2502,81 +2743,66 @@ form {
     bottom: 25px;
 }
 
-.busfahrer-cont {
-    text-align: center;
-    color: white;
-    font-family: 'Vollkorn', serif;
-    color: #1b0e1e;
+/* #region Retry Button */
+
+.try-cont {
+    position: absolute;
+    display: inline-block;
+    bottom: 150px;
+    right: 150px;
+    z-index: 5;
 }
 
-.busfahrer-title {
-    font-family: 'Luckiest Guy', cursive;
-    font-size: 40px;
-    color: #f5e1a4;
-    font-weight: bold;
-    margin-top: 35px;
-}
-
-.busfahrer-name {
-    color: #a65a2e;
-    font-weight: bold;
-}
-
-.busfahrer-subtitle {
-    font-size: 35px;
-    font-weight: bolder;
-    margin-top: -30px;
-}
-
-.busfahrer-rules {
-    list-style-type: none;
+.try-cont button {
+    position: absolute;
+    background: none;
+    border: none;
     padding: 0;
-    font-size: 27px;
-    margin-top: -40px;
-    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.1s ease-in-out;
 }
 
-.phase3-row {
-    display: flex;
-    justify-content: center;
-    gap: 42.5px;
-    margin-top: -37.5px;
+.btn-try-disabled {
+    position: absolute;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.1s ease-in-out;
 }
 
-.phase3-row .card {
-    height: 120px;
-    width: 80px;
-    transform: rotate(90deg);
+.btn-try img {
+    width: 135px;
+    height: auto;
+    display: block;
+    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.4);
+    border-radius: 70px;
+    transition: all 0.1s ease-in-out;
+    pointer-events: none;
+    user-select: none;
 }
 
-.phase3-row .card {
-    height: 120px;
-    width: 80px;
-    transform: rotate(90deg);
+.btn-try-disabled img {
+    width: 135px;
+    height: auto;
+    display: block;
+    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.4);
+    border-radius: 70px;
+    transition: all 0.1s ease-in-out;
+    pointer-events: none;
+    user-select: none;
 }
 
-.phase3-row .flipped {
-    transform: rotateZ(90deg) rotateY(180deg);
+.btn-try:hover img {
+    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
+    transform: translateY(-3px);
 }
 
-.phase3-row:first-child {
-    margin-left: -125px;
+.btn-try:active img {
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    transform: translateY(2px);
 }
 
-.phase3-row:last-child {
-    margin-left: 125px;
-}
+/* #endregion */
 
-.upload-section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-}
-
-.card-theme-preview {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 9px;
-}
+/* #endregion */

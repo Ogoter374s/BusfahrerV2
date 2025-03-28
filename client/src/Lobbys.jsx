@@ -65,7 +65,6 @@ function Lobbys() {
         const data = await response.json();
         setGames(data);
 
-        console.log(data);
     };
 
     /**

@@ -1,7 +1,7 @@
 import BASE_URL, { WBS_URL } from './config';
 import ChatSidebar from './ChatSidebar';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, use } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 function Create() {
@@ -19,9 +19,13 @@ function Create() {
     const [selectedTurnMode, setSelectedTurnMode] = useState('Default');
     const [selectedBusfahrerMode, setSelectedBusfahrerMode] = useState('Default');
     const [playerLimit, setPlayerLimit] = useState(10);
+    const [selectedSchluckGiveMode, setSelectedSchluckGiveMode] = useState('Default');
+    const [everyoneCanPhase3, setEveryoneCanPhase3] = useState(true);
 
     const navigate = useNavigate();
     const init = useRef(false);
+
+    // #region Game Modes
 
     const shuffleStyles = [
         { name: 'Normal', type: 'Fisher-Yates' },
@@ -36,7 +40,6 @@ function Create() {
 
     const turnModes = [
         { name: 'Default', type: 'Default' },
-        { name: 'Timed', type: 'Timed' },
         { name: 'Reverse', type: 'Reverse' },
         { name: 'Random', type: 'Random' },
     ];
@@ -44,9 +47,15 @@ function Create() {
     const busfahrerSelectionMode = [
         { name: 'Default', type: 'Default' },
         { name: 'Reversed', type: 'Reverse' },
-        { name: 'Player Vote', type: 'Voted' },
         { name: 'Random', type: 'Random' },
     ];
+
+    const schluckGiveMode = [
+        { name: 'Default', type: 'Default' },
+        { name: 'Per Avatar', type: 'Avatar' },
+    ];
+
+    // #endregion
 
     /**
      * Fetches the user's selected click sound preference.
@@ -153,6 +162,8 @@ function Create() {
                     turning: selectedTurnMode,
                     busMode: selectedBusfahrerMode,
                     playerLimit,
+                    giving: selectedSchluckGiveMode,
+                    isEveryone: everyoneCanPhase3,
                 }
             }
 
@@ -177,6 +188,8 @@ function Create() {
         }
     };
 
+    // #region Event Handlers
+
     /**
      * Handles the selection change for the shuffle mode setting.
      *
@@ -189,7 +202,6 @@ function Create() {
      */
     const handleShuffleChange = () => {
         const newShuffle = event.target.value;
-        console.log(newShuffle);
         setSelectedShuffle(newShuffle);
     };
 
@@ -234,6 +246,22 @@ function Create() {
         const newMode = event.target.value;
         setSelectedBusfahrerMode(newMode);
     };
+
+    /**
+     * Handles the change of the "Schluck Give Mode" setting.
+     *
+     * Updates the selected mode for distributing drinks based on the selected value
+     * from a dropdown or similar input element.
+     *
+     * @function handleSchluckGiveMode
+     * @param {Event} event - The change event containing the selected mode value.
+     */
+    const handleSchluckGiveMode = () => {
+        const newMode = event.target.value;
+        setSelectedSchluckGiveMode(newMode);
+    };
+
+    // #endregion
 
     /**
      * Renders the game creation UI screen.
@@ -308,6 +336,18 @@ function Create() {
                             />
                             Private Game
                         </label>
+                    </div>
+
+                    {/* Button to create the game */}
+                    <div className="create-cont">
+                        <button className="btn-create" onClick={createGame}>
+                            <img
+                                src="button.svg"
+                                alt="Create Game"
+                                className="create-icon"
+                            />
+                            <p className="btn-text">Create Game</p>
+                        </button>
                     </div>
                 </div>
 
@@ -417,19 +457,37 @@ function Create() {
                             onChange={(e) => setPlayerLimit(parseInt(e.target.value))}
                         />
                     </div>
-                </div>
-            </div>
 
-            {/* Button to create the game */}
-            <div className="create-cont">
-                <button className="btn-create" onClick={createGame}>
-                    <img
-                        src="button.svg"
-                        alt="Create Game"
-                        className="create-icon"
-                    />
-                    <p className="btn-text">Create Game</p>
-                </button>
+                    {/* Schulcke Give Mode selection */}
+                    <div className="options-selection">
+                        <label htmlFor="optionsSelect">
+                            Schlucke Give Mode
+                        </label>
+                        <select
+                            id="optionsSelect"
+                            value={selectedSchluckGiveMode}
+                            onChange={handleSchluckGiveMode}
+                        >
+                            {schluckGiveMode.map((style) => (
+                                <option key={style.type} value={style.type}>
+                                    {style.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Checkbox Everyone can play Phase3 */}
+                    <div className="options-selection">
+                        <label className="rustic-checkbox">
+                            <input
+                                type="checkbox"
+                                checked={everyoneCanPhase3}
+                                onChange={() => setEveryoneCanPhase3(!everyoneCanPhase3)}
+                            />
+                            Everyone can play Phase 3
+                        </label>
+                    </div>
+                </div>
             </div>
 
             {/* Navigation button to return to the homepage */}

@@ -4,20 +4,21 @@ import dotenv from "dotenv";
 import jwt from "jsonwebtoken"
 import bcrypt from "bcryptjs"
 import cookieParser from "cookie-parser";
-import fs from "fs";
+import fs, { access } from "fs";
 import path from "path";
 import redis from "redis";
 import http2 from "http2";
 import https from "https";
 import http2Express from "http2-express-bridge";
 import multer from "multer";
+import qs from 'querystring';
 
 import { MongoClient, ObjectId } from "mongodb";
 import { WebSocket, WebSocketServer } from "ws";
 import { swaggerUi, swaggerSpec } from "./swagger.js";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
-import { title } from "process";
+import { v4 as uuidv4 } from "uuid";
 
 dotenv.config();
 
@@ -340,33 +341,33 @@ const shuffleDeck = (deck, type) => {
 };
 
 const ChaoticShuffle = (deck) => {
-    const shuffled = [];
-    const copy = [...deck];
+    const original = [...deck];
+    deck.length = 0;
 
-    while (copy.length > 0) {
+    while (original.length > 0) {
         let index;
 
         // Favor pulling the last added card again (streaks)
-        if (shuffled.length > 0 && Math.random() < 0.3) {
-            const last = shuffled[shuffled.length - 1];
-            const similarIndexes = copy
+        if (deck.length > 0 && Math.random() < 0.3) {
+            const last = deck[deck.length - 1];
+            const similarIndexes = original
                 .map((card, idx) => (card.number === last.number || card.type === last.type ? idx : -1))
                 .filter(idx => idx !== -1);
 
             if (similarIndexes.length > 0) {
                 index = similarIndexes[Math.floor(Math.random() * similarIndexes.length)];
             } else {
-                index = Math.floor(Math.random() * copy.length);
+                index = Math.floor(Math.random() * original.length);
             }
         } else {
-            index = Math.floor(Math.random() * copy.length);
+            index = Math.floor(Math.random() * original.length);
         }
 
-        const [card] = copy.splice(index, 1);
-        shuffled.push(card);
+        const [card] = original.splice(index, 1);
+        deck.push(card);
     }
 
-    return shuffled;
+    return deck;
 };
 
 const FisherYatesShuffle = (deck) => {
@@ -375,6 +376,77 @@ const FisherYatesShuffle = (deck) => {
         [deck[i], deck[j]] = [deck[j], deck[i]];
     }
     return deck;
+};
+
+const doesCardMatch = (card, targetCard, matchStyle) => {
+    switch (matchStyle) {
+        case "Number-only":
+            return card.number === targetCard.number;
+        case "Type-only":
+            return card.type === targetCard.type;
+        case "Exact":
+        default:
+            return card.number === targetCard.number && card.type === targetCard.type;
+    }
+};
+
+const getNextPlayerId = (turnMode, turnOrder, players, currentPlayerId) => {
+    const currPlayerIdx = turnOrder.indexOf(currentPlayerId);
+    if(currPlayerIdx === -1) throw new Error("Current player not found in turn order");
+
+    let nextIndex;
+
+    switch (turnMode) {
+        case 'Reverse':
+            nextIndex = (currPlayerIdx - 1 + turnOrder.length) % turnOrder.length;
+            players[currPlayerIdx].hadTurn = true;
+            break;
+        case 'Random':
+            players[currPlayerIdx].hadTurn = true;
+    
+            const remaining = players.filter(p => !p.hadTurn);
+
+            if(remaining.length === 0) {
+                nextIndex = 0;
+            } else {
+                let randPlayerId;
+                do {
+                    const randomIdx = Math.floor(Math.random() * remaining.length);
+                    randPlayerId = remaining[randomIdx].id;
+                } while(randPlayerId === turnOrder[currPlayerIdx]);
+
+                nextIndex = turnOrder.indexOf(randPlayerId);
+            }
+            break;
+        case 'Default':
+        default:
+            nextIndex = (currPlayerIdx + 1) % turnOrder.length;
+            players[currPlayerIdx].hadTurn = true;
+            break;
+    }
+
+    return turnOrder[nextIndex];
+};
+
+const selectBusfahrer = (busMode, players) => {
+    const cardCounts = players.map(player => {
+        const unplayed = player.cards.filter(c => !c.played).length;
+        return {id: player.id, count: unplayed};
+    });
+
+    const max = Math.max(...cardCounts.map(p => p.count));
+    const min = Math.min(...cardCounts.map(p => p.count));
+
+    switch(busMode) {
+        case "Reverse":
+            return cardCounts.filter(p => p.count === min).map(p => p.id);
+        case "Random":
+            const randomIdx = Math.floor(Math.random() * players.length);
+            return [players[randomIdx].id];
+        case "Default":
+        default:
+            return cardCounts.filter(p => p.count === max).map(p => p.id);
+    }
 };
 
 /**
@@ -494,6 +566,8 @@ const wss = new WebSocketServer({ server });
 const activeGameConnections = new Map();
 const accountConnections = new Map();
 const friendsConnections = new Map();
+const gameChatConnections = new Map();
+
 const waitingGameConnections = new Set();
 
 /**
@@ -559,6 +633,13 @@ wss.on("connection", (ws, req) => {
                     friendsConnections.set(ws.user.userId, []);
                 }
                 friendsConnections.get(ws.user.userId).push(ws);
+            }
+
+            if (type === "gameChat" && gameId) {
+                if (!gameChatConnections.has(gameId)) {
+                    gameChatConnections.set(gameId, []);
+                }
+                gameChatConnections.get(gameId).push(ws);
             }
         }
         catch (error) {
@@ -777,22 +858,22 @@ const watchLobbyUpdates = async () => {
 
             const format = await Promise.all(
                 games
-                .filter(game => game.settings && game.players?.length < game.settings.playerLimit)
-                .map(async (game) => {
-                    const avatars = await Promise.all(
-                        game.players.slice(0, 3).map(async (playerId) => {
-                            return playerId?.avatar || "default.svg";
-                        })
-                    );
-                
-                    return {
-                        id: game._id.toString(),
-                        name: game.name,
-                        playerCount: game.players.length,
-                        settings: game.settings,
-                        avatars,
-                    };
-                })
+                    .filter(game => game.settings && game.players?.length < game.settings.playerLimit)
+                    .map(async (game) => {
+                        const avatars = await Promise.all(
+                            game.players.slice(0, 3).map(async (playerId) => {
+                                return playerId?.avatar || "default.svg";
+                            })
+                        );
+
+                        return {
+                            id: game._id.toString(),
+                            name: game.name,
+                            playerCount: game.players.length,
+                            settings: game.settings,
+                            avatars,
+                        };
+                    })
             );
 
             waitingGameConnections.forEach((client) => {
@@ -833,10 +914,12 @@ const watchGlobalGames = async () => {
             if (!gameId) return;
 
             const clients = activeGameConnections.get(gameId) || [];
+            const chats = gameChatConnections.get(gameId) || [];
             if (clients.length === 0) return;
 
             const isUpdate = change.operationType === "update";
             const updatedFields = isUpdate ? change.updateDescription.updatedFields || {} : {};
+            const updatedKeys = Object.keys(updatedFields) || {};
 
             const game = await collection.findOne(
                 { _id: new ObjectId(gameId) },
@@ -854,6 +937,7 @@ const watchGlobalGames = async () => {
                         drinkCount: 1,
                         phaseCards: 1,
                         cards: 1,
+                        messages: 1,
                     },
                 }
             );
@@ -864,15 +948,16 @@ const watchGlobalGames = async () => {
                 ["round", "lastRound", "activePlayer", "phase", "busfahrer", "endGame", "players"].includes(field)) ||
                 Object.keys(updatedFields).some(field =>
                     ["round", "lastRound", "activePlayer", "phase", "busfahrer", "endGame", "players"].some(key =>
-                      field.startsWith(key)
+                        field.startsWith(key)
                     )
-                  )
+                )
             ) {
                 const playerInfo = game.players.map(p => ({
                     id: p.id,
                     name: p.name,
                     avatar: p.avatar,
                     title: p.title,
+                    drinks: p.drinks,
                 }));
 
                 const busfahrerIds = game.busfahrer || [];
@@ -900,7 +985,8 @@ const watchGlobalGames = async () => {
             }
 
             //Player Update
-            if (isUpdate && Object.keys(updatedFields).some(field => field.startsWith("players"))) {
+            if (isUpdate && Object.keys(updatedFields).some(field => 
+                ["players", "drinks"].some(key => field.startsWith(key)))) {
                 const player = game.players.find(p => p.id === game.activePlayer);
                 if (player && player.exen !== undefined) {
                     const data = { exen: player.exen };
@@ -962,6 +1048,22 @@ const watchGlobalGames = async () => {
                     }
                 });
             }
+
+            if (!isUpdate) return;
+
+            //Game Chat Update
+            const isGameMessage = updatedKeys.some(key =>
+                key.startsWith("message")
+            );
+
+            if (!isGameMessage) return;
+
+            chats.forEach((client) => {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({ type: "gameChat", data: null }));
+                }
+            });
+
         });
 
     } catch (error) {
@@ -1211,68 +1313,30 @@ app.get("/get-friend-code", authenticateToken, async (req, res) => {
     }
 });
 
-/**
- * @swagger
- * /friend-messages:
- *   get:
- *     summary: Retrieves the chat messages between the authenticated user and a selected friend.
- *     description: Fetches the conversation history between the logged-in user and a specified friend.
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: friendId
- *         schema:
- *           type: string
- *           example: "605c72b7e8472a3df6b0e1c5"
- *         required: true
- *         description: The ObjectId of the friend whose messages should be retrieved.
- *     responses:
- *       200:
- *         description: Successfully retrieved chat messages.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 messages:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       name:
- *                         type: string
- *                         example: "TestUser"
- *                       message:
- *                         type: string
- *                         example: "Hey, how are you?"
- *       400:
- *         description: Bad request. The friendId is missing or invalid.
- *       404:
- *         description: No messages found for this friend.
- *       500:
- *         description: Server error.
- */
-app.get("/friend-messages", authenticateToken, async (req, res) => {
+app.get("/game-messages", authenticateToken, async (req, res) => {
     const userId = req.user.userId;
-    const { friendId } = req.query;
+    const { gameId } = req.query;
 
     try {
-        const user = await db.collection("users").findOne(
-            { _id: new ObjectId(userId), "friends.userId": new ObjectId(friendId) },
-            { projection: { "friends.$": 1 } }
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { messages: 1 } }
         );
 
-        if (!user || !user.friends.length) {
-            return res.status(404).json({ error: "Friend not found or no messages." });
+        if (!game) {
+            return res.status(404).json({ error: "Game not found." });
         }
 
-        const friendData = user.friends[0];
-        const lastMessages = (friendData.messages || []).slice(-8);
+        const lastMessages = (game.messages || [])
+        .slice(-18)
+        .map((msg) => ({
+            ...msg,
+            name: msg.senderId.toString() === userId.toString() ? "You" : msg.name,
+        }));
 
         return res.status(200).json({ messages: lastMessages || [] });
     } catch (error) {
-        console.error(`Error fetching messages: ${error.message}`);
+        logError(`Error fetching game messages: ${error.message}`);
         return res.status(500).json({ error: "Something went wrong." });
     }
 });
@@ -1464,6 +1528,27 @@ app.get("/get-achievements", authenticateToken, async (req, res) => {
     }
 });
 
+app.get("/get-game-name", authenticateToken, async (req, res) => {
+    const { gameId } = req.query;
+
+    try {
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { name: 1 } }
+        );
+
+        if (!game) {
+            return res.status(404).json({ error: "Game not found" });
+        }
+
+        return res.status(200).json({ name: game.name });
+    }
+    catch(error) {
+        logError(`Error fetching game name: ${error.message}`);
+        res.status(500).json({ error: "Failed to fetch game name" });
+    }
+});
+
 /**
  * @swagger
  * /get-waiting-games:
@@ -1509,22 +1594,22 @@ app.get("/get-waiting-games", authenticateToken, async (req, res) => {
 
         const format = await Promise.all(
             games
-            .filter(game => game.settings && game.players?.length < game.settings.playerLimit)
-            .map(async (game) => {
-                const avatars = await Promise.all(
-                    game.players.slice(0, 3).map(async (playerId) => {
-                        return playerId?.avatar || "default.svg";
-                    })
-                );
-            
-                return {
-                    id: game._id.toString(),
-                    name: game.name,
-                    playerCount: game.players.length,
-                    settings: game.settings,
-                    avatars,
-                };
-            })
+                .filter(game => game.settings && game.players?.length < game.settings.playerLimit)
+                .map(async (game) => {
+                    const avatars = await Promise.all(
+                        game.players.slice(0, 3).map(async (playerId) => {
+                            return playerId?.avatar || "default.svg";
+                        })
+                    );
+
+                    return {
+                        id: game._id.toString(),
+                        name: game.name,
+                        playerCount: game.players.length,
+                        settings: game.settings,
+                        avatars,
+                    };
+                })
         );
 
         res.json(format);
@@ -1621,6 +1706,7 @@ app.get("/get-players/:gameId", async (req, res) => {
             name: player.name,
             avatar: player.avatar,
             title: player.title,
+            drinks: player.drinks,
         }));
 
         const data = {
@@ -1695,6 +1781,133 @@ app.get("/is-game-master", authenticateToken, async (req, res) => {
     }
     catch (error) {
         logError(`Error verifying game master (${gameId}): ${error.message}`);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+app.get("/drinks-given", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+
+    const { gameId } = req.query;
+
+    try {
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { players: 1, drinkCount: 1, settings: 1 } }
+        );
+
+        if (!game) {
+            return res.status(404).json({ error: "Game not found" });
+        }
+
+        let given = false;
+
+        if(game.settings.giving === "Default") {
+            given = true;
+            return res.status(200).json(given);
+        }
+
+        const totalGiven = game.players.reduce((sum, player) => {
+            return sum + (player.drinks);
+        }, 0);
+
+        given = totalGiven >= game.drinkCount;
+
+        return res.status(200).json(given);
+    }
+    catch (error) {
+        logError(`Error verifying game master (${gameId}): ${error.message}`);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+app.get("/get-drinks-received", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+
+    const { gameId } = req.query;
+
+    try {
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { players: 1, drinkCount: 1, settings: 1 } }
+        );
+
+        if (!game) {
+            return res.status(404).json({ error: "Game not found" });
+        }
+
+        let recieved = 0;
+
+        if(game.settings.giving === "Default") {
+            return res.status(200).json(recieved);
+        }
+
+        const player = game.players.find(p => p.id === userId);
+
+        recieved = player.drinks;
+
+        return res.status(200).json(recieved);
+    }
+    catch (error) {
+        logError(`Error verifying game master (${gameId}): ${error.message}`);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+app.get("/use-give", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+
+    const { gameId } = req.query;
+
+    try {
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { settings: 1 } }
+        );
+
+        if (!game) {
+            return res.status(404).json({ error: "Game not found" });
+        }
+
+        const given = game.settings.giving === "Avatar" ? true : false;
+
+        return res.status(200).json(given);
+    }
+    catch (error) {
+        logError(`Checking if giving is avatar method (${gameId}): ${error.message}`);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+app.get("/is-owner", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+
+    const { gameId } = req.query;
+
+    try {
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { settings: 1, busfahrer: 1, tryOwner: 1 } }
+        );
+
+        if (!game) {
+            return res.status(404).json({ error: "Game not found" });
+        }
+
+        let owner = (userId.toString() === game.tryOwner.toString());
+
+        if(game.tryOwner === "")
+            owner = true;
+
+        if (!game.busfahrer.includes(userId)) {
+            if(!game.settings.isEveryone)
+                owner = false;
+        }
+
+        return res.status(200).json(owner);
+    }
+    catch (error) {
+        logError(`Checking if user is owner (${gameId}): ${error.message}`);
         return res.status(500).json({ error: "Internal server error" });
     }
 });
@@ -2400,6 +2613,8 @@ app.get("/get-end-game", async (req, res) => {
 
 // #region POST API Endpoints
 
+// #region Authentication
+
 /**
  * @swagger
  * /register:
@@ -2470,6 +2685,10 @@ app.post("/register", async (req, res) => {
             changedTheme: 0,
             changedSound: 0,
             uploadedAvatar: 0,
+            playersKicked: 0,
+            gotKicked: 0,
+            drinksRecieved: 0,
+            maxDrinksRecieved: 0,
         };
 
         const friendCode = await generateUniqueFriendCode();
@@ -2614,6 +2833,45 @@ app.post("/login", async (req, res) => {
         res.status(500).json({ error: "Failed to log in" });
     }
 });
+
+/**
+ * @swagger
+ * /logout:
+ *   post:
+ *     summary: Logs out the current user.
+ *     description: Clears the user's session by invalidating the HttpOnly authentication cookie.
+ *     responses:
+ *       200:
+ *         description: User successfully logged out.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *       500:
+ *         description: Internal server error.
+ */
+app.post('/logout', (req, res) => {
+    try {
+        res.clearCookie('token', {
+            httpOnly: true,
+            sameSite: 'strict',
+            path: '/'
+        });
+
+        res.status(200).json({ success: true });
+    } catch (error) {
+        logError(`Logout error: ${error.stack || error.message}`);
+        res.status(500).json({ success: false });
+    }
+});
+
+// #endregion
+
+// #region Friend System
 
 /**
  * @swagger
@@ -2917,6 +3175,10 @@ app.post("/remove-friend", authenticateToken, async (req, res) => {
     }
 });
 
+// #endregion
+
+// #region Messaging
+
 /**
  * @swagger
  * /send-message:
@@ -3056,6 +3318,40 @@ app.post("/mark-messages-read", authenticateToken, async (req, res) => {
         return res.status(500).json({ error: "Something went wrong." });
     }
 });
+
+app.post("/send-game-message", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+    const { gameId, message } = req.body;
+
+    try {
+        const game = await db.collection("games").findOne({ _id: new ObjectId(gameId) });
+        if (!game) return res.status(404).json({ error: "Game not found." });
+
+        const player = game.players.find(p => p.id.toString() === userId);
+        if (!player) return res.status(404).json({ error: "Player not found in this game." });
+
+        const gameMessage = {
+            senderId: new ObjectId(userId),
+            name: player.name,
+            message,
+            timestamp: new Date(),
+        };
+
+        await db.collection("games").updateOne(
+            { _id: new ObjectId(gameId) },
+            { $push: { messages: gameMessage } }
+        );
+
+        return res.status(200).json({ message: "Message sent successfully." });
+    } catch (error) {
+        logError(`Error sending message: ${error.message}`);
+        return res.status(500).json({ error: "Something went wrong." });
+    }
+});
+
+// #endregion
+
+// #region User Profile
 
 /**
  * @swagger
@@ -3370,40 +3666,9 @@ app.post("/set-title", authenticateToken, async (req, res) => {
     }
 });
 
-/**
- * @swagger
- * /logout:
- *   post:
- *     summary: Logs out the current user.
- *     description: Clears the user's session by invalidating the HttpOnly authentication cookie.
- *     responses:
- *       200:
- *         description: User successfully logged out.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *       500:
- *         description: Internal server error.
- */
-app.post('/logout', (req, res) => {
-    try {
-        res.clearCookie('token', {
-            httpOnly: true,
-            sameSite: 'strict',
-            path: '/'
-        });
+// #endregion
 
-        res.status(200).json({ success: true });
-    } catch (error) {
-        logError(`Logout error: ${error.stack || error.message}`);
-        res.status(500).json({ success: false });
-    }
-});
+// #region Achievement System
 
 /**
  * @swagger
@@ -3472,6 +3737,10 @@ app.post("/add-achievement", async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 });
+
+// #endregion
+
+// #region Lobby System
 
 /**
  * @swagger
@@ -3555,6 +3824,7 @@ app.post("/create-game", authenticateToken, async (req, res) => {
                 exen: false,
                 avatar: user.avatar,
                 title: activeTitle,
+                hadTurn: false,
             }],
             status: "waiting",
             private: isPrivate,
@@ -3567,6 +3837,8 @@ app.post("/create-game", authenticateToken, async (req, res) => {
             createdAt: new Date(),
             statistics,
             settings,
+            messages: [],
+            turnOrder: [],
         };
 
         const result = await db.collection("games").insertOne(newGame);
@@ -3709,7 +3981,7 @@ app.post("/join-game/:gameId", authenticateToken, async (req, res) => {
     try {
         const game = await db.collection("games").findOne(
             { _id: new ObjectId(gameId) },
-            { projection: { players: 1, status: 1 } }
+            { projection: { players: 1, status: 1, settings: 1 } }
         );
 
         if (!game) {
@@ -3733,6 +4005,10 @@ app.post("/join-game/:gameId", authenticateToken, async (req, res) => {
             return res.status(404).json({ error: "User not found" });
         }
 
+        if (game.players.length >= game.settings.playerLimit) {
+            return res.status(400).json({ error: "Game is full" });
+        }
+
         const activeTitle = user.titles?.find(title => title.active) || null;
 
         const result = await db.collection("games").updateOne(
@@ -3749,6 +4025,7 @@ app.post("/join-game/:gameId", authenticateToken, async (req, res) => {
                         exen: false,
                         avatar: user.avatar,
                         title: activeTitle,
+                        hadTurn: false,
                     },
                     "statistics.schluckePerPlayer": {
                         id: userId,
@@ -3837,11 +4114,13 @@ app.post("/kick-player", authenticateToken, async (req, res) => {
             return res.status(404).json({ error: "Game not found" });
         }
 
-        if (game.players[0].id !== userId) {
+        const gameMasterId = game.players[0].id;
+
+        if (gameMasterId !== userId) {
             return res.status(403).json({ error: "Only the Game Master can kick players" });
         }
 
-        if (game.players[0].id === id) {
+        if (gameMasterId === id) {
             return res.status(403).json({ error: "The Game Master cannot kick himself" });
         }
 
@@ -3849,6 +4128,16 @@ app.post("/kick-player", authenticateToken, async (req, res) => {
         const updatedStatistics = game.statistics;
         updatedStatistics.schluckePerPlayer = game.statistics.schluckePerPlayer.filter(player => player.id !== userId);
         updatedStatistics.roundsPerPlayer = game.statistics.roundsPerPlayer.filter(player => player.id !== userId);
+
+        await db.collection("users").updateOne(
+            { _id: new ObjectId(gameMasterId) },
+            { $inc: { "statistics.playersKicked": 1 } }
+        );
+
+        await db.collection("users").updateOne(
+            { _id: new ObjectId(id) },
+            { $inc: { "statistics.gotKicked": 1 } }
+        );
 
         const result = await db.collection("games").updateOne(
             { _id: new ObjectId(gameId) },
@@ -3873,6 +4162,10 @@ app.post("/kick-player", authenticateToken, async (req, res) => {
         return res.status(500).json({ error: "Error kicking player" });
     }
 });
+
+// #endregion
+
+// #region Game System
 
 /**
  * @swagger
@@ -3923,7 +4216,7 @@ app.post("/start-game", authenticateToken, async (req, res) => {
     try {
         const game = await db.collection("games").findOne(
             { _id: new ObjectId(gameId) },
-            { projection: { players: 1, activePlayer: 1, settings: 1 } }
+            { projection: { players: 1, activePlayer: 1, settings: 1, turnOrder: 1 } }
         );
 
         if (!game) {
@@ -3936,7 +4229,7 @@ app.post("/start-game", authenticateToken, async (req, res) => {
 
         const settings = game.settings;
 
-        let deck = createDeck(settings.shuffle);
+        let deck = createDeck(settings.shuffling);
         const updatedPlayers = game.players.map((player) => {
             const playerCards = deck.splice(0, 10).map(card => ({ ...card, played: false }));
             return { ...player, cards: playerCards };
@@ -3944,9 +4237,11 @@ app.post("/start-game", authenticateToken, async (req, res) => {
 
         const pyramid = deck.splice(0, 15).map(card => ({ ...card, flipped: false }));
 
+        const order = updatedPlayers.map(player => player.id);
+
         const result = await db.collection("games").updateOne(
             { _id: new ObjectId(gameId) },
-            { $set: { players: updatedPlayers, cards: pyramid, status: "started" } }
+            { $set: { players: updatedPlayers, cards: pyramid, status: "started", turnOrder: order } }
         );
 
         if (result.modifiedCount === 0) {
@@ -4091,6 +4386,245 @@ app.post("/leave-game", authenticateToken, async (req, res) => {
 
 /**
  * @swagger
+ * /start-phase2:
+ *   post:
+ *     summary: Starts phase 2 of the game.
+ *     description: >
+ *       Authenticates the user using a JWT stored in an HttpOnly cookie.
+ *       Only the Game Master can start phase 2.
+ *       Determines the "Busfahrer" (players with the most unplayed cards).
+ *       Updates game state and user statistics.
+ *     security:
+ *       - BearerAuth: []
+ *     tags:
+ *       - Games
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               gameId:
+ *                 type: string
+ *                 description: The unique identifier of the game.
+ *     responses:
+ *       200:
+ *         description: Successfully started phase 2.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Confirmation message.
+ *       403:
+ *         description: Only the Game Master can start phase 2.
+ *       404:
+ *         description: Game or player not found.
+ *       500:
+ *         description: Internal server error.
+ */
+app.post("/start-phase2", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+
+    const { gameId } = req.body;
+
+    try {
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { players: 1, settings: 1 } }
+        );
+
+        if (!game) {
+            return res.status(404).json({ error: "Game not found" });
+        }
+
+        const { players, settings } = game;
+
+        if (players[0].id !== userId) {
+            return res.status(403).json({ error: "Only the Game Master can start the next phase" });
+        }
+
+        const busMode = settings.busMode;
+        const busfahrer = selectBusfahrer(busMode, players);
+
+        for (const player of players) {
+            const unplayedCards = player.cards.filter(card => !card.played).length;
+
+            const user = await db.collection("users").findOne(
+                { _id: new ObjectId(player.id) },
+                { projection: { statistics: 1 } }
+            );
+
+            if (user.statistics.cardsLeft < unplayedCards) {
+                await db.collection("users").updateOne(
+                    { _id: new ObjectId(player.id) },
+                    { $set: { "statistics.cardsLeft": unplayedCards } }
+                );
+            }
+
+            await db.collection("users").updateOne(
+                { _id: new ObjectId(player.id) },
+                { $set: { "statistics.cardsPlayedPhase1": 10 - unplayedCards } }
+            );
+        };
+
+        let phaseCards = [];
+
+        await db.collection("games").updateOne(
+            { _id: new ObjectId(gameId) },
+            {
+                $set: {
+                    busfahrer,
+                    drinkCount: 0,
+                    lastRound: 0,
+                    round: 1,
+                    phase: "phase2",
+                    phaseCards
+                }
+            }
+        );
+
+        const playerIds = players.map(player => player.id);
+
+        await Promise.all(playerIds.map(async (id) => {
+            const user = await db.collection("users").findOne({ _id: new ObjectId(id) });
+            if (!user) {
+                return res.status(404).json({ error: "User not found" });
+            }
+
+            const stats = user.statistics;
+
+            if (busfahrer.includes(id)) {
+                stats.gamesBusfahrer++;
+            }
+
+            const player = players.find(p => p.id === id);
+            if (player) {
+                const unplayedCards = player.cards.filter(card => !card.played).length;
+
+                stats.layedCards += (10 - unplayedCards);
+                stats.maxCardsSelf = Math.max(stats.maxCardsSelf, unplayedCards);
+            }
+
+            await db.collection("users").updateOne(
+                { _id: new ObjectId(id) },
+                { $set: { statistics: stats } }
+            );
+        }));
+
+
+        const clients = activeGameConnections.get(gameId) || [];
+        clients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({ type: "phase2" }));
+            }
+        });
+
+        res.status(200).json({ message: "Phase 2 started!" });
+    }
+    catch (error) {
+        logError(`Error starting phase 2 for game ${gameId}: ${error.message}`);
+        return res.status(500).json({ error: "Error starting Phase 2" });
+    }
+});
+
+/**
+ * @swagger
+ * /start-phase3:
+ *   post:
+ *     summary: Starts Phase 3 of the game.
+ *     description: Transitions the game to Phase 3, initializes the diamond layout, and notifies active players via WebSocket.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               gameId:
+ *                 type: string
+ *                 description: The unique ID of the game.
+ *     responses:
+ *       200:
+ *         description: Successfully started Phase 3.
+ *       400:
+ *         description: Missing gameId in the request body.
+ *       403:
+ *         description: Only the Game Master can start Phase 3.
+ *       404:
+ *         description: Game not found.
+ *       500:
+ *         description: Internal server error.
+ */
+app.post("/start-phase3", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+
+    const { gameId } = req.body;
+
+    try {
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { players: 1, settings: 1 } }
+        );
+
+        if (!game) {
+            return res.status(404).json({ error: "Game not found" });
+        }
+
+        if (game.players[0].id !== userId) {
+            return res.status(403).json({ error: "Only the Game Master can start the next phase" });
+        }
+
+        const settings = game.settings;
+
+        let deck = createDeck(settings.shuffling);
+        const diamond = deck.splice(0, 27).map(card => ({ ...card, flipped: false }));
+
+        // Flip the first and last card of the diamond
+        diamond[0].flipped = true;
+        diamond[26].flipped = true;
+        const lastCard = diamond[26];
+
+        await db.collection("games").updateOne(
+            { _id: new ObjectId(gameId) },
+            {
+                $set: {
+                    cards: diamond,
+                    drinkCount: 0,
+                    lastRound: 0,
+                    round: 9,
+                    phase: "phase3",
+                    lastCard,
+                    endGame: false,
+                    tryOwner: "",
+                }
+            }
+        );
+
+        const clients = activeGameConnections.get(gameId) || [];
+        clients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({ type: "phase3" }));
+            }
+        });
+
+        return res.status(200).json({ message: "Phase 3 started!" });
+    }
+    catch (error) {
+        logError(`Error starting Phase 3 for game ${gameId}: ${error.message}`);
+        return res.status(500).json({ error: "Error starting Phase 3" });
+    }
+});
+
+// #endregion
+
+// #region Phase 1 Actions
+
+/**
+ * @swagger
  * /flip-row:
  *   post:
  *     summary: Flips a row in the pyramid.
@@ -4160,8 +4694,8 @@ app.post("/flip-row", authenticateToken, async (req, res) => {
             return res.status(400).json({ error: "You can only flip one row per turn" });
         }
 
-        if (rowIdx < 1 || rowIdx > 5) {
-            return res.status(400).json({ error: "Invalid row ID" });
+        if (rowIdx !== currentRound) {
+            return res.status(400).json({ error: `Only row ${currentRound} can be flipped in this round` });
         }
 
         let pyramid = game.cards || [];
@@ -4259,7 +4793,7 @@ app.post("/lay-card", authenticateToken, async (req, res) => {
     try {
         const game = await db.collection("games").findOne(
             { _id: new ObjectId(gameId) },
-            { projection: { players: 1, cards: 1, activePlayer: 1, round: 1, drinkCount: 1 } }
+            { projection: { players: 1, cards: 1, activePlayer: 1, round: 1, drinkCount: 1, settings: 1 } }
         );
 
         if (!game) {
@@ -4298,12 +4832,29 @@ app.post("/lay-card", authenticateToken, async (req, res) => {
             return res.status(400).json({ error: "Card has already been played" });
         }
 
-        const isInRow = rowCards.some(rCard => rCard.number === card.number);
+        const matchStyle = game.settings.matching;
+        const isInRow = rowCards.some(rCard => doesCardMatch(card, rCard, matchStyle));
+
+        if(!isInRow) {
+            return res.status(400).json({ error: "Card does not match any card in the current row" });
+        }
+
         let updatedDrinkCount = drinkCount;
+    
+        let drinks = 0;
+        if(isInRow) {
+            if(game.settings.isChaos) {
+                const shouldMultiply = Math.random() < process.env.CHAOS_MODE;
+                const chaosMultiplier = shouldMultiply ? rowIdx : 1;
+                updatedDrinkCount += card.number * chaosMultiplier;
+            } else {
+                updatedDrinkCount += rowIdx;
+            }
+        }
 
         if (isInRow) {
             players[playerIndex].cards[cardIdx].played = true;
-            updatedDrinkCount += rowIdx;
+            updatedDrinkCount += drinks;
         }
 
         await db.collection("games").updateOne(
@@ -4374,7 +4925,7 @@ app.post("/next-player", authenticateToken, async (req, res) => {
     try {
         const game = await db.collection("games").findOne(
             { _id: new ObjectId(gameId) },
-            { projection: { players: 1, activePlayer: 1, round: 1, drinkCount: 1 } }
+            { projection: { players: 1, activePlayer: 1, round: 1, drinkCount: 1, settings: 1, turnOrder: 1 } }
         );
 
         if (!game) {
@@ -4385,39 +4936,60 @@ app.post("/next-player", authenticateToken, async (req, res) => {
             return res.status(403).json({ error: "Only the current Player can click Next Player" });
         }
 
-        const { players, round, drinkCount } = game;
+        const { players, round, drinkCount, settings, turnOrder } = game;
 
-        const playerIndex = players.findIndex(p => p.id === userId);
-        if (playerIndex === -1) {
-            return res.status(404).json({ error: "Player not in game" });
-        }
-
-        let nextPlayerIndex = (playerIndex + 1) % players.length;
+        const nextPlayerId = getNextPlayerId(settings.turning, turnOrder, players, userId);
+        
         let nextRound = round;
+        let updatedPlayers = players;
 
-        if (nextPlayerIndex === 0 && nextRound < 6) {
+        const allHadTurn = game.players.every(p => p.hadTurn === true);
+        if (allHadTurn && nextRound < 6) {
             nextRound += 1;
+            updatedPlayers = game.players.map(p => ({ ...p, hadTurn: false }));
         }
 
         const user = await db.collection("users").findOne({ _id: new ObjectId(userId) });
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
-
+        
         const stats = user.statistics;
         stats.drinksGiven += drinkCount;
         stats.maxDrinksGiven = Math.max(stats.maxDrinksGiven, drinkCount);
+        
 
         await db.collection("users").updateOne(
             { _id: new ObjectId(userId) },
             { $set: { statistics: stats } }
         );
 
+        for (const player of players) {
+            const targetUser = await db.collection("users").findOne({ _id: new ObjectId(player.id) });
+            if (!targetUser) continue;
+
+            const userStats = targetUser.statistics || {
+                drinksSelf: 0,
+                maxDrinksSelf: 0,
+            };
+
+            userStats.drinksSelf += player.drinks;
+            userStats.maxDrinksSelf = Math.max(userStats.maxDrinksSelf || 0, player.drinks);
+
+            await db.collection("users").updateOne(
+                { _id: new ObjectId(player.id) },
+                { $set: { statistics: userStats } }
+            );
+        }
+
+        updatedPlayers = updatedPlayers.map(p => ({ ...p, drinks: 0 }));
+
         await db.collection("games").updateOne(
             { _id: new ObjectId(gameId) },
             {
                 $set: {
-                    activePlayer: players[nextPlayerIndex].id,
+                    activePlayer: nextPlayerId,
+                    players: updatedPlayers,
                     round: nextRound,
                     drinkCount: 0
                 }
@@ -4432,52 +5004,10 @@ app.post("/next-player", authenticateToken, async (req, res) => {
     }
 });
 
-/**
- * @swagger
- * /start-phase2:
- *   post:
- *     summary: Starts phase 2 of the game.
- *     description: >
- *       Authenticates the user using a JWT stored in an HttpOnly cookie.
- *       Only the Game Master can start phase 2.
- *       Determines the "Busfahrer" (players with the most unplayed cards).
- *       Updates game state and user statistics.
- *     security:
- *       - BearerAuth: []
- *     tags:
- *       - Games
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               gameId:
- *                 type: string
- *                 description: The unique identifier of the game.
- *     responses:
- *       200:
- *         description: Successfully started phase 2.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   description: Confirmation message.
- *       403:
- *         description: Only the Game Master can start phase 2.
- *       404:
- *         description: Game or player not found.
- *       500:
- *         description: Internal server error.
- */
-app.post("/start-phase2", authenticateToken, async (req, res) => {
+app.post("/give-schluck", authenticateToken, async (req, res) => {
     const userId = req.user.userId;
 
-    const { gameId } = req.body;
+    const { gameId, inc, playerId } = req.body;
 
     try {
         const game = await db.collection("games").findOne(
@@ -4489,102 +5019,35 @@ app.post("/start-phase2", authenticateToken, async (req, res) => {
             return res.status(404).json({ error: "Game not found" });
         }
 
-        const { players } = game;
+        const player = game.players.find(player => player.id === playerId);
 
-        if (players[0].id !== userId) {
-            return res.status(403).json({ error: "Only the Game Master can start the next phase" });
+        if (!player) {
+            return res.status(404).json({ error: "Player not found" });
         }
 
-        let maxCards = 0;
-        let busfahrer = [];
+        const currentDrinks = player.drinks;
+        const updatedDrinks = inc ? currentDrinks + 1 : Math.max(0, currentDrinks - 1);
 
-        for (const player of players) {
-            const unplayedCards = player.cards.filter(card => !card.played).length;
-
-            if (unplayedCards > maxCards) {
-                maxCards = unplayedCards;
-                busfahrer = [player.id];
-            } else if (unplayedCards === maxCards) {
-                busfahrer.push(player.id);
-            }
-
-            const user = db.collection("users").findOne(
-                { _id: new ObjectId(player.id) },
-                { projection: { statistics: 1 } }
-            );
-
-            if (user.statistics.cardsLeft < unplayedCards) {
-                await db.collection("users").updateOne(
-                    { _id: new ObjectId(player.id) },
-                    { $set: { "statistics.cardsLeft": unplayedCards } }
-                );
-            }
-
-            await db.collection("users").updateOne(
-                { _id: new ObjectId(player.id) },
-                { $set: { "statistics.cardsPlayedPhase1": 10 - unplayedCards } }
-            );
-        };
-
-        let phaseCards = [];
-
-        await db.collection("games").updateOne(
-            { _id: new ObjectId(gameId) },
-            {
-                $set: {
-                    busfahrer,
-                    drinkCount: 0,
-                    lastRound: 0,
-                    round: 1,
-                    phase: "phase2",
-                    phaseCards
-                }
-            }
+        const updateResult = await db.collection("games").updateOne(
+            { _id: new ObjectId(gameId), "players.id": playerId },
+            { $set: { "players.$.drinks": updatedDrinks } }
         );
 
-        const playerIds = players.map(player => player.id);
+        if (updateResult.modifiedCount === 0) {
+            return res.status(500).json({ error: "Failed to update player drinks" });
+        }
 
-        await Promise.all(playerIds.map(async (id) => {
-            const user = await db.collection("users").findOne({ _id: new ObjectId(id) });
-            if (!user) {
-                return res.status(404).json({ error: "User not found" });
-            }
-
-            const stats = user.statistics;
-
-            if (busfahrer.includes(id)) {
-                stats.gamesBusfahrer++;
-            }
-
-            const player = players.find(p => p.id === id);
-            if (player) {
-                const unplayedCards = player.cards.filter(card => !card.played).length;
-
-                stats.layedCards += (10 - unplayedCards);
-                stats.maxCardsSelf = Math.max(stats.maxCardsSelf, unplayedCards);
-            }
-
-            await db.collection("users").updateOne(
-                { _id: new ObjectId(id) },
-                { $set: { statistics: stats } }
-            );
-        }));
-
-
-        const clients = activeGameConnections.get(gameId) || [];
-        clients.forEach(client => {
-            if (client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify({ type: "phase2" }));
-            }
-        });
-
-        res.status(200).json({ message: "Phase 2 started!" });
+        res.status(200).json({ message: `Gave ${count} Schluck to ${player.name}` });
     }
     catch (error) {
-        logError(`Error starting phase 2 for game ${gameId}: ${error.message}`);
-        return res.status(500).json({ error: "Error starting Phase 2" });
+        logError(`Error giving schluck to player ${playerId} in game ${gameId}: ${error.message}`);
+        return res.status(500).json({ error: "Error giving schluck" });
     }
 });
+
+// #endregion
+
+// #region Phase 2 Actions
 
 /**
  * @swagger
@@ -4826,92 +5289,11 @@ app.post("/next-player-phase", authenticateToken, async (req, res) => {
     }
 });
 
-/**
- * @swagger
- * /start-phase3:
- *   post:
- *     summary: Starts Phase 3 of the game.
- *     description: Transitions the game to Phase 3, initializes the diamond layout, and notifies active players via WebSocket.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               gameId:
- *                 type: string
- *                 description: The unique ID of the game.
- *     responses:
- *       200:
- *         description: Successfully started Phase 3.
- *       400:
- *         description: Missing gameId in the request body.
- *       403:
- *         description: Only the Game Master can start Phase 3.
- *       404:
- *         description: Game not found.
- *       500:
- *         description: Internal server error.
- */
-app.post("/start-phase3", authenticateToken, async (req, res) => {
-    const userId = req.user.userId;
 
-    const { gameId } = req.body;
 
-    try {
-        const game = await db.collection("games").findOne(
-            { _id: new ObjectId(gameId) },
-            { projection: { players: 1, settings: 1 } }
-        );
+// #endregion
 
-        if (!game) {
-            return res.status(404).json({ error: "Game not found" });
-        }
-
-        if (game.players[0].id !== userId) {
-            return res.status(403).json({ error: "Only the Game Master can start the next phase" });
-        }
-
-        const settings = game.settings;
-
-        let deck = createDeck(settings.shuffle);
-        const diamond = deck.splice(0, 27).map(card => ({ ...card, flipped: false }));
-
-        // Flip the first and last card of the diamond
-        diamond[0].flipped = true;
-        diamond[26].flipped = true;
-        const lastCard = diamond[26];
-
-        await db.collection("games").updateOne(
-            { _id: new ObjectId(gameId) },
-            {
-                $set: {
-                    cards: diamond,
-                    drinkCount: 0,
-                    lastRound: 0,
-                    round: 9,
-                    phase: "phase3",
-                    lastCard,
-                    endGame: false
-                }
-            }
-        );
-
-        const clients = activeGameConnections.get(gameId) || [];
-        clients.forEach(client => {
-            if (client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify({ type: "phase3" }));
-            }
-        });
-
-        return res.status(200).json({ message: "Phase 3 started!" });
-    }
-    catch (error) {
-        logError(`Error starting Phase 3 for game ${gameId}: ${error.message}`);
-        return res.status(500).json({ error: "Error starting Phase 3" });
-    }
-});
+// #region Phase 3 Actions
 
 /**
  * @swagger
@@ -4940,16 +5322,24 @@ app.post("/start-phase3", authenticateToken, async (req, res) => {
  *         description: Internal server error.
  */
 app.post("/flip-phase", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+
     const { gameId } = req.body;
 
     try {
         const game = await db.collection("games").findOne(
             { _id: new ObjectId(gameId) },
-            { projection: { cards: 1 } }
+            { projection: { cards: 1, settings: 1, tryOwner: 1 } }
         );
 
         if (!game) {
             return res.status(404).json({ error: "Game not found" });
+        }
+
+        if(game.settings.isEveryone) {
+            if(userId.toString() !== game.tryOwner.toString() && game.tryOwner !== "") {
+                return res.status(403).json({ error: "Only the player who started the try can retry" });
+            }
         }
 
         const updatedCards = game.cards.map((card, index) => ({
@@ -5011,7 +5401,7 @@ app.post("/retry-phase", authenticateToken, async (req, res) => {
     try {
         const game = await db.collection("games").findOne(
             { _id: new ObjectId(gameId) },
-            { projection: { players: 1, busfahrer: 1, statistics: 1, settings: 1 } }
+            { projection: { players: 1, busfahrer: 1, statistics: 1, settings: 1, tryOwner: 1 } }
         );
 
         if (!game) {
@@ -5020,7 +5410,15 @@ app.post("/retry-phase", authenticateToken, async (req, res) => {
 
         const settings = game.settings;
 
-        let deck = createDeck(settings.shuffle);
+        if(game.settings.isEveryone) {
+            if(userId.toString() !== game.tryOwner.toString() && game.tryOwner !== "") {
+                return res.status(403).json({ error: "Only the player who started the try can retry" });
+            }
+        } else {
+
+        }
+
+        let deck = createDeck(settings.shuffling);
         const diamond = deck.splice(0, 27).map(card => ({ ...card, flipped: false }));
 
         // Flip the first and last card in the diamond
@@ -5034,7 +5432,7 @@ app.post("/retry-phase", authenticateToken, async (req, res) => {
         const player = updatedStatistics.roundsPerPlayer.find(player => player.id.toString() === userId.toString());
         player.rounds++;
 
-        await db.collection("games").updateOne(
+        const result = await db.collection("games").updateOne(
             { _id: new ObjectId(gameId) },
             {
                 $set: {
@@ -5043,9 +5441,10 @@ app.post("/retry-phase", authenticateToken, async (req, res) => {
                     lastRound: 0,
                     round: 9,
                     lastCard: diamond[26],
-                    endGame: false
-                },
-                $set: { statistics: updatedStatistics }
+                    endGame: false,
+                    statistics: updatedStatistics,
+                    tryOwner: "",
+                }
             }
         );
 
@@ -5107,7 +5506,7 @@ app.post("/open-new-game", authenticateToken, async (req, res) => {
     try {
         const oldGame = await db.collection("games").findOne(
             { _id: new ObjectId(gameId) },
-            { projection: { players: 1, name: 1, private: 1, activePlayer: 1, statistics: 1 } }
+            { projection: { players: 1, name: 1, private: 1, activePlayer: 1, statistics: 1, settings: 1 } }
         );
 
         if (!oldGame) {
@@ -5121,9 +5520,14 @@ app.post("/open-new-game", authenticateToken, async (req, res) => {
         const players = oldGame.players.map(player => ({
             id: player.id,
             name: player.name,
+            role: player.role,
+            gender: player.gender,
             cards: [],
             drinks: 0,
-            exen: false
+            exen: false,
+            avatar: player.avatar,
+            title: player.title,
+            hadTurn: false,
         }));
 
         const user = await db.collection("users").findOne({ _id: new ObjectId(userId) });
@@ -5132,7 +5536,7 @@ app.post("/open-new-game", authenticateToken, async (req, res) => {
             return res.status(404).json({ error: "User not found" });
         }
 
-        const stats = game.statistics;
+        const stats = oldGame.statistics;
         const player = stats.roundsPerPlayer.find(player => player.id.toString() === userId.toString());
 
         let maxRounds = user.statistics.maxRounds;
@@ -5149,6 +5553,14 @@ app.post("/open-new-game", authenticateToken, async (req, res) => {
             }
         );
 
+        const playerIds = oldGame?.statistics?.schluckePerPlayer?.map(p => p.id) || [];
+
+        const newStatistics = {
+            topDrinker: { drinks: 0, id: "" },
+            schluckePerPlayer: playerIds.map(id => ({ id, drinks: 0 })),
+            roundsPerPlayer: playerIds.map(id => ({ id, rounds: 1 })),
+        };
+
         const newGame = await db.collection("games").insertOne({
             name: oldGame.name,
             players: players,
@@ -5159,7 +5571,12 @@ app.post("/open-new-game", authenticateToken, async (req, res) => {
             drinkCount: 0,
             round: 1,
             lastRound: 0,
-            phase: "phase1"
+            phase: "phase1",
+            createdAt: new Date(),
+            statistics: newStatistics,
+            settings: oldGame.settings,
+            messages: [],
+            turnOrder: [],
         });
 
         const newId = newGame.insertedId.toString()
@@ -5229,7 +5646,7 @@ app.post("/check-card", authenticateToken, async (req, res) => {
     try {
         const game = await db.collection("games").findOne(
             { _id: new ObjectId(gameId) },
-            { projection: { cards: 1, lastCard: 1, drinkCount: 1, round: 1 } }
+            { projection: { cards: 1, lastCard: 1, drinkCount: 1, round: 1, settings: 1, busfahrer: 1, tryOwner: 1 } }
         );
 
         if (!game) {
@@ -5239,6 +5656,21 @@ app.post("/check-card", authenticateToken, async (req, res) => {
         const gameCards = game.cards;
         if (cardIdx < 0 || cardIdx >= gameCards.length) {
             return res.status(404).json({ error: "Invalid card index" });
+        }
+
+        if(!game.settings.isEveryone) {
+            if (!game.busfahrer.includes(userId)) {
+                return res.status(403).json({ error: "Only the busfahrer can check the cards" });
+            }
+        }
+
+        let owner = game.tryOwner;
+        if(cardIdx === 25) {
+            owner = userId;
+        }
+
+        if(owner !== userId) {
+            return res.status(403).json({ error: "Only the player who started the try can check the card" });
         }
 
         const card = gameCards[cardIdx];
@@ -5281,6 +5713,7 @@ app.post("/check-card", authenticateToken, async (req, res) => {
                         round: nextRound,
                         drinkCount: updatedDrinkCount,
                         lastCard,
+                        tryOwner: owner,
                     },
                 }
             );
@@ -5298,6 +5731,7 @@ app.post("/check-card", authenticateToken, async (req, res) => {
                         round: nextRound,
                         drinkCount: updatedDrinkCount,
                         lastRound,
+                        tryOwner: "",
                     },
                 }
             );
@@ -5444,6 +5878,7 @@ app.post("/check-last-card", authenticateToken, async (req, res) => {
                         round: nextRound,
                         drinkCount: updatedDrinkCount,
                         lastRound,
+                        tryOwner: "",
                     },
                 }
             );
@@ -5458,6 +5893,8 @@ app.post("/check-last-card", authenticateToken, async (req, res) => {
 });
 
 // #endregion 
+
+// #endregion
 
 const apiServer = http2.createSecureServer(sslOptions, app);
 

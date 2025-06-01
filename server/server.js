@@ -11,14 +11,12 @@ import http2 from "http2";
 import https from "https";
 import http2Express from "http2-express-bridge";
 import multer from "multer";
-import qs from 'querystring';
 
 import { MongoClient, ObjectId } from "mongodb";
 import { WebSocket, WebSocketServer } from "ws";
 import { swaggerUi, swaggerSpec } from "./swagger.js";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
-import { v4 as uuidv4 } from "uuid";
 
 dotenv.config();
 
@@ -570,6 +568,15 @@ const gameChatConnections = new Map();
 
 const waitingGameConnections = new Set();
 
+setInterval(() => {
+    wss.clients.forEach((ws) => {
+        if(!ws.isAlive) return ws.terminate();
+
+        ws.isAlive = false;
+        ws.ping();
+    });
+}, 30000);
+
 /**
  * Handles incoming WebSocket connections and manages different types of subscriptions.
  *
@@ -592,6 +599,10 @@ wss.on("connection", (ws, req) => {
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         ws.user = decoded;
+        ws.isAlive = true;
+        ws.on("pong", () => {
+            ws.isAlive = true;
+        });
     } catch (error) {
         logError(`Invalid token attempt: ${error.stack || error.message}`);
         ws.close(1008, "Unauthorized: Invalid token");
@@ -601,14 +612,19 @@ wss.on("connection", (ws, req) => {
     ws.on("message", (message) => {
         try {
             const { type, gameId } = JSON.parse(message);
+            const data = JSON.parse(message);
 
-            // Subscribe to game updates
-            if (type === "subscribe" && gameId) {
-                if (!activeGameConnections.has(gameId)) {
-                    activeGameConnections.set(gameId, []);
+            if (data.type === "subscribe" && data.gameId) {
+                if(!ws.user.userId) {
+                    ws.close();
+                    return;
                 }
-                activeGameConnections.get(gameId).push(ws);
-                logTrace(`Subscribed to game updates for gameId ${gameId}`);
+
+                if (!activeGameConnections.has(data.gameId)) {
+                    activeGameConnections.set(data.gameId, []);
+                }
+                activeGameConnections.get(data.gameId).push(ws);
+                logTrace(`Subscribed to game updates for gameId ${data.gameId}, userId ${ws.user.userId}`);
             }
 
             // Subscribe to lobby updates
@@ -938,6 +954,7 @@ const watchGlobalGames = async () => {
                         phaseCards: 1,
                         cards: 1,
                         messages: 1,
+                        spectators: 1,
                     },
                 }
             );
@@ -945,9 +962,9 @@ const watchGlobalGames = async () => {
 
             //Game Update
             if (!isUpdate || Object.keys(updatedFields).some(field =>
-                ["round", "lastRound", "activePlayer", "phase", "busfahrer", "endGame", "players"].includes(field)) ||
+                ["round", "lastRound", "activePlayer", "phase", "busfahrer", "endGame", "players", "spectators"].includes(field)) ||
                 Object.keys(updatedFields).some(field =>
-                    ["round", "lastRound", "activePlayer", "phase", "busfahrer", "endGame", "players"].some(key =>
+                    ["round", "lastRound", "activePlayer", "phase", "busfahrer", "endGame", "players", "spectators"].some(key =>
                         field.startsWith(key)
                     )
                 )
@@ -958,6 +975,14 @@ const watchGlobalGames = async () => {
                     avatar: p.avatar,
                     title: p.title,
                     drinks: p.drinks,
+                    current: p.id === game.activePlayer,
+                }));
+
+                const spectatorInfo = game.spectators.map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    avatar: p.avatar,
+                    title: p.title,
                 }));
 
                 const busfahrerIds = game.busfahrer || [];
@@ -973,7 +998,7 @@ const watchGlobalGames = async () => {
                     busfahrerIds,
                     busfahrerName,
                     endGame: !!game.endGame,
-                    currentPlayer: game.activePlayer,
+                    spectators: spectatorInfo,
                 };
 
                 logTrace(`Game update for gameId ${gameId}: ${JSON.stringify(data)}`);
@@ -1115,6 +1140,70 @@ app.get("/check-auth", (req, res) => {
     catch (error) {
         logError(`Invalid token attempt: ${error.stack || error.message}`);
         res.json({ isAuthenticated: false });
+    }
+});
+
+app.get("/check-lobby-auth/:gameId", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+
+    const { gameId } = req.params;
+
+    try {
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { players: 1, status : 1, } }
+        );
+
+        if (!game) {
+            return res.json({ isLobbyAuthenticated: false });
+        }
+
+        if(game.players.length >= 10) {
+            return res.json({ isLobbyAuthenticated: false });
+        }
+
+        if(game.status !== "waiting") {
+            const isPlayerInGame = game.players.some(player => player.id === userId);
+
+            if (!isPlayerInGame) {
+                return res.json({ isLobbyAuthenticated: false });
+            }
+        }
+
+        return res.json({ isLobbyAuthenticated: true });
+    }
+    catch (error) {
+        logError(`Error checking lobby (${gameId}): ${error.message}`);
+        return res.json({ isLobbyAuthenticated: false });
+    }
+});
+
+app.get("/check-game-auth/:gameId", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+
+    const { gameId } = req.params;
+
+    try {
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { players: 1, status : 1, spectators: 1 } }
+        );
+
+        if (!game) {
+            return res.json({ isGameAuthenticated: false });
+        }
+
+        const isPlayerInGame = game.players.some(player => player.id === userId) || game.spectators.some(spectator => spectator.id === userId);
+
+        if (!isPlayerInGame) {
+            return res.json({ isGameAuthenticated: false });
+        }
+
+        return res.json({ isGameAuthenticated: true });
+    }
+    catch (error) {
+        logError(`Error checking game (${gameId}): ${error.message}`);
+        return res.json({ isGameAuthenticated: false });
     }
 });
 
@@ -1707,11 +1796,11 @@ app.get("/get-players/:gameId", async (req, res) => {
             avatar: player.avatar,
             title: player.title,
             drinks: player.drinks,
+            current: player.id === game.activePlayer,
         }));
 
         const data = {
             players,
-            currentPlayer: game.activePlayer,
         }
 
         res.status(200).json(data);
@@ -1719,6 +1808,38 @@ app.get("/get-players/:gameId", async (req, res) => {
     catch (error) {
         logError(`Error fetching players for game (${gameId}): ${error.message}`);
         res.status(500).json({ error: "Failed to fetch players" });
+    }
+});
+
+app.get("/get-spectators/:gameId", async (req, res) => {
+    const { gameId } = req.params;
+
+    try {
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { spectators: 1 } }
+        );
+
+        if (!game) {
+            return res.status(404).json({ error: "Game not found" });
+        }
+
+        const spectators = game.spectators.map(spectator => ({
+            id: spectator.id,
+            name: spectator.name,
+            avatar: spectator.avatar,
+            title: spectator.title,
+        }));
+
+        const data = {
+            spectators,
+        }
+
+        res.status(200).json(data);
+    }
+    catch (error) {
+        logError(`Error fetching spectators for game (${gameId}): ${error.message}`);
+        res.status(500).json({ error: "Failed to fetch spectatorsy" });
     }
 });
 
@@ -1768,19 +1889,48 @@ app.get("/is-game-master", authenticateToken, async (req, res) => {
     try {
         const game = await db.collection("games").findOne(
             { _id: new ObjectId(gameId) },
-            { projection: { players: 1 } }
+            { projection: { players: 1, spectators: 1 } }
         );
 
         if (!game) {
             return res.status(404).json({ error: "Game not found" });
         }
 
-        const isGameMaster = game.players.length > 0 && game.players[0].id === userId;
+        const isSpectator = Array.isArray(game.spectators) && game.spectators.some(s => s.id === userId);
+        const isGameMaster = !isSpectator &&
+                            Array.isArray(game.players) &&
+                            game.players.length > 0 &&
+                            game.players[0].id === userId;
 
         return res.status(200).json(isGameMaster);
     }
     catch (error) {
         logError(`Error verifying game master (${gameId}): ${error.message}`);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+app.get("/is-spectator", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+
+    const { gameId } = req.query;
+
+    try {
+        const game = await db.collection("games").findOne(
+            { _id: new ObjectId(gameId) },
+            { projection: { spectators: 1 } }
+        );
+
+        if (!game) {
+            return res.status(404).json({ error: "Game not found" });
+        }
+
+        const isSpec = (game.spectators.length > 0 && game.spectators?.some(s => s.id === userId)) || false;
+
+        return res.status(200).json(isSpec);
+    }
+    catch (error) {
+        logError(`Error checking Spectator (${gameId}): ${error.message}`);
         return res.status(500).json({ error: "Internal server error" });
     }
 });
@@ -1816,7 +1966,7 @@ app.get("/drinks-given", authenticateToken, async (req, res) => {
         return res.status(200).json(given);
     }
     catch (error) {
-        logError(`Error verifying game master (${gameId}): ${error.message}`);
+        logError(`Error fetching if drinks are given (${gameId}), User id (${userId}): ${error.message}`);
         return res.status(500).json({ error: "Internal server error" });
     }
 });
@@ -1849,7 +1999,7 @@ app.get("/get-drinks-received", authenticateToken, async (req, res) => {
         return res.status(200).json(recieved);
     }
     catch (error) {
-        logError(`Error verifying game master (${gameId}): ${error.message}`);
+        logError(`Error fetching drinks recieved (${gameId}), User id (${userId}): ${error.message}`);
         return res.status(500).json({ error: "Internal server error" });
     }
 });
@@ -1963,11 +2113,18 @@ app.get("/get-player-cards", authenticateToken, async (req, res) => {
     try {
         const game = await db.collection("games").findOne(
             { _id: new ObjectId(gameId) },
-            { projection: { players: 1 } }
+            { projection: { players: 1, spectators: 1 } }
         );
 
         if (!game) {
             return res.status(404).json({ error: "Game not found" });
+        }
+
+        let cards = [];
+
+        const spectator = game.spectators.find(s => s.id === userId);
+        if( spectator) {
+            return res.status(200).json(cards);
         }
 
         const player = game.players.find(p => p.id === userId);
@@ -1975,7 +2132,9 @@ app.get("/get-player-cards", authenticateToken, async (req, res) => {
             return res.status(404).json({ error: "Player not in game" });
         }
 
-        return res.status(200).json(player.cards || []);
+        cards = player.cards || [];
+
+        return res.status(200).json(cards);
     }
     catch (error) {
         logError(`Error fetching player cards for game ${gameId}: ${error.message}`);
@@ -2155,16 +2314,18 @@ app.get("/get-current-player", authenticateToken, async (req, res) => {
             return res.status(404).json({ error: "Player not in game" });
         }
 
+        const isPlayer = activePlayer === userId;
+
         if (phase === "phase2" && round === 2) {
             const reqPlayer = players.find(p => p.id === userId);
             if (!reqPlayer) {
                 return res.status(404).json({ error: "Player not in game" });
             }
 
-            return res.status(200).json({ playerId: activePlayer, playerName: reqPlayer.name });
+            return res.status(200).json({ isCurrent: isPlayer, playerName: reqPlayer.name });
         }
 
-        return res.status(200).json({ playerId: activePlayer, playerName: player.name });
+        return res.status(200).json({ isCurrent: isPlayer, playerName: player.name });
     }
     catch (error) {
         logError(`Error fetching current player for game ${gameId}: ${error.message}`);
@@ -2392,7 +2553,9 @@ app.get("/get-phase-cards", async (req, res) => {
  *       500:
  *         description: Internal server error.
  */
-app.get("/get-busfahrer", async (req, res) => {
+app.get("/get-busfahrer", authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+
     const { gameId } = req.query;
 
     try {
@@ -2417,7 +2580,9 @@ app.get("/get-busfahrer", async (req, res) => {
             busfahrerName = busfahrerName ? `${busfahrerName} & ${player.name}` : player.name;
         }
 
-        res.status(200).json({ busfahrerName, playerIds });
+        const isBusfahrer = playerIds.includes(userId);
+
+        res.status(200).json({ busfahrerName, playerIds, isBusfahrer });
     }
     catch (error) {
         logError(`Error fetching busfahrer for game ${gameId}: ${error.message}`);
@@ -2463,11 +2628,16 @@ app.get("/all-cards-played", authenticateToken, async (req, res) => {
     try {
         const game = await db.collection("games").findOne(
             { _id: new ObjectId(gameId) },
-            { projection: { round: 1, players: 1 } }
+            { projection: { round: 1, players: 1, spectators: 1 } }
         );
 
         if (!game) {
             return res.status(404).json({ error: "Game not found" });
+        }
+
+        const spectator = game.spectators.find(s => s.id === userId);
+        if( spectator) {
+            return res.status(200).json(true);
         }
 
         const player = game.players.find(p => p.id === userId);
@@ -3826,14 +3996,16 @@ app.post("/create-game", authenticateToken, async (req, res) => {
                 title: activeTitle,
                 hadTurn: false,
             }],
+            spectators: [],
             status: "waiting",
             private: isPrivate,
             activePlayer: userId,
             cards: [],
             drinkCount: 0,
+            drinkGiven: 0,
             round: 1,
             lastRound: 0,
-            phase: "phase1",
+            phase: "lobby",
             createdAt: new Date(),
             statistics,
             settings,
@@ -3975,13 +4147,13 @@ app.post("/check-game-code", authenticateToken, async (req, res) => {
 app.post("/join-game/:gameId", authenticateToken, async (req, res) => {
     const userId = req.user.userId;
 
-    const { playerName, gender } = req.body;
+    const { playerName, gender, spectator } = req.body;
     const { gameId } = req.params;
 
     try {
         const game = await db.collection("games").findOne(
             { _id: new ObjectId(gameId) },
-            { projection: { players: 1, status: 1, settings: 1 } }
+            { projection: { players: 1, status: 1, settings: 1, spectators: 1 } }
         );
 
         if (!game) {
@@ -4005,50 +4177,77 @@ app.post("/join-game/:gameId", authenticateToken, async (req, res) => {
             return res.status(404).json({ error: "User not found" });
         }
 
-        if (game.players.length >= game.settings.playerLimit) {
-            return res.status(400).json({ error: "Game is full" });
-        }
+        let msg;
 
         const activeTitle = user.titles?.find(title => title.active) || null;
 
-        const result = await db.collection("games").updateOne(
-            { _id: new ObjectId(gameId) },
-            {
-                $push: {
-                    players: {
-                        id: userId,
-                        name: playerName,
-                        gender: gender,
-                        role: "Player",
-                        cards: [],
-                        drinks: 0,
-                        exen: false,
-                        avatar: user.avatar,
-                        title: activeTitle,
-                        hadTurn: false,
-                    },
-                    "statistics.schluckePerPlayer": {
-                        id: userId,
-                        drinks: 0
-                    },
-                    "statistics.roundsPerPlayer": {
-                        id: userId,
-                        rounds: 1
-                    },
+        if(spectator) {
+            const result = await db.collection("games").updateOne(
+                { _id: new ObjectId(gameId) },
+                {
+                    $push: {
+                        spectators: {
+                            id: userId,
+                            name: playerName,
+                            role: "Spectator",
+                            avatar: user.avatar,
+                            title: activeTitle,
+                        },
+                    }
                 }
-            }
-        );
+            );
 
-        if (result.modifiedCount === 0) {
-            return res.status(500).json({ error: "Failed to join game" });
+            if (result.modifiedCount === 0) {
+                return res.status(500).json({ error: "Failed to join game" });
+            }
+
+            msg = "Player joined as spectator";
+        } else {
+            if (game.players.length >= game.settings.playerLimit) {
+                return res.status(400).json({ error: "Game is full" });
+            }
+
+            const result = await db.collection("games").updateOne(
+                { _id: new ObjectId(gameId) },
+                {
+                    $push: {
+                        players: {
+                            id: userId,
+                            name: playerName,
+                            gender: gender,
+                            role: "Player",
+                            cards: [],
+                            drinks: 0,
+                            exen: false,
+                            avatar: user.avatar,
+                            title: activeTitle,
+                            hadTurn: false,
+                        },
+                        "statistics.schluckePerPlayer": {
+                            id: userId,
+                            drinks: 0
+                        },
+                        "statistics.roundsPerPlayer": {
+                            id: userId,
+                            rounds: 1
+                        },
+                    }
+                }
+            );
+
+            if (result.modifiedCount === 0) {
+                return res.status(500).json({ error: "Failed to join game" });
+            }
+
+            await db.collection("users").updateOne(
+                { _id: new ObjectId(user._id) },
+                { $inc: { "statistics.gamesJoined": 1 } }
+            );
+
+            msg = "Player joined the game";
         }
 
-        await db.collection("users").updateOne(
-            { _id: new ObjectId(user._id) },
-            { $inc: { "statistics.gamesJoined": 1 } }
-        );
-
-        res.status(200).json({ message: "Player joined game" });
+        res.status(200).json({ success: true, gameId, message: msg });
     }
     catch (error) {
         logError(`Error joining game (${gameId}): ${error.message}`);
@@ -4102,12 +4301,12 @@ app.post("/join-game/:gameId", authenticateToken, async (req, res) => {
 app.post("/kick-player", authenticateToken, async (req, res) => {
     const userId = req.user.userId;
 
-    const { gameId, id } = req.body;
+    const { gameId, id, isSpectator } = req.body;
 
     try {
         const game = await db.collection("games").findOne(
             { _id: new ObjectId(gameId) },
-            { projection: { players: 1, statistics: 1 } }
+            { projection: { players: 1, statistics: 1, spectators: 1} }
         );
 
         if (!game) {
@@ -4124,25 +4323,38 @@ app.post("/kick-player", authenticateToken, async (req, res) => {
             return res.status(403).json({ error: "The Game Master cannot kick himself" });
         }
 
-        const updatedPlayers = game.players.filter(player => player.id !== id);
-        const updatedStatistics = game.statistics;
-        updatedStatistics.schluckePerPlayer = game.statistics.schluckePerPlayer.filter(player => player.id !== userId);
-        updatedStatistics.roundsPerPlayer = game.statistics.roundsPerPlayer.filter(player => player.id !== userId);
+        let result;
 
-        await db.collection("users").updateOne(
-            { _id: new ObjectId(gameMasterId) },
-            { $inc: { "statistics.playersKicked": 1 } }
-        );
+        if(!isSpectator) {
+            const updatedPlayers = game.players.filter(player => player.id !== id);
+            const updatedStatistics = game.statistics;
+            updatedStatistics.schluckePerPlayer = game.statistics.schluckePerPlayer.filter(player => player.id !== userId);
+            updatedStatistics.roundsPerPlayer = game.statistics.roundsPerPlayer.filter(player => player.id !== userId);
 
-        await db.collection("users").updateOne(
-            { _id: new ObjectId(id) },
-            { $inc: { "statistics.gotKicked": 1 } }
-        );
+            await db.collection("users").updateOne(
+                { _id: new ObjectId(gameMasterId) },
+                { $inc: { "statistics.playersKicked": 1 } }
+            );
 
-        const result = await db.collection("games").updateOne(
-            { _id: new ObjectId(gameId) },
-            { $set: { players: updatedPlayers, statistics: updatedStatistics } }
-        );
+            await db.collection("users").updateOne(
+                { _id: new ObjectId(id) },
+                { $inc: { "statistics.gotKicked": 1 } }
+            );
+
+            result = await db.collection("games").updateOne(
+                { _id: new ObjectId(gameId) },
+                { $set: { players: updatedPlayers, statistics: updatedStatistics } }
+            );
+        } else {
+            const updatedSpectators = game.spectators.filter(spectator => spectator.id !== id);
+
+            console.log(updatedSpectators);
+
+            result = await db.collection("games").updateOne(
+                { _id: new ObjectId(gameId) },
+                { $set: { spectators: updatedSpectators } }
+            );
+        }
 
         if (result.modifiedCount === 0) {
             return res.status(500).json({ error: "Failed to update game data" });
@@ -4150,8 +4362,8 @@ app.post("/kick-player", authenticateToken, async (req, res) => {
 
         const clients = activeGameConnections.get(gameId) || [];
         clients.forEach(client => {
-            if (client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify({ type: "kicked", id }));
+            if (client.user.userId == id && client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({ type: "kicked" }));
             }
         });
 
@@ -4241,7 +4453,7 @@ app.post("/start-game", authenticateToken, async (req, res) => {
 
         const result = await db.collection("games").updateOne(
             { _id: new ObjectId(gameId) },
-            { $set: { players: updatedPlayers, cards: pyramid, status: "started", turnOrder: order } }
+            { $set: { players: updatedPlayers, cards: pyramid, status: "started", turnOrder: order, phase: "phase1" } }
         );
 
         if (result.modifiedCount === 0) {
@@ -4319,34 +4531,49 @@ app.post("/start-game", authenticateToken, async (req, res) => {
 app.post("/leave-game", authenticateToken, async (req, res) => {
     const userId = req.user.userId;
 
-    const { gameId } = req.body;
+    const { gameId, isSpectator } = req.body;
 
     try {
         const game = await db.collection("games").findOne(
             { _id: new ObjectId(gameId) },
-            { projection: { players: 1, statistics: 1, endGame: 1 } }
+            { projection: { players: 1, statistics: 1, endGame: 1, spectators: 1 } }
         );
 
         if (!game) {
             return res.status(404).json({ error: "Game not found" });
         }
 
-        if (game.players[0].id !== userId) {
-            const updatedPlayers = game.players.filter(player => player.id !== userId);
-            const updatedStatistics = game.statistics;
-            updatedStatistics.schluckePerPlayer = game.statistics.schluckePerPlayer.filter(player => player.id !== userId);
-            updatedStatistics.roundsPerPlayer = game.statistics.roundsPerPlayer.filter(player => player.id !== userId);
+        if(!isSpectator) {
+            if (game.players[0].id !== userId) {
+                const updatedPlayers = game.players.filter(player => player.id !== userId);
+                const updatedStatistics = game.statistics;
+                updatedStatistics.schluckePerPlayer = game.statistics.schluckePerPlayer.filter(player => player.id !== userId);
+                updatedStatistics.roundsPerPlayer = game.statistics.roundsPerPlayer.filter(player => player.id !== userId);
+
+                const result = await db.collection("games").updateOne(
+                    { _id: new ObjectId(gameId) },
+                    { $set: { players: updatedPlayers, statistics: updatedStatistics } }
+                );
+
+                if (result.modifiedCount === 0) {
+                    return res.status(500).json({ error: "Failed to update game data" });
+                }
+
+                return res.status(200).json({ success: true, message: "userLeft" });
+            }
+        } else {
+            const updatedSpectators = game.spectators.filter(spectator => spectator.id !== userId);
 
             const result = await db.collection("games").updateOne(
                 { _id: new ObjectId(gameId) },
-                { $set: { players: updatedPlayers, statistics: updatedStatistics } }
+                { $set: { spectators: updatedSpectators } }
             );
 
             if (result.modifiedCount === 0) {
                 return res.status(500).json({ error: "Failed to update game data" });
             }
 
-            return res.status(200).json({ success: true, message: "one" });
+            return res.status(200).json({ success: true, message: "userLeft" });
         }
 
         if (game.players[0].id === userId) {
@@ -4362,20 +4589,20 @@ app.post("/leave-game", authenticateToken, async (req, res) => {
                 );
             }
 
+            const clients = activeGameConnections.get(gameId) || [];
+            clients.forEach(client => {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({ type: "gameClosed" }));
+                }
+            });
+
             const deleteResult = await db.collection("games").deleteOne({ _id: new ObjectId(gameId) });
 
             if (deleteResult.deletedCount === 0) {
                 return res.status(500).json({ error: "Failed to delete game" });
             }
 
-            const clients = activeGameConnections.get(gameId) || [];
-            clients.forEach(client => {
-                if (client.readyState === WebSocket.OPEN) {
-                    client.send(JSON.stringify({ type: "close", userId }));
-                }
-            });
-
-            return res.status(200).json({ success: true, message: "all" });
+            return res.status(200).json({ success: true, message: "gameClosed" });
         }
     }
     catch (error) {
@@ -4836,7 +5063,7 @@ app.post("/lay-card", authenticateToken, async (req, res) => {
         const isInRow = rowCards.some(rCard => doesCardMatch(card, rCard, matchStyle));
 
         if(!isInRow) {
-            return res.status(400).json({ error: "Card does not match any card in the current row" });
+            return res.status(200).json({ success: false, message: "Card does not match" });
         }
 
         let updatedDrinkCount = drinkCount;
@@ -4867,7 +5094,7 @@ app.post("/lay-card", authenticateToken, async (req, res) => {
             }
         );
 
-        res.status(200).json({ message: "Card played!" });
+        res.status(200).json({ success: true, message: "Card played!" });
     }
     catch (error) {
         logError(`Error laying card for game ${gameId}: ${error.message}`);
@@ -5012,7 +5239,7 @@ app.post("/give-schluck", authenticateToken, async (req, res) => {
     try {
         const game = await db.collection("games").findOne(
             { _id: new ObjectId(gameId) },
-            { projection: { players: 1 } }
+            { projection: { players: 1, drinkGiven: 1, drinkCount: 1, } }
         );
 
         if (!game) {
@@ -5026,18 +5253,43 @@ app.post("/give-schluck", authenticateToken, async (req, res) => {
         }
 
         const currentDrinks = player.drinks;
-        const updatedDrinks = inc ? currentDrinks + 1 : Math.max(0, currentDrinks - 1);
+        const totalGiven = game.players.reduce((sum, player) => sum + player.drinks, 0);
 
-        const updateResult = await db.collection("games").updateOne(
-            { _id: new ObjectId(gameId), "players.id": playerId },
-            { $set: { "players.$.drinks": updatedDrinks } }
-        );
+        let updatedDrinks = currentDrinks;
+        let updatedGiven = game.drinkGiven;
+        let change = false;
 
-        if (updateResult.modifiedCount === 0) {
-            return res.status(500).json({ error: "Failed to update player drinks" });
+        if(inc) {
+            if(totalGiven < game.drinkCount) {
+                updatedDrinks += 1;
+                updatedGiven += 1;
+                change = true;
+            }
+        } else {
+            if(updatedDrinks > 0) {
+                updatedDrinks = Math.max(0, updatedDrinks - 1);
+                updatedGiven = Math.max(0, updatedGiven - 1);
+                change = true;
+            }
+        }
+        
+        if(change) {
+            const updateResult = await db.collection("games").updateOne(
+                { _id: new ObjectId(gameId), "players.id": playerId },
+                { 
+                    $set: { 
+                        "players.$.drinks": updatedDrinks,
+                        drinkGiven: updatedGiven
+                    },
+                }
+            );
+
+            if (updateResult.modifiedCount === 0) {
+                return res.status(500).json({ error: "Failed to update player drinks" });
+            }
         }
 
-        res.status(200).json({ message: `Gave ${count} Schluck to ${player.name}` });
+        res.status(200).json({ message: `Gave Schluck to ${player.name}` });
     }
     catch (error) {
         logError(`Error giving schluck to player ${playerId} in game ${gameId}: ${error.message}`);
@@ -5114,13 +5366,13 @@ app.post("/lay-card-phase", authenticateToken, async (req, res) => {
 
         // Validate card based on the round
         if (game.round === 1 && (card.number < 2 || card.number > 10)) {
-            return res.status(400).json({ error: "Only cards with numbers 2-10 can be played in round 1" });
+            return res.status(200).json({ error: "Only cards with numbers 2-10 can be played in round 1" });
         }
         if (game.round === 2 && (card.number < 11 || card.number > 13)) {
-            return res.status(400).json({ error: "Only J, Q, K can be played in round 2" });
+            return res.status(200).json({ error: "Only J, Q, K can be played in round 2" });
         }
         if (game.round === 3 && card.number !== 14) {
-            return res.status(400).json({ error: "Only A can be played in round 3" });
+            return res.status(200).json({ error: "Only A can be played in round 3" });
         }
 
         const phaseCards = game.phaseCards || [];
@@ -5238,7 +5490,9 @@ app.post("/next-player-phase", authenticateToken, async (req, res) => {
             stats.maxDrinksSelf = Math.max(game.drinkCount, stats.maxDrinksSelf);
 
             const updatedStatistics = game.statistics;
+            console.log(userId);
             const player = updatedStatistics.schluckePerPlayer.find(player => player.id.toString() === userId.toString());
+            console.log(player);
             player.drinks += game.drinkCount;
 
             if (player.drinks > updatedStatistics.topDrinker.drinks) {
@@ -5253,6 +5507,8 @@ app.post("/next-player-phase", authenticateToken, async (req, res) => {
                 { _id: new ObjectId(gameId) },
                 { $set: { statistics: updatedStatistics } }
             );
+
+            console.log("Test");
         }
 
         if (game.round === 3) {
@@ -5506,7 +5762,7 @@ app.post("/open-new-game", authenticateToken, async (req, res) => {
     try {
         const oldGame = await db.collection("games").findOne(
             { _id: new ObjectId(gameId) },
-            { projection: { players: 1, name: 1, private: 1, activePlayer: 1, statistics: 1, settings: 1 } }
+            { projection: { players: 1, name: 1, private: 1, activePlayer: 1, statistics: 1, settings: 1, spectators: 1, } }
         );
 
         if (!oldGame) {
@@ -5567,8 +5823,10 @@ app.post("/open-new-game", authenticateToken, async (req, res) => {
             status: "waiting",
             private: oldGame.private,
             activePlayer: oldGame.activePlayer,
+            spectators: oldGame.spectators || [],
             cards: [],
             drinkCount: 0,
+            drinkGiven: 0,
             round: 1,
             lastRound: 0,
             phase: "phase1",

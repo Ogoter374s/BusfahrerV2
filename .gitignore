@@ -26,12 +26,6 @@ yarn-debug.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Firebase related
-firebase-debug.log
-firebase.json
-firebase-key.json
-.firebaserc
-
 # Editor & system files
 .DS_Store
 Thumbs.db
@@ -51,4 +45,4 @@ Thumbs.db
 *.pem
 
 # User Avatars
-public/
+avatars/

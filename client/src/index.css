@@ -83,44 +83,44 @@ form {
 /* #endregion */
 
 .highlight {
-  color: red;
-  margin-left: 15px;
+    color: red;
+    margin-left: 15px;
 }
 
 /* #region Input Fields */
 
 .rustic-input {
-  background: url('/wood_blue.svg');
-  background-size: cover;
-  font-family: 'Cinzel', serif;
-  font-size: 27px;
-  color: #f5e1a4;
-  box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.6);
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-  border-radius: 5px;
-  outline: none;
-  height: 45px;
+    background: url('/wood_blue.svg');
+    background-size: cover;
+    font-family: 'Cinzel', serif;
+    font-size: 27px;
+    color: #f5e1a4;
+    box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.6);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    border-radius: 5px;
+    outline: none;
+    height: 45px;
 }
 
 .rustic-input:focus {
-  border-color: #c49a6c;
-  box-shadow: 0 0 8px rgba(196, 154, 108, 0.8);
+    border-color: #c49a6c;
+    box-shadow: 0 0 8px rgba(196, 154, 108, 0.8);
 }
 
 .rustic-label {
-  font-family: 'Cinzel', serif;
-  font-size: 27px;
-  color: #f5e1a4;
+    font-family: 'Cinzel', serif;
+    font-size: 27px;
+    color: #f5e1a4;
 }
 
 .gender-select {
-  padding: 8px;
-  font-size: 20px;
-  font-family: 'Cinzel', serif;
-  border-radius: 5px;
-  border: none;
-  margin-bottom: 15px;
-  width: 100%;
+    padding: 8px;
+    font-size: 20px;
+    font-family: 'Cinzel', serif;
+    border-radius: 5px;
+    border: none;
+    margin-bottom: 15px;
+    width: 100%;
 }
 
 /* #endregion */
@@ -268,6 +268,55 @@ form {
 
 /* #endregion */
 
+/* #region PopUp */
+
+.popup-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+}
+
+.popup-box {
+    background: #2c2c2c;
+    border: 2px solid #aaa;
+    border-radius: 10px;
+    padding: 24px 32px;
+    max-width: 250px;
+    min-width: 125px;
+    min-height: 125px;
+    color: white;
+    text-align: center;
+    user-select: none;
+}
+
+.popup-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.popup-icon {
+    font-size: 1.6rem;
+}
+
+.popup-button {
+    margin-top: 2.5rem;
+    padding: 10px 30px;
+    font-weight: bold;
+    font-size: 1rem;
+    background: #00c4ff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+/* #endregion */
+
 /* #region Chat */
 
 .message-area {
@@ -278,19 +327,19 @@ form {
     border-radius: 6px;
     overflow-y: auto;
 }
-  
+
 .message-wrapper {
     display: flex;
 }
-  
+
 .sent-wrapper {
     justify-content: flex-end;
 }
-  
+
 .received-wrapper {
     justify-content: flex-start;
 }
-  
+
 .message-bubble {
     display: inline-block;
     max-width: 80%;
@@ -299,13 +348,13 @@ form {
     font-size: 14px;
     word-break: break-word;
 }
-  
+
 .sent {
     background-color: #2196f3;
     color: white;
     text-align: right;
 }
-  
+
 .received {
     background-color: #444;
     color: white;
@@ -381,7 +430,6 @@ form {
     left: 0px;
 }
 
-
 .chat-sidebar.open + .chat-toggle-button {
     left: 450px;
 }
@@ -409,7 +457,7 @@ form {
     height: 40px;
     border-bottom: 2px solid #444;
 }
-  
+
 .chat-tab-btn {
     flex: 1;
     height: 100%;
@@ -420,16 +468,16 @@ form {
     font-weight: bold;
     cursor: pointer;
 }
-  
+
 .chat-tab-btn.active {
     background: #333;
     border-bottom: 2px solid #c1272d;
 }
-  
+
 .chat-tab-btn:disabled {
     background: #111;
     opacity: 0.5;
-    cursor: not-allowed; 
+    cursor: not-allowed;
 }
 
 /* #endregion */
@@ -670,7 +718,7 @@ form {
     padding: 10px;
     background: rgba(0, 0, 0, 0.4);
 }
-  
+
 .chat-title {
     font-size: 50px;
     font-weight: bold;
@@ -875,11 +923,43 @@ form {
 }
 
 .home-logo {
-    position: absolute;
-    width: 14%;
-    top: 60px;
     pointer-events: none;
     user-select: none;
+    width: 85%;
+}
+
+@keyframes pulsate {
+    0% {
+        transform: scale(1) rotate(12.5deg);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.08) rotate(12.5deg);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1) rotate(12.5deg);
+        opacity: 1;
+    }
+}
+
+.drink-quote {
+    position: absolute;
+    top: -40px;
+    right: -70px;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #d10000;
+    transform: rotate(12.5deg);
+    text-shadow: 1px 1px 2px #000;
+    animation: pulsate 2.2s ease-in-out infinite;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.game-logo-wrapper {
+    position: absolute;
+    top: 90px;
 }
 
 .home-title {
@@ -931,7 +1011,7 @@ form {
 .btn-text-play {
     position: absolute;
     top: -17%;
-    left: 21%;
+    left: 15%;
     font-family: 'Luckiest Guy', cursive;
     font-size: 35px;
     color: white;
@@ -1311,8 +1391,22 @@ form {
 .stats-box {
     position: absolute;
     text-align: center;
-    width: 350px;
+    width: 400px;
     left: 100px;
+}
+
+.stats-content {
+    max-height: 580px;
+    overflow-y: auto;
+    padding-right: 15px;
+}
+
+.stats-content::-webkit-scrollbar {
+    width: 8px;
+}
+.stats-content::-webkit-scrollbar-thumb {
+    background-color: #ffd700;
+    border-radius: 4px;
 }
 
 .stats-box h2 {
@@ -1601,6 +1695,10 @@ form {
     cursor: pointer;
 }
 
+.card-container.selected {
+    border-color: #00c3ff;
+}
+
 .card-theme-option p {
     margin-top: 5px;
     font-size: 14px;
@@ -1628,6 +1726,11 @@ form {
 .card-container:hover {
     transform: scale(1.1);
     border-color: #e33e3e;
+}
+
+.card-container.selected:hover {
+    transform: scale(1.1);
+    border-color: #00c3ff;
 }
 
 /* #region Color Picker */
@@ -1703,9 +1806,15 @@ form {
 
 /* #endregion */
 
-.close-modal {
+.modal-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+.modal-btn {
     margin-top: 10px;
-    padding: 10px 15px;
+    padding: 8px 15px;
     border: none;
     background-color: #ff4b4b;
     color: white;
@@ -1714,7 +1823,7 @@ form {
     border-radius: 5px;
 }
 
-.close-modal:hover {
+.modal-btn:hover {
     transform: scale(1.1);
     background-color: #e33e3e;
 }
@@ -1838,43 +1947,43 @@ form {
 /* #region Create Page */
 
 .create-menu {
-  text-align: center;
-  color: white;
-  height: 98vh;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  align-items: center;
-  z-index: 2;
+    text-align: center;
+    color: white;
+    height: 98vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    align-items: center;
+    z-index: 2;
 }
 
 .create-form-box {
-  padding: 30px 50px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 320px;
-  margin-left: 120px;
-  user-select: none;
+    padding: 30px 50px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 320px;
+    margin-left: 120px;
+    user-select: none;
 }
 
 .create-options-box {
-  padding: 20px;
-  border-radius: 15px;
-  width: 500px;
-  color: white;
-  font-family: 'Georgia', serif;
-  margin-top: -50px;
-  color: #f5e1a4;
-  user-select: none;
+    padding: 20px;
+    border-radius: 15px;
+    width: 500px;
+    color: white;
+    font-family: 'Georgia', serif;
+    margin-top: -50px;
+    color: #f5e1a4;
+    user-select: none;
 }
 
 .create-options-title {
-  font-size: 4rem;
-  font-weight: bold;
-  text-align: center;
-  margin-bottom: 15px;
-  color: white;
+    font-size: 4rem;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 15px;
+    color: white;
 }
 
 .create-logo {
@@ -1886,102 +1995,101 @@ form {
 }
 
 .create-title {
-  font-family: serif;
-  font-size: 4rem;
-  margin-bottom: 5%;
+    font-family: serif;
+    font-size: 4rem;
+    margin-bottom: 5%;
 }
 
-
 .rustic-form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .rustic-checkbox {
-  display: flex;
-  align-items: center;
-  font-family: 'Cinzel', serif;
-  font-size: 27px;
-  color: #f5e1a4;
+    display: flex;
+    align-items: center;
+    font-family: 'Cinzel', serif;
+    font-size: 27px;
+    color: #f5e1a4;
 }
 
 .rustic-checkbox input {
-  width: 30px;
-  height: 30px;
-  margin-right: 12px;
-  accent-color: #5a3e22;
+    width: 30px;
+    height: 30px;
+    margin-right: 12px;
+    accent-color: #5a3e22;
 }
 
 .limit-input {
-    background-color: #222;         
-  color: white;                  
-  border: 2px solid #a65a2e;    
-  border-radius: 4px;           
-  padding: 6px 10px;
-  font-size: 16px;
-  outline: none;
-  width: 100px;
+    background-color: #222;
+    color: white;
+    border: 2px solid #a65a2e;
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: 16px;
+    outline: none;
+    width: 100px;
 }
 
 .limit-input:hover {
-    border-color: #e33e3e;       
+    border-color: #e33e3e;
 }
 
 /* #region Create Button */
 
 .create-cont {
-  position: absolute;
-  display: inline-block;
-  bottom: 7%;
-  z-index: 2;
+    position: absolute;
+    display: inline-block;
+    bottom: 7%;
+    z-index: 2;
 }
 
 .create-cont button {
-  position: relative;
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  transition: all 0.1s ease-in-out;
+    position: relative;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.1s ease-in-out;
 }
 
 .btn-create img {
-  width: 310px;
-  height: auto;
-  display: block;
-  box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2);
-  border-radius: 10px;
-  transition: all 0.1s ease-in-out;
-  user-select: none;
-  pointer-events: none;
+    width: 310px;
+    height: auto;
+    display: block;
+    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    transition: all 0.1s ease-in-out;
+    user-select: none;
+    pointer-events: none;
 }
 
-.btn-text {
-  position: absolute;
-  top: -18%;
-  left: 15%;
-  font-family: 'Luckiest Guy', cursive;
-  font-size: 35px;
-  color: white;
-  text-shadow: 3px 3px 8px rgba(0, 0, 0, 0.7);
-  pointer-events: none;
-  transition: all 0.1s ease-in-out;
+.btn-text-create {
+    position: absolute;
+    top: -18%;
+    left: 15%;
+    font-family: 'Luckiest Guy', cursive;
+    font-size: 35px;
+    color: white;
+    text-shadow: 3px 3px 8px rgba(0, 0, 0, 0.7);
+    pointer-events: none;
+    transition: all 0.1s ease-in-out;
 }
 
 .btn-create:hover img {
-  box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
-  transform: translateY(-3px);
+    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
+    transform: translateY(-3px);
 }
 
 .btn-create:active img {
-  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-  transform: translateY(2px);
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    transform: translateY(2px);
 }
 
 .btn-create:hover p {
-  box-shadow: 6px 6px 12px rgba(0, 0, 0, 0);
-  transform: translateY(-3px);
+    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0);
+    transform: translateY(-3px);
 }
 
 /* #endregion */
@@ -2032,7 +2140,7 @@ form {
     font-size: 25px;
     color: #f5deb3;
     font-family: 'Luckiest Guy', cursive;
-    width: 500px;
+    width: 550px;
     height: 25px;
     user-select: none;
 }
@@ -2072,7 +2180,7 @@ form {
     gap: 4px;
     pointer-events: none;
 }
-  
+
 .avatar-preview {
     width: 32px;
     height: 32px;
@@ -2089,7 +2197,7 @@ form {
     margin-top: 14px;
     margin-left: -5px;
 }
-  
+
 .game-name {
     margin-left: 12px;
     color: #ffe2a7;
@@ -2111,6 +2219,24 @@ form {
     align-items: center;
     gap: 8px;
     height: 100%;
+}
+
+.game-spectator {
+    display: flex;
+    align-items: center; 
+    padding-right: 15px;
+    padding-top: 3px;
+}
+
+.game-spectator span {
+    font-size: 30px;
+    line-height: 1;
+}
+
+.spectator-icon {
+    width: 55px;
+    height: 55px;
+    filter: brightness(0) saturate(100%) invert(88%) sepia(17%) saturate(831%) hue-rotate(337deg) brightness(104%) contrast(101%);
 }
 
 /* #endregion */
@@ -2285,12 +2411,33 @@ form {
     top: 40px;
 }
 
-.player-list {
-    position: absolute;
+.scroll-container {
+    max-height: 62.5vh;
+    min-height: 62.5vh;
+    overflow-y: auto;
+    padding-right: 100px;
+    padding-left: 100px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    top: 190px;
+    justify-content: flex-start;
+}
+
+.list-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: -1rem;
+}
+
+.list-heading {
+    font-size: 2rem;
+    font-weight: bold;
+    text-align: center;
+    color: #f5deb3;
+    margin-bottom: 1rem;
+    width: 500px;
+    font-family: 'Luckiest Guy', cursive;
+    border-bottom: 2px solid #f5deb3;
 }
 
 /* #region Player Item */
@@ -2309,6 +2456,7 @@ form {
     font-family: 'Luckiest Guy', cursive;
     width: 400px;
     height: 40px;
+    margin-bottom: 5px;
 }
 
 .player-avatar {
@@ -2324,7 +2472,6 @@ form {
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-left: 10px;
     flex: 1;
 }
 
@@ -2338,7 +2485,6 @@ form {
     font-size: 1rem;
     font-weight: 500;
 }
-
 
 .player-item span {
     flex-grow: 1;

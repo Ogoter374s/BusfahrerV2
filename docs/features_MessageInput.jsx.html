@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: features/MessageInput.jsx</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: features/MessageInput.jsx</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @fileoverview MessageInput component for sending messages in a chat application.
+ * &lt;br>&lt;br>
+ * This component includes an input field for typing messages and handles sending messages on pressing the Enter key.
+ */
+
+/**
+ * A component that provides an input field for sending messages in a chat application.
+ * &lt;br> &lt;br>
+ * &lt;strong>handleKeyDown:&lt;/strong> &lt;br>
+ * - A function that listens for the Enter key press to send the message and clear the input field.
+ * 
+ * @function MessageInput
+ * @param {string} value - The current value of the input field.
+ * @param {Function} setValue - Function to update the input field value.
+ * @param {Function} onSend - Function to call when the message is sent.
+ * @returns {JSX.Element} The rendered MessageInput component.
+ */
+const MessageInput = ({ value, setValue, onSend }) => {
+
+    /**
+     * Function to handle key down events in the input field.
+     * It checks if the Enter key is pressed, and if so, calls the onSend function
+     * and clears the input field.
+     */
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            onSend();
+            setValue('');
+        }
+    };
+
+    return (
+        // Input field for sending messages
+        &lt;input
+            type="text"
+            placeholder="Type a message..."
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="message-input"
+        />
+    );
+};
+
+export default MessageInput;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#Access">Access</a></li><li><a href="global.html#Account">Account</a></li><li><a href="global.html#Achievements">Achievements</a></li><li><a href="global.html#Avatar">Avatar</a></li><li><a href="global.html#AvatarInfo">AvatarInfo</a></li><li><a href="global.html#AvatarUploader">AvatarUploader</a></li><li><a href="global.html#BackButton">BackButton</a></li><li><a href="global.html#BricksCard">BricksCard</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#ChatMessages">ChatMessages</a></li><li><a href="global.html#ChatSidebar">ChatSidebar</a></li><li><a href="global.html#ChatTabs">ChatTabs</a></li><li><a href="global.html#ChatToggleButton">ChatToggleButton</a></li><li><a href="global.html#Create">Create</a></li><li><a href="global.html#DefaultCard">DefaultCard</a></li><li><a href="global.html#FriendCode">FriendCode</a></li><li><a href="global.html#FriendInput">FriendInput</a></li><li><a href="global.html#FriendList">FriendList</a></li><li><a href="global.html#FriendMessages">FriendMessages</a></li><li><a href="global.html#FriendRequestList">FriendRequestList</a></li><li><a href="global.html#Game">Game</a></li><li><a href="global.html#GameLogo">GameLogo</a></li><li><a href="global.html#GetCardTheme">GetCardTheme</a></li><li><a href="global.html#GetCardThemeURL">GetCardThemeURL</a></li><li><a href="global.html#HexagonCard">HexagonCard</a></li><li><a href="global.html#Home">Home</a></li><li><a href="global.html#Join">Join</a></li><li><a href="global.html#LeafsCard">LeafsCard</a></li><li><a href="global.html#LeaveButton">LeaveButton</a></li><li><a href="global.html#Lobbies">Lobbies</a></li><li><a href="global.html#Lobby">Lobby</a></li><li><a href="global.html#LobbyInvitation">LobbyInvitation</a></li><li><a href="global.html#LobbyList">LobbyList</a></li><li><a href="global.html#MenuButton">MenuButton</a></li><li><a href="global.html#MenuCheckBox">MenuCheckBox</a></li><li><a href="global.html#MenuInput">MenuInput</a></li><li><a href="global.html#MenuSelect">MenuSelect</a></li><li><a href="global.html#MessageInput">MessageInput</a></li><li><a href="global.html#NewGameButton">NewGameButton</a></li><li><a href="global.html#NextPhaseButton">NextPhaseButton</a></li><li><a href="global.html#NextPlayerButton">NextPlayerButton</a></li><li><a href="global.html#PLAYER_GENDER">PLAYER_GENDER</a></li><li><a href="global.html#Phase1">Phase1</a></li><li><a href="global.html#Phase1Layout">Phase1Layout</a></li><li><a href="global.html#Phase2">Phase2</a></li><li><a href="global.html#Phase2Layout">Phase2Layout</a></li><li><a href="global.html#Phase3">Phase3</a></li><li><a href="global.html#Phase3Layout">Phase3Layout</a></li><li><a href="global.html#PlayerActionButton">PlayerActionButton</a></li><li><a href="global.html#PlayerCards">PlayerCards</a></li><li><a href="global.html#PlayerListItem">PlayerListItem</a></li><li><a href="global.html#PopupModal">PopupModal</a></li><li><a href="global.html#PopupOptions">PopupOptions</a></li><li><a href="global.html#RetryButton">RetryButton</a></li><li><a href="global.html#SettingsButton">SettingsButton</a></li><li><a href="global.html#ShinglesCard">ShinglesCard</a></li><li><a href="global.html#SoundManager">SoundManager</a></li><li><a href="global.html#SquareCard">SquareCard</a></li><li><a href="global.html#StatisticBox">StatisticBox</a></li><li><a href="global.html#ThemeSelector">ThemeSelector</a></li><li><a href="global.html#TurnInfo">TurnInfo</a></li><li><a href="global.html#achievLabels">achievLabels</a></li><li><a href="global.html#busfahrerSelectionMode">busfahrerSelectionMode</a></li><li><a href="global.html#cardMatchStyles">cardMatchStyles</a></li><li><a href="global.html#cardThemes">cardThemes</a></li><li><a href="global.html#drinkQuotes">drinkQuotes</a></li><li><a href="global.html#playSound">playSound</a></li><li><a href="global.html#playerActionFeatures">playerActionFeatures</a></li><li><a href="global.html#schluckGiveMode">schluckGiveMode</a></li><li><a href="global.html#shuffleStyles">shuffleStyles</a></li><li><a href="global.html#statLabels">statLabels</a></li><li><a href="global.html#turnModes">turnModes</a></li><li><a href="global.html#useAuthGuard">useAuthGuard</a></li><li><a href="global.html#useAvatarInfo">useAvatarInfo</a></li><li><a href="global.html#useAvatarUpload">useAvatarUpload</a></li><li><a href="global.html#useBusfahrer">useBusfahrer</a></li><li><a href="global.html#useCardTheme">useCardTheme</a></li><li><a href="global.html#useChatManager">useChatManager</a></li><li><a href="global.html#useFriendChatManager">useFriendChatManager</a></li><li><a href="global.html#useGameCards">useGameCards</a></li><li><a href="global.html#useGameGuard">useGameGuard</a></li><li><a href="global.html#useGameInfo">useGameInfo</a></li><li><a href="global.html#useGameManager">useGameManager</a></li><li><a href="global.html#useLobbiesManager">useLobbiesManager</a></li><li><a href="global.html#useLobbyGuard">useLobbyGuard</a></li><li><a href="global.html#useLobbyManager">useLobbyManager</a></li><li><a href="global.html#usePlayerCards">usePlayerCards</a></li><li><a href="global.html#useSpectatorManager">useSpectatorManager</a></li><li><a href="global.html#useStatistics">useStatistics</a></li><li><a href="global.html#useTitles">useTitles</a></li><li><a href="global.html#useWebSocketConnector">useWebSocketConnector</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Fri Nov 07 2025 20:48:43 GMT+0100 (Central European Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

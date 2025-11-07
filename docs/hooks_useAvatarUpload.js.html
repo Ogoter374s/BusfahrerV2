@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: hooks/useAvatarUpload.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: hooks/useAvatarUpload.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @fileoverview Custom hook for handling avatar uploads and preset avatar selection.
+ * &lt;br>&lt;br>
+ * This hook manages the state and logic for uploading a custom avatar image, including cropping functionality, as well as selecting from preset avatars. &lt;br>
+ * It handles file input changes, image cropping, and server communication. &lt;br>
+ * It also provides feedback to the user through popup messages in case of errors or success.
+ */
+
+// Utilities
+import { PopupManager } from "../utils/popupManager";
+import { SoundManager } from '../utils/soundManager';
+
+// React
+import { useState } from 'react';
+
+/**
+ * A custom React hook for handling avatar uploads and preset avatar selection.
+ * &lt;br>&lt;br>
+ * This hook manages the state and logic for uploading a custom avatar image, including cropping functionality, as well as selecting from preset avatars. &lt;br>
+ * It handles file input changes, image cropping, and server communication. &lt;br>
+ * It also provides feedback to the user through popup messages in case of errors or success.
+ * &lt;br>&lt;br>
+ * &lt;strong>handleAvatarChange:&lt;/strong> &lt;br>
+ * This function is called when the user selects a new avatar image file. &lt;br>
+ * It updates the state with the selected file and generates a preview URL for cropping.
+ * &lt;br>&lt;br>
+ * &lt;strong>getCroppedImage:&lt;/strong> &lt;br>
+ * This function creates a cropped version of the selected avatar image based on the cropping area defined by the user. &lt;br>
+ * It returns a Promise that resolves to a Blob of the cropped image.
+ * &lt;br>&lt;br>
+ * &lt;strong>uploadAvatar:&lt;/strong> &lt;br>
+ * This asynchronous function uploads the cropped avatar image to the server. &lt;br>
+ * It handles server responses and displays appropriate popup messages for success or failure.
+ * &lt;br>&lt;br>
+ * &lt;strong>selectPresetAvatar:&lt;/strong> &lt;br>
+ * This asynchronous function allows the user to select a preset avatar. &lt;br>
+ * It sends the selected avatar identifier to the server and handles responses with popup messages.
+ * &lt;br>&lt;br>
+ * @function useAvatarUpload
+ * @param {string} BASE_URL - The base URL for the server API.
+ * @param {function} onUploadSuccess - Callback function to call when the avatar upload is successful.
+ * @returns {Object} An object containing state variables and functions for managing avatar uploads and selections.
+ */
+const useAvatarUpload = ({ BASE_URL, onUploadSuccess }) => {
+    const [avatarFile, setAvatarFile] = useState(null);
+    const [avatarPreview, setAvatarPreview] = useState(null);
+
+    const [showCropper, setShowCropper] = useState(false);
+    const [crop, setCrop] = useState({ x: 0, y: 0 });
+    const [zoom, setZoom] = useState(1);
+    const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+
+    /**
+     * Handles the change event when a new avatar image file is selected.
+     * This function updates the state with the selected file and generates a preview URL for cropping
+     */
+    const handleAvatarChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setAvatarFile(file);
+            setAvatarPreview(URL.createObjectURL(file));
+            setShowCropper(true);
+        }
+    };
+
+    /**
+     * Generates a cropped version of the selected avatar image.
+     * This function creates a canvas element to draw the cropped area and returns a Blob of the cropped image.
+     */
+    const getCroppedImage = () => {
+        return new Promise((resolve) => {
+            const image = new Image();
+            image.src = avatarPreview;
+            image.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                const { width, height } = image;
+                const {
+                    x,
+                    y,
+                    width: cropWidth,
+                    height: cropHeight,
+                } = croppedAreaPixels;
+
+                canvas.width = cropWidth;
+                canvas.height = cropHeight;
+                ctx.drawImage(
+                    image,
+                    x,
+                    y,
+                    cropWidth,
+                    cropHeight,
+                    0,
+                    0,
+                    cropWidth,
+                    cropHeight,
+                );
+
+                canvas.toBlob((blob) => {
+                    resolve(blob);
+                }, avatarFile.type);
+            };
+        });
+    };
+
+    /**
+     * Uploads the cropped avatar image to the server.
+     * This asynchronous function handles server responses and displays appropriate popup messages for success or failure.
+     * If no file is selected, it prompts the user to select an image.
+     */
+    const uploadAvatar = async () => {
+        SoundManager.playClickSound();
+
+        if (!avatarFile) {
+            PopupManager.showPopup({
+                title: 'Avatar Upload',
+                message: 'Please select an image.',
+                icon: '🚫',
+            });
+        }
+
+        // Prepare form data for upload
+        const formData = new FormData();
+        if (avatarFile.type === 'image/gif') {
+            formData.append('avatar', avatarFile, avatarFile.name);
+            if (croppedAreaPixels) {
+                formData.append('cropData', JSON.stringify(croppedAreaPixels));
+            }
+        } else {
+            const croppedBlob = await getCroppedImage();
+            const ext = avatarFile.name.split('.').pop().toLowerCase();
+            const fileName = `cropped-avatar.${ext}`;
+            formData.append('avatar', croppedBlob, fileName);
+        }
+
+        try {
+            const response = await fetch(`${BASE_URL}upload-avatar`, {
+                method: 'POST',
+                body: formData,
+                credentials: 'include',
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                setAvatarFile(null);
+                setShowCropper(false);
+                onUploadSuccess(`${BASE_URL}avatars/${data.avatarUrl}`);
+            } else {
+                PopupManager.showPopup({
+                    title: data.title,
+                    message: data.error,
+                    icon: '❌',
+                });
+            }
+        } catch (error) {
+            PopupManager.showPopup({
+                title: 'Error',
+                message: 'An unexpected error occurred. Please try again later.',
+                icon: '❌',
+            });
+            console.error('Error uploading avatar:', error);
+        }
+    };
+
+    /**
+     * Selects a preset avatar by sending the selected avatar identifier to the server.
+     * This asynchronous function handles server responses and displays appropriate popup messages for success or failure.
+     */
+    const selectPresetAvatar = async (avatar) => {
+        SoundManager.playClickSound();
+
+        try {
+            const response = await fetch(`${BASE_URL}set-avatar`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({ avatar }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                onUploadSuccess(`${BASE_URL}/avatars/${avatar}`);
+            } else {
+                PopupManager.showPopup({
+                    title: data.title,
+                    message: data.error,
+                    icon: '❌',
+                });
+            }
+        } catch (error) {
+            PopupManager.showPopup({
+                title: 'Error',
+                message: 'An unexpected error occurred. Please try again later.',
+                icon: '❌',
+            });
+            console.error('Error setting avatar:', error);
+        }
+    };
+
+    return {
+        avatarPreview,
+        setAvatarPreview,
+
+        showCropper,
+        setShowCropper,
+
+        crop,
+        setCrop,
+        zoom,
+        setZoom,
+
+        croppedAreaPixels,
+        setCroppedAreaPixels,
+
+        uploadAvatar,
+        selectPresetAvatar,
+        handleAvatarChange,
+    };
+};
+
+export default useAvatarUpload;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#Access">Access</a></li><li><a href="global.html#Account">Account</a></li><li><a href="global.html#Achievements">Achievements</a></li><li><a href="global.html#Avatar">Avatar</a></li><li><a href="global.html#AvatarInfo">AvatarInfo</a></li><li><a href="global.html#AvatarUploader">AvatarUploader</a></li><li><a href="global.html#BackButton">BackButton</a></li><li><a href="global.html#BricksCard">BricksCard</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#ChatMessages">ChatMessages</a></li><li><a href="global.html#ChatSidebar">ChatSidebar</a></li><li><a href="global.html#ChatTabs">ChatTabs</a></li><li><a href="global.html#ChatToggleButton">ChatToggleButton</a></li><li><a href="global.html#Create">Create</a></li><li><a href="global.html#DefaultCard">DefaultCard</a></li><li><a href="global.html#FriendCode">FriendCode</a></li><li><a href="global.html#FriendInput">FriendInput</a></li><li><a href="global.html#FriendList">FriendList</a></li><li><a href="global.html#FriendMessages">FriendMessages</a></li><li><a href="global.html#FriendRequestList">FriendRequestList</a></li><li><a href="global.html#Game">Game</a></li><li><a href="global.html#GameLogo">GameLogo</a></li><li><a href="global.html#GetCardTheme">GetCardTheme</a></li><li><a href="global.html#GetCardThemeURL">GetCardThemeURL</a></li><li><a href="global.html#HexagonCard">HexagonCard</a></li><li><a href="global.html#Home">Home</a></li><li><a href="global.html#Join">Join</a></li><li><a href="global.html#LeafsCard">LeafsCard</a></li><li><a href="global.html#LeaveButton">LeaveButton</a></li><li><a href="global.html#Lobbies">Lobbies</a></li><li><a href="global.html#Lobby">Lobby</a></li><li><a href="global.html#LobbyInvitation">LobbyInvitation</a></li><li><a href="global.html#LobbyList">LobbyList</a></li><li><a href="global.html#MenuButton">MenuButton</a></li><li><a href="global.html#MenuCheckBox">MenuCheckBox</a></li><li><a href="global.html#MenuInput">MenuInput</a></li><li><a href="global.html#MenuSelect">MenuSelect</a></li><li><a href="global.html#MessageInput">MessageInput</a></li><li><a href="global.html#NewGameButton">NewGameButton</a></li><li><a href="global.html#NextPhaseButton">NextPhaseButton</a></li><li><a href="global.html#NextPlayerButton">NextPlayerButton</a></li><li><a href="global.html#PLAYER_GENDER">PLAYER_GENDER</a></li><li><a href="global.html#Phase1">Phase1</a></li><li><a href="global.html#Phase1Layout">Phase1Layout</a></li><li><a href="global.html#Phase2">Phase2</a></li><li><a href="global.html#Phase2Layout">Phase2Layout</a></li><li><a href="global.html#Phase3">Phase3</a></li><li><a href="global.html#Phase3Layout">Phase3Layout</a></li><li><a href="global.html#PlayerActionButton">PlayerActionButton</a></li><li><a href="global.html#PlayerCards">PlayerCards</a></li><li><a href="global.html#PlayerListItem">PlayerListItem</a></li><li><a href="global.html#PopupModal">PopupModal</a></li><li><a href="global.html#PopupOptions">PopupOptions</a></li><li><a href="global.html#RetryButton">RetryButton</a></li><li><a href="global.html#SettingsButton">SettingsButton</a></li><li><a href="global.html#ShinglesCard">ShinglesCard</a></li><li><a href="global.html#SoundManager">SoundManager</a></li><li><a href="global.html#SquareCard">SquareCard</a></li><li><a href="global.html#StatisticBox">StatisticBox</a></li><li><a href="global.html#ThemeSelector">ThemeSelector</a></li><li><a href="global.html#TurnInfo">TurnInfo</a></li><li><a href="global.html#achievLabels">achievLabels</a></li><li><a href="global.html#busfahrerSelectionMode">busfahrerSelectionMode</a></li><li><a href="global.html#cardMatchStyles">cardMatchStyles</a></li><li><a href="global.html#cardThemes">cardThemes</a></li><li><a href="global.html#drinkQuotes">drinkQuotes</a></li><li><a href="global.html#playSound">playSound</a></li><li><a href="global.html#playerActionFeatures">playerActionFeatures</a></li><li><a href="global.html#schluckGiveMode">schluckGiveMode</a></li><li><a href="global.html#shuffleStyles">shuffleStyles</a></li><li><a href="global.html#statLabels">statLabels</a></li><li><a href="global.html#turnModes">turnModes</a></li><li><a href="global.html#useAuthGuard">useAuthGuard</a></li><li><a href="global.html#useAvatarInfo">useAvatarInfo</a></li><li><a href="global.html#useAvatarUpload">useAvatarUpload</a></li><li><a href="global.html#useBusfahrer">useBusfahrer</a></li><li><a href="global.html#useCardTheme">useCardTheme</a></li><li><a href="global.html#useChatManager">useChatManager</a></li><li><a href="global.html#useFriendChatManager">useFriendChatManager</a></li><li><a href="global.html#useGameCards">useGameCards</a></li><li><a href="global.html#useGameGuard">useGameGuard</a></li><li><a href="global.html#useGameInfo">useGameInfo</a></li><li><a href="global.html#useGameManager">useGameManager</a></li><li><a href="global.html#useLobbiesManager">useLobbiesManager</a></li><li><a href="global.html#useLobbyGuard">useLobbyGuard</a></li><li><a href="global.html#useLobbyManager">useLobbyManager</a></li><li><a href="global.html#usePlayerCards">usePlayerCards</a></li><li><a href="global.html#useSpectatorManager">useSpectatorManager</a></li><li><a href="global.html#useStatistics">useStatistics</a></li><li><a href="global.html#useTitles">useTitles</a></li><li><a href="global.html#useWebSocketConnector">useWebSocketConnector</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Fri Nov 07 2025 20:48:43 GMT+0100 (Central European Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

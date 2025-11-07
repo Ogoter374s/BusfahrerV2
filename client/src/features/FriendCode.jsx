@@ -1,60 +1,55 @@
 /**
- * FriendCode.jsx — Displays the current user's friend code with copy-to-clipboard functionality.
- *
- * Allows the user to share their friend code by clicking a clipboard icon.
- * Includes a sound effect to enhance feedback on interaction.
+ * @fileoverview FriendCode component that displays the user's friend code and allows copying it to the clipboard.
+ * <br><br>
+ * This component includes a function to play a click sound when the friend code is copied
+ * and a button to copy the friend code to the clipboard.
  */
 
 // Utilities
 import { SoundManager } from '../utils/soundManager';
 
 /**
- * FriendCode component function.
- *
- * Renders the user's friend code along with a button to copy it to the clipboard.
- * Triggers a click sound when the copy action is performed.
- *
+ * A component that displays the user's friend code and allows copying it to the clipboard.
+ * <br> <br>
+ * <strong>playClickSound:</strong> <br>
+ * - A function that plays a click sound when the friend code is copied.
+ * <br> <br>
+ * <strong>copyToClipboard:</strong> <br>
+ * - A function that copies the user's friend code to the clipboard and plays a click sound.
+ * 
  * @function FriendCode
- * @param {Object} props - Component properties.
- * @param {string} props.userFriendCode - The current user's unique friend code.
- * @returns {JSX.Element} The rendered friend code display with copy support.
+ * @param {string} userFriendCode - The user's friend code to be displayed and copied.
+ * @returns {JSX.Element} The rendered FriendCode component.
  */
 const FriendCode = ({ userFriendCode }) => {
-    /**
-     * Plays a UI sound effect on interaction.
-     *
-     * Used to give feedback when the user clicks the clipboard icon.
-     */
+    
+    // Function to play a click sound
     const playClickSound = () => SoundManager.playClickSound();
 
     /**
-     * Handles copying the friend code to the clipboard.
-     *
-     * Plays a sound effect and copies the provided friend code text
-     * to the system clipboard using the Clipboard API.
+     * Function to copy the user's friend code to the clipboard.
+     * It plays a click sound when the code is copied.
      */
     const copyToClipboard = () => {
         playClickSound();
         navigator.clipboard.writeText(userFriendCode);
     };
 
-    /**
-     * Renders the friend code and clipboard icon layout.
-     *
-     * Displays the code in styled text and binds the icon's click
-     * event to trigger the clipboard copy action.
-     */
     return (
-        <div className="friend-code-display">
+        // Display the user's friend code and a button to copy it to the clipboard
+        <div className="friendCode-wrapper">
+
+            {/* Display the friend code with a bold style */}
             <p>
-                Your Friend Code: <span>{userFriendCode}</span>
+                Your Friend Code: <span className="text-[#c49a6c] font-bold"> {userFriendCode} </span>
             </p>
+
+            {/* Button to copy the friend code to clipboard */}
             <img
-                src="/clipboard.png"
+                src="/chatSidebar/clipboard.png"
                 alt="Copy to clipboard"
-                className="clipboard-icon"
                 onClick={copyToClipboard}
-            />
+                className="friendCode-img"/>
         </div>
     );
 };

@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: pages/Create.jsx</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: pages/Create.jsx</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @fileoverview Page for creating a new game session with customizable settings. 
+ * &lt;br> &lt;br>
+ * Users can input game and player details, select game modes, and create the game. &lt;br>
+ * Utilizes various components and hooks for functionality and UI.
+ */
+
+// Components
+import ChatSidebar from '../components/ChatSidebar';
+import MenuInput from '../components/MenuInput';
+import MenuButton from '../components/MenuButton';
+import BackButton from '../components/BackButton';
+import MenuSelect from '../components/MenuSelect';
+import MenuCheckBox from '../components/MenuCheckBox';
+import PopupModal from '../components/PopUpModal';
+
+// Hooks
+import { useAuthGuard } from '../hooks/useAuthGuard';
+import { PopupManager } from '../utils/popupManager';
+
+// Utils
+import BASE_URL from '../utils/config';
+import { shuffleStyles, cardMatchStyles, turnModes, busfahrerSelectionMode, schluckGiveMode, PLAYER_GENDER } from "../utils/constants";
+
+// React
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+/**
+ * Component for the Create Game page.
+ * Allows users to set up a new game session with various options.
+ * &lt;br>&lt;br>
+ * Includes inputs for game and player details. &lt;br>
+ * Provides dropdowns and checkboxes for game settings. &lt;br>
+ * Displays a popup modal for messages and confirmations.
+ * &lt;br>&lt;br>
+ * &lt;strong>createLobby:&lt;/strong> &lt;br>
+ * Handles the creation of a new game lobby. &lt;br>
+ * Validates input fields and sends a request to the server. &lt;br>
+ * Displays popups for success or error messages.
+ * &lt;br>&lt;br>
+ * &lt;strong>useEffect:&lt;/strong> &lt;br>
+ * Initializes the popup manager and sets authentication guard. &lt;br>
+ * 
+ * @function Create
+ * @returns {JSX.Element} The Create Game page component.
+ */
+function Create() {
+    const [gameName, setGameName] = useState('');
+    const [playerName, setPlayerName] = useState('');
+    const [isPrivate, setIsPrivate] = useState(false);
+    const [gender, setGender] = useState(PLAYER_GENDER.MALE);
+
+    const [selectedShuffle, setSelectedShuffle] = useState('Fisher-Yates');
+    const [selectedCardMatch, setSelectedCardMatch] = useState('Number-only');
+    const [cardChaos, setCardChaos] = useState(false);
+    const [selectedTurnMode, setSelectedTurnMode] = useState('Default');
+    const [selectedBusfahrerMode, setSelectedBusfahrerMode] = useState('Default');
+    const [playerLimit, setPlayerLimit] = useState(10);
+    const [selectedSchluckGiveMode, setSelectedSchluckGiveMode] = useState('Default');
+    const [everyoneCanPhase3, setEveryoneCanPhase3] = useState(true);
+    const [hotJoin, setHotJoin] = useState(false);
+    const [cardChange, setCardChange] = useState(false);
+    const [gameInherit, setGameInherit] = useState(false);
+
+    const [popup, setPopup] = useState(PopupManager.defaultPopup);
+
+    const init = useRef(false);
+    const navigate = useNavigate();
+    const isAuthenticated = useAuthGuard();
+
+    /**
+     * Creates a new lobby with the provided parameters.
+     * Validates input and sends a request to the server.
+     * Displays popups for errors or success.
+     */
+    const createLobby = async ({ gameName, playerName, isPrivate, gender, settings }) => {
+        const nameRegex = /^[A-Za-z]+(?:\s[A-Za-z]+)*$/;
+
+        if (!gameName?.trim()) {
+            PopupManager.showPopup({
+                title: "Invalid Game Name",
+                message: "Please provide a valid game name.",
+                icon: '🚫',
+            });
+            return;
+        }
+
+        if (!nameRegex.test(gameName.trim())) {
+            PopupManager.showPopup({
+                title: "Invalid Game Name",
+                message: "Game name must contain only letters (A–Z or a–z).",
+                icon: '🚫',
+            });
+            return;
+        }
+
+        if (!playerName?.trim()) {
+            PopupManager.showPopup({
+                title: "Invalid Player Name",
+                message: "Please provide a valid player name.",
+                icon: '🚫',
+            });
+            return;
+        }
+
+        if (!nameRegex.test(playerName.trim())) {
+            PopupManager.showPopup({
+                title: "Invalid Player Name",
+                message: "Player name must contain only letters (A–Z or a–z).",
+                icon: '🚫',
+            });
+            return;
+        }
+
+        const payload = {
+            lobbyName: gameName.trim().slice(0, 16),
+            playerName: playerName.trim().slice(0, 26),
+            isPrivate,
+            gender,
+            settings,
+        };
+
+        try {
+            const response = await fetch(`${BASE_URL}create-lobby`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify(payload),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                navigate(`/lobby/${data.lobbyId}`);
+            } else {
+                PopupManager.showPopup({
+                    title: "Game Creation",
+                    message: "Failed to create the game.",
+                    icon: '❌',
+                });
+            }
+        } catch (error) {
+            PopupManager.showPopup({
+                title: 'Error',
+                message: 'An unexpected error occurred. Please try again later.',
+                icon: '❌',
+            });
+            console.error("Error creating game:", error);
+        }
+    };
+    
+    /**
+     * Effect hook to initialize the popup manager and set authentication guard.
+     * Runs once on component mount if the user is authenticated.
+     * Initializes the PopupManager with the setPopup function.
+     * Sets the PopupManager instance in the custom hook.
+     */
+    useEffect(() => {
+        if(!isAuthenticated) return;
+
+        if (init.current) return;
+        init.current = true;
+
+        PopupManager.initPopupManager(setPopup);
+    }, [isAuthenticated]);
+
+    return (
+        &lt;div className="@container/create flex flex-col items-center justify-center h-screen">
+            
+            {/* Background overlay image */}
+            &lt;div className="create-wrapper">
+                {/* Game name input */}
+                &lt;div className="create-game">
+                    {/* Game session title and branding logo */}
+                    &lt;img
+                        src="/logos/logo.svg" 
+                        alt="Game Logo"
+                        className="create-logo"
+                    />
+
+                    &lt;h1 className="create-title">
+                        Play
+                        &lt;span className="highlight">Game&lt;/span>
+                    &lt;/h1>
+
+                    {/* Form inputs for game and player details */}
+                    &lt;div className="flex flex-col
+                        gap-3 sm:gap-1 lg:gap-2 xl:gap-2 2xl:gap-3
+                    ">
+                        {/* Input for the game name */}
+                        &lt;MenuInput 
+                            type="text"
+                            placeholder="Game Name"
+                            value={gameName}
+                            onChange={(e) => setGameName(e.target.value)}
+                            img="wood_blue"
+                            required
+                        />
+
+                        {/* Input for player's display name */}
+                        &lt;MenuInput 
+                            type="text"
+                            placeholder="Player Name"
+                            value={playerName}
+                            onChange={(e) => setPlayerName(e.target.value)}
+                            img="wood_blue"
+                            required
+                        />
+
+                        {/* Gender selection dropdown */}        
+                        &lt;MenuSelect
+                            label="Gender:"
+                            id="optionsSelect"
+                            value={gender}
+                            onChange={(e) => setGender(e.target.value)}
+                            options={[
+                                { name: "Male", value: PLAYER_GENDER.MALE},
+                                { name: "Female", value: PLAYER_GENDER.FEMALE},
+                                { name: "Other", value: PLAYER_GENDER.OTHER},
+                            ]}
+                        />
+
+                        {/* Checkbox for marking game as private or public */}
+                        &lt;MenuCheckBox 
+                            label="Private Game"
+                            value={isPrivate}
+                            onChange={() => setIsPrivate(!isPrivate)}
+                            className="options-selection"
+                            selectType="checkbox"
+                        />
+                    &lt;/div>
+
+                    {/* Button to create the game */}
+                    &lt;MenuButton
+                        wrapper={true}
+                        wrapperClass="mt-4 sm:mt-1 lg:mt-2 xl:mt-2 2xl:mt-3"
+                        buttonClass="create-btn"
+                        textClass="btn-txt"
+                        icon="button"
+                        alt="Create Game"
+                        text="Create Game"
+                        onClick={() =>
+                            createLobby({
+                                gameName,
+                                playerName,
+                                isPrivate,
+                                gender,
+                                settings: {
+                                    shuffling: selectedShuffle,
+                                    matching: selectedCardMatch,
+                                    isChaos: cardChaos,
+                                    turning: selectedTurnMode,
+                                    busMode: selectedBusfahrerMode,
+                                    playerLimit,
+                                    giving: selectedSchluckGiveMode,
+                                    isEveryone: everyoneCanPhase3,
+                                    hotJoin,
+                                    isCardChange: cardChange,
+                                    canInherit: gameInherit,
+                                },
+                            })
+                        }
+                    />
+                &lt;/div>
+
+                {/* Container for game configuration options */}
+                &lt;div className="create-options">
+                    &lt;h2 className="create-options-title">
+                        Game
+                        &lt;span className="highlight">Options&lt;/span>
+                    &lt;/h2>
+
+                    &lt;div className="create-options-wrapper">
+
+                        {/* Card Shuffle selection */}
+                        &lt;MenuSelect 
+                            label="Shuffle Style"
+                            id="optionsSelect"
+                            value={selectedShuffle}
+                            onChange={(e) => setSelectedShuffle(e.target.value)}
+                            options={shuffleStyles.map((s) => ({ name: s.name, value: s.type }))}
+                        />
+                        
+                        {/* Card Match selection */}
+                        &lt;MenuSelect 
+                            label="Card Match Rules"
+                            id="optionsSelect"
+                            value={selectedCardMatch}
+                            onChange={(e) => setSelectedCardMatch(e.target.value)}
+                            options={cardMatchStyles.map((s) => ({ name: s.name, value: s.type }))}
+                        />
+
+                        {/* Checkbox for marking game Chaos Mode */}
+                        &lt;MenuCheckBox 
+                            label="Card Chaos Mode"
+                            value={cardChaos}
+                            onChange={() => setCardChaos(!cardChaos)}
+                            className="options-selection"
+                            selectType="checkbox"
+                        />
+
+                        {/* Turn Mode selection */}
+                        &lt;MenuSelect 
+                            label="Turn Mode"
+                            id="optionsSelect"
+                            value={selectedTurnMode}
+                            onChange={(e) => setSelectedTurnMode(e.target.value)}
+                            options={turnModes.map((s) => ({ name: s.name, value: s.type }))}
+                        />
+                        
+                        {/* Busfahrer Mode selection */}
+                        &lt;MenuSelect 
+                            label="Busfahrer Selection Mode"
+                            id="optionsSelect"
+                            value={selectedBusfahrerMode}
+                            onChange={(e) => setSelectedBusfahrerMode(e.target.value)}
+                            options={busfahrerSelectionMode.map((s) => ({ name: s.name, value: s.type }))}
+                        />
+
+                        {/* Player limit per game */}
+                        &lt;div className="flex flex-col items-center">
+                            &lt;label 
+                                htmlFor="playerLimit"
+                                className="numberInc-label"
+                            >
+                                Player Limit
+                            &lt;/label>
+                            &lt;input
+                                type="number"
+                                placeholder="Player Limit"
+                                min={2}
+                                max={10}
+                                value={playerLimit}
+                                onChange={(e) =>
+                                    setPlayerLimit(parseInt(e.target.value))
+                                }
+                                className="numberInc-input"
+                            />
+                        &lt;/div>
+
+                        {/* Schulcke Give Mode selection */}
+                        &lt;MenuSelect 
+                            label="Schlucke Give Mode"
+                            id="optionsSelect"
+                            value={selectedSchluckGiveMode}
+                            onChange={(e) => setSelectedSchluckGiveMode(e.target.value)}
+                            options={schluckGiveMode.map((s) => ({ name: s.name, value: s.type }))}
+                        />
+                        
+                        {/* Checkbox Everyone can play Phase3 */}
+                        &lt;MenuCheckBox 
+                            label="Everyone can play Phase 3"
+                            value={everyoneCanPhase3}
+                            onChange={() => setEveryoneCanPhase3(!everyoneCanPhase3)}
+                            className="options-selection"
+                            selectType="checkbox"
+                        />
+
+                        {/* Checkbox Hot Join */}
+                        &lt;MenuCheckBox 
+                            label="Hot Join"
+                            value={hotJoin}
+                            onChange={() => setHotJoin(!hotJoin)}
+                            className="options-selection"
+                            selectType="checkbox"
+                        />
+
+                        {/* Checkbox for marking game Cards can Change Mode */}
+                        &lt;MenuCheckBox 
+                            label="Cards can Change"
+                            value={cardChange}
+                            onChange={() => setCardChange(!cardChange)}
+                            className="options-selection"
+                            selectType="checkbox"
+                        />
+
+                        {/* Checkbox for setting Game inheritance */}
+                        &lt;MenuCheckBox 
+                            label="Game Master Inheritance"
+                            value={gameInherit}
+                            onChange={() => setGameInherit(!gameInherit)}
+                            className="options-selection"
+                            selectType="checkbox"
+                        />
+                    &lt;/div>
+                &lt;/div>
+            &lt;/div>
+
+            {/* Navigation button to return to the homepage */}
+            &lt;BackButton />
+
+            {/* Chat sidebar component */}
+            &lt;ChatSidebar />
+
+            {/* Popup modal for displaying messages */}
+            &lt;PopupModal
+                isOpen={popup.show}
+                title={popup.title}
+                message={popup.message}
+                icon={popup.icon}
+                onOk={PopupManager.okPopup}
+                onCancel={PopupManager.cancelPopup}
+                useCancel={popup.useCancel}
+            />
+        &lt;/div>
+    );
+}
+
+export default Create;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#Access">Access</a></li><li><a href="global.html#Account">Account</a></li><li><a href="global.html#Achievements">Achievements</a></li><li><a href="global.html#Avatar">Avatar</a></li><li><a href="global.html#AvatarInfo">AvatarInfo</a></li><li><a href="global.html#AvatarUploader">AvatarUploader</a></li><li><a href="global.html#BackButton">BackButton</a></li><li><a href="global.html#BricksCard">BricksCard</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#ChatMessages">ChatMessages</a></li><li><a href="global.html#ChatSidebar">ChatSidebar</a></li><li><a href="global.html#ChatTabs">ChatTabs</a></li><li><a href="global.html#ChatToggleButton">ChatToggleButton</a></li><li><a href="global.html#Create">Create</a></li><li><a href="global.html#DefaultCard">DefaultCard</a></li><li><a href="global.html#FriendCode">FriendCode</a></li><li><a href="global.html#FriendInput">FriendInput</a></li><li><a href="global.html#FriendList">FriendList</a></li><li><a href="global.html#FriendMessages">FriendMessages</a></li><li><a href="global.html#FriendRequestList">FriendRequestList</a></li><li><a href="global.html#Game">Game</a></li><li><a href="global.html#GameLogo">GameLogo</a></li><li><a href="global.html#GetCardTheme">GetCardTheme</a></li><li><a href="global.html#GetCardThemeURL">GetCardThemeURL</a></li><li><a href="global.html#HexagonCard">HexagonCard</a></li><li><a href="global.html#Home">Home</a></li><li><a href="global.html#Join">Join</a></li><li><a href="global.html#LeafsCard">LeafsCard</a></li><li><a href="global.html#LeaveButton">LeaveButton</a></li><li><a href="global.html#Lobbies">Lobbies</a></li><li><a href="global.html#Lobby">Lobby</a></li><li><a href="global.html#LobbyInvitation">LobbyInvitation</a></li><li><a href="global.html#LobbyList">LobbyList</a></li><li><a href="global.html#MenuButton">MenuButton</a></li><li><a href="global.html#MenuCheckBox">MenuCheckBox</a></li><li><a href="global.html#MenuInput">MenuInput</a></li><li><a href="global.html#MenuSelect">MenuSelect</a></li><li><a href="global.html#MessageInput">MessageInput</a></li><li><a href="global.html#NewGameButton">NewGameButton</a></li><li><a href="global.html#NextPhaseButton">NextPhaseButton</a></li><li><a href="global.html#NextPlayerButton">NextPlayerButton</a></li><li><a href="global.html#PLAYER_GENDER">PLAYER_GENDER</a></li><li><a href="global.html#Phase1">Phase1</a></li><li><a href="global.html#Phase1Layout">Phase1Layout</a></li><li><a href="global.html#Phase2">Phase2</a></li><li><a href="global.html#Phase2Layout">Phase2Layout</a></li><li><a href="global.html#Phase3">Phase3</a></li><li><a href="global.html#Phase3Layout">Phase3Layout</a></li><li><a href="global.html#PlayerActionButton">PlayerActionButton</a></li><li><a href="global.html#PlayerCards">PlayerCards</a></li><li><a href="global.html#PlayerListItem">PlayerListItem</a></li><li><a href="global.html#PopupModal">PopupModal</a></li><li><a href="global.html#PopupOptions">PopupOptions</a></li><li><a href="global.html#RetryButton">RetryButton</a></li><li><a href="global.html#SettingsButton">SettingsButton</a></li><li><a href="global.html#ShinglesCard">ShinglesCard</a></li><li><a href="global.html#SoundManager">SoundManager</a></li><li><a href="global.html#SquareCard">SquareCard</a></li><li><a href="global.html#StatisticBox">StatisticBox</a></li><li><a href="global.html#ThemeSelector">ThemeSelector</a></li><li><a href="global.html#TurnInfo">TurnInfo</a></li><li><a href="global.html#achievLabels">achievLabels</a></li><li><a href="global.html#busfahrerSelectionMode">busfahrerSelectionMode</a></li><li><a href="global.html#cardMatchStyles">cardMatchStyles</a></li><li><a href="global.html#cardThemes">cardThemes</a></li><li><a href="global.html#drinkQuotes">drinkQuotes</a></li><li><a href="global.html#playSound">playSound</a></li><li><a href="global.html#playerActionFeatures">playerActionFeatures</a></li><li><a href="global.html#schluckGiveMode">schluckGiveMode</a></li><li><a href="global.html#shuffleStyles">shuffleStyles</a></li><li><a href="global.html#statLabels">statLabels</a></li><li><a href="global.html#turnModes">turnModes</a></li><li><a href="global.html#useAuthGuard">useAuthGuard</a></li><li><a href="global.html#useAvatarInfo">useAvatarInfo</a></li><li><a href="global.html#useAvatarUpload">useAvatarUpload</a></li><li><a href="global.html#useBusfahrer">useBusfahrer</a></li><li><a href="global.html#useCardTheme">useCardTheme</a></li><li><a href="global.html#useChatManager">useChatManager</a></li><li><a href="global.html#useFriendChatManager">useFriendChatManager</a></li><li><a href="global.html#useGameCards">useGameCards</a></li><li><a href="global.html#useGameGuard">useGameGuard</a></li><li><a href="global.html#useGameInfo">useGameInfo</a></li><li><a href="global.html#useGameManager">useGameManager</a></li><li><a href="global.html#useLobbiesManager">useLobbiesManager</a></li><li><a href="global.html#useLobbyGuard">useLobbyGuard</a></li><li><a href="global.html#useLobbyManager">useLobbyManager</a></li><li><a href="global.html#usePlayerCards">usePlayerCards</a></li><li><a href="global.html#useSpectatorManager">useSpectatorManager</a></li><li><a href="global.html#useStatistics">useStatistics</a></li><li><a href="global.html#useTitles">useTitles</a></li><li><a href="global.html#useWebSocketConnector">useWebSocketConnector</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Fri Nov 07 2025 20:48:43 GMT+0100 (Central European Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

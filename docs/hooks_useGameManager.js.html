@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: hooks/useGameManager.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: hooks/useGameManager.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @fileoverview Custom hook to manage and coordinate game state and actions.
+ * &lt;br>&lt;br>
+ * This hook integrates various other hooks and provides functions to handle game actions such as laying cards, flipping rows, and leaving the game.
+ */
+
+// Hooks
+import useWebSocketConnector from './useWebSocketConnector';
+import usePlayerCards from './usePlayerCards';
+import useAvatarInfo from './useAvatarInfo';
+import useSpectatorManager from './useSpectatorManager';
+import useGameInfo from './useGameInfo';
+import useGameCards from './useGameCards';
+
+// Utilities
+import BASE_URL from "../utils/config";
+import { SoundManager } from '../utils/soundManager';
+import { PopupManager } from '../utils/popupManager';
+
+// React
+import { useRef, useEffect } from 'react';
+import { useNavigate, useParams } from "react-router-dom";
+
+/**
+ * Custom hook that manages and coordinates game state and actions.
+ * &lt;br>&lt;br>
+ * This hook integrates various other hooks and provides functions to handle game actions such as laying cards, flipping rows, and leaving the game.
+ * &lt;br>&lt;br>
+ * &lt;strong>usePlayerCards:&lt;/strong> &lt;br>
+ * This hook manages the player's cards and provides functions to fetch and update them.
+ * &lt;br>&lt;br>
+ * &lt;strong>handleLayCard:&lt;/strong> &lt;br>
+ * This function handles the action of laying a card. &lt;br>
+ * It checks if the player is the current player, plays a click sound, and makes a POST request to lay the specified card. &lt;br>
+ * If the action fails, it shows a popup with the error message.
+ * &lt;br>&lt;br>
+ * &lt;strong>handleRowClick:&lt;/strong> &lt;br>
+ * This function handles the action of flipping a row. &lt;br>
+ * It checks if the player is the game master and the current player, plays a click sound, and makes a POST request to flip the specified row. &lt;br>
+ * If the action fails, it shows a popup with the error message.
+ * &lt;br>&lt;br>
+ * &lt;strong>leaveGame:&lt;/strong> &lt;br>
+ * This function handles the action of leaving the game. &lt;br>
+ * It plays a click sound, makes a POST request to leave the game, and navigates to the specified route if successful. &lt;br>
+ * If the action fails, it shows a popup with the error message.
+ * &lt;br>&lt;br>
+ * &lt;strong>useEffect:&lt;/strong> &lt;br>
+ * This effect runs once on mount and initializes the game state. &lt;br>
+ * It fetches the player's cards, game cards, and game information.
+ * &lt;br>&lt;br>
+ * 
+ * @function useGameManager
+ * @returns {object} An object containing player cards, game cards, avatar info, game info, spectator status, and functions to handle game actions.
+ */
+const useGameManager = () => {
+    const init = useRef(false);
+    const navigate = useNavigate();
+    const { lobbyId } = useParams();
+
+    // Avatar information management and functions.
+    const avatarInfo = useAvatarInfo();
+
+    // Spectator management and functions.
+    const { isSpectator } = useSpectatorManager();
+
+    // Player cards management and functions.
+    const {
+        playerCards,
+        setPlayerCards,
+        fetchPlayerCards,
+    } = usePlayerCards(lobbyId);
+
+    // Game information management and functions.
+    const gameInfo = useGameInfo(lobbyId);
+
+    // Game cards management and functions.
+    const gameCards = useGameCards(lobbyId);
+
+    /**
+     * Handles the action of laying a card.
+     * It checks if the player is the current player, plays a click sound, and makes a POST request to lay the specified card.
+     * If the action fails, it shows a popup with the error message.
+     */
+    const handleLayCard = async (cardIdx) => {
+        if (!gameInfo.isCurrentPlayer) return;
+        SoundManager.playClickSound();
+
+        try {
+            const response = await fetch(`${BASE_URL}lay-card/${lobbyId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ idx: cardIdx }),
+            });
+
+            const data = await response.json();
+
+            if (!data.success) {
+                PopupManager.showPopup({
+                    title: data.title,
+                    message: data.error,
+                    icon: '❌',
+                });
+            }
+        } catch (error) {
+            PopupManager.showPopup({
+                title: "Lay Card Error",
+                message: "Failed to lay the card. Please try again.",
+                icon: '❌',
+            });
+            console.error('Error laying card:', error);
+        }
+    };
+
+    /**
+     * Handles the action of flipping a row.
+     * It checks if the player is the game master and the current player, plays a click sound, and makes a POST request to flip the specified row.
+     * If the action fails, it shows a popup with the error message.
+     */
+    const handleRowClick = async (rowIdx) => {
+        if (!gameInfo.isGameMaster || !gameInfo.isCurrentPlayer) return;
+        SoundManager.playClickSound();
+
+        try {
+            const response = await fetch(`${BASE_URL}flip-row/${lobbyId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ idx: rowIdx }),
+            });
+
+            const data = await response.json();
+
+            if (!data.success) {
+                PopupManager.showPopup({
+                    title: data.title,
+                    message: data.error,
+                    icon: '❌',
+                });
+            }
+        } catch (error) {
+            PopupManager.showPopup({
+                title: "Flip Row Error",
+                message: "Failed to flip the row. Please try again.",
+                icon: '❌',
+            });
+            console.error('Error flipping row:', error);
+        }
+    };
+
+    /**
+     * Handles the action of leaving the game.
+     * It plays a click sound, makes a POST request to leave the game, and navigates to the specified route if successful.
+     * If the action fails, it shows a popup with the error message.
+     */
+    const leaveGame = async (to = "") => {
+        SoundManager.playClickSound();
+        try {
+            const response = await fetch(`${BASE_URL}leave-game/${lobbyId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                if (to !== "") {
+                    navigate(`/${to}`);
+                }
+            } else {
+                PopupManager.showPopup({
+                    title: data.title,
+                    message: data.error,
+                    icon: '❌',
+                });
+            }
+        } catch (error) {
+            PopupManager.showPopup({
+                title: 'Error',
+                message: 'An error occurred while trying to leave. Please try again.',
+                icon: '❌',
+            });
+            console.error('Error leaving game:', error);
+            window._leavingManually = false;
+        }
+    };
+
+    /**
+     * Initializes the game state on mount.
+     * It fetches the player's cards, game cards, and game information.
+     */
+    useEffect(() => {
+        if (init.current) return;
+        init.current = true;
+
+        fetchPlayerCards();
+        gameCards.fetchGameCards();
+        gameInfo.fetchGameInfo();
+    }, [lobbyId]);
+
+    /**
+     * WebSocket connector to handle real-time game updates.
+     * It listens for various message types and updates the corresponding state variables accordingly.
+     */
+    useWebSocketConnector("game", { lobbyId }, init.current, (message) => {
+        if (message.type === "avatarUpdate") {
+            avatarInfo.setPlayers(message.data.players);
+        }
+
+        if (message.type === "settingUpdate") {
+            avatarInfo.setUseGiving(message.data.settings.giving);
+        }
+
+        if (message.type == "playerDrinkUpdate") {
+            avatarInfo.setDrinksGiven(message.data.given);
+            avatarInfo.setCanUp(message.data.canUp);
+            avatarInfo.setCanDown(message.data.canDown);
+        }
+
+        if (message.type === "playerCardUpdate") {
+            setPlayerCards(message.data.cards);
+        }
+
+        if (message.type === "turnInfoUpdate") {
+            gameInfo.setIsGameMaster(message.data.isGameMaster);
+            gameInfo.setIsCurrentPlayer(message.data.isCurrentPlayer);
+
+            if (message.data.drinksReceived !== undefined) gameInfo.setDrinksReceived(message.data.drinksReceived);
+            if (message.data.nextPlayerEnabled !== undefined) gameInfo.setNextPlayerEnabled(message.data.nextPlayerEnabled);
+            if (message.data.nextPhaseEnabled !== undefined) gameInfo.setNextPhaseEnabled(message.data.nextPhaseEnabled);
+        }
+
+        if (message.type === "gameInfoUpdate") {
+            gameInfo.setPlayerRow(message.data.playerRow);
+            gameInfo.setDrinkRow(message.data.drinkRow);
+            gameInfo.setPhase(message.data.phase);
+        }
+
+        if (message.type === "phase3Update") {
+            gameInfo.setCurrentRow(message.data.currentRow);
+            gameInfo.setTryOver(message.data.tryOver);
+            gameInfo.setGameOver(message.data.gameOver);
+        }
+
+        if (message.type === "gameCardUpdate") {
+            gameCards.setCards(message.data.cards);
+        }
+
+        if (message.type === "nextPlayerUpdate") {
+            gameInfo.setNextPlayerEnabled(message.data.nextPlayerEnabled);
+            gameInfo.setNextPhaseEnabled(message.data.nextPhaseEnabled);
+            gameInfo.setIsCurrentPlayer(message.data.isCurrentPlayer);
+        }
+
+        if (message.type === "busfahrerUpdate") {
+            gameInfo.setBusfahrerName(message.data.busfahrerName);
+        }
+
+        if (message.type === 'closeUpdate') {
+            PopupManager.showPopup({
+                title: "Game Closed",
+                message: "The Game has been closed by the Game Master.",
+                icon: '❌',
+                to: '/lobbies',
+            });
+        }
+
+        if (message.type === "newGameUpdate") {
+            navigate(`/lobby/${message.data.lobbyId}`);
+        }
+    });
+
+    return {
+        playerCards,
+        handleLayCard,
+
+        gameCards,
+        handleRowClick,
+
+        avatarInfo,
+        gameInfo,
+        isSpectator,
+
+        leaveGame,
+    };
+}
+
+export default useGameManager;</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#Access">Access</a></li><li><a href="global.html#Account">Account</a></li><li><a href="global.html#Achievements">Achievements</a></li><li><a href="global.html#Avatar">Avatar</a></li><li><a href="global.html#AvatarInfo">AvatarInfo</a></li><li><a href="global.html#AvatarUploader">AvatarUploader</a></li><li><a href="global.html#BackButton">BackButton</a></li><li><a href="global.html#BricksCard">BricksCard</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#ChatMessages">ChatMessages</a></li><li><a href="global.html#ChatSidebar">ChatSidebar</a></li><li><a href="global.html#ChatTabs">ChatTabs</a></li><li><a href="global.html#ChatToggleButton">ChatToggleButton</a></li><li><a href="global.html#Create">Create</a></li><li><a href="global.html#DefaultCard">DefaultCard</a></li><li><a href="global.html#FriendCode">FriendCode</a></li><li><a href="global.html#FriendInput">FriendInput</a></li><li><a href="global.html#FriendList">FriendList</a></li><li><a href="global.html#FriendMessages">FriendMessages</a></li><li><a href="global.html#FriendRequestList">FriendRequestList</a></li><li><a href="global.html#Game">Game</a></li><li><a href="global.html#GameLogo">GameLogo</a></li><li><a href="global.html#GetCardTheme">GetCardTheme</a></li><li><a href="global.html#GetCardThemeURL">GetCardThemeURL</a></li><li><a href="global.html#HexagonCard">HexagonCard</a></li><li><a href="global.html#Home">Home</a></li><li><a href="global.html#Join">Join</a></li><li><a href="global.html#LeafsCard">LeafsCard</a></li><li><a href="global.html#LeaveButton">LeaveButton</a></li><li><a href="global.html#Lobbies">Lobbies</a></li><li><a href="global.html#Lobby">Lobby</a></li><li><a href="global.html#LobbyInvitation">LobbyInvitation</a></li><li><a href="global.html#LobbyList">LobbyList</a></li><li><a href="global.html#MenuButton">MenuButton</a></li><li><a href="global.html#MenuCheckBox">MenuCheckBox</a></li><li><a href="global.html#MenuInput">MenuInput</a></li><li><a href="global.html#MenuSelect">MenuSelect</a></li><li><a href="global.html#MessageInput">MessageInput</a></li><li><a href="global.html#NewGameButton">NewGameButton</a></li><li><a href="global.html#NextPhaseButton">NextPhaseButton</a></li><li><a href="global.html#NextPlayerButton">NextPlayerButton</a></li><li><a href="global.html#PLAYER_GENDER">PLAYER_GENDER</a></li><li><a href="global.html#Phase1">Phase1</a></li><li><a href="global.html#Phase1Layout">Phase1Layout</a></li><li><a href="global.html#Phase2">Phase2</a></li><li><a href="global.html#Phase2Layout">Phase2Layout</a></li><li><a href="global.html#Phase3">Phase3</a></li><li><a href="global.html#Phase3Layout">Phase3Layout</a></li><li><a href="global.html#PlayerActionButton">PlayerActionButton</a></li><li><a href="global.html#PlayerCards">PlayerCards</a></li><li><a href="global.html#PlayerListItem">PlayerListItem</a></li><li><a href="global.html#PopupModal">PopupModal</a></li><li><a href="global.html#PopupOptions">PopupOptions</a></li><li><a href="global.html#RetryButton">RetryButton</a></li><li><a href="global.html#SettingsButton">SettingsButton</a></li><li><a href="global.html#ShinglesCard">ShinglesCard</a></li><li><a href="global.html#SoundManager">SoundManager</a></li><li><a href="global.html#SquareCard">SquareCard</a></li><li><a href="global.html#StatisticBox">StatisticBox</a></li><li><a href="global.html#ThemeSelector">ThemeSelector</a></li><li><a href="global.html#TurnInfo">TurnInfo</a></li><li><a href="global.html#achievLabels">achievLabels</a></li><li><a href="global.html#busfahrerSelectionMode">busfahrerSelectionMode</a></li><li><a href="global.html#cardMatchStyles">cardMatchStyles</a></li><li><a href="global.html#cardThemes">cardThemes</a></li><li><a href="global.html#drinkQuotes">drinkQuotes</a></li><li><a href="global.html#playSound">playSound</a></li><li><a href="global.html#playerActionFeatures">playerActionFeatures</a></li><li><a href="global.html#schluckGiveMode">schluckGiveMode</a></li><li><a href="global.html#shuffleStyles">shuffleStyles</a></li><li><a href="global.html#statLabels">statLabels</a></li><li><a href="global.html#turnModes">turnModes</a></li><li><a href="global.html#useAuthGuard">useAuthGuard</a></li><li><a href="global.html#useAvatarInfo">useAvatarInfo</a></li><li><a href="global.html#useAvatarUpload">useAvatarUpload</a></li><li><a href="global.html#useBusfahrer">useBusfahrer</a></li><li><a href="global.html#useCardTheme">useCardTheme</a></li><li><a href="global.html#useChatManager">useChatManager</a></li><li><a href="global.html#useFriendChatManager">useFriendChatManager</a></li><li><a href="global.html#useGameCards">useGameCards</a></li><li><a href="global.html#useGameGuard">useGameGuard</a></li><li><a href="global.html#useGameInfo">useGameInfo</a></li><li><a href="global.html#useGameManager">useGameManager</a></li><li><a href="global.html#useLobbiesManager">useLobbiesManager</a></li><li><a href="global.html#useLobbyGuard">useLobbyGuard</a></li><li><a href="global.html#useLobbyManager">useLobbyManager</a></li><li><a href="global.html#usePlayerCards">usePlayerCards</a></li><li><a href="global.html#useSpectatorManager">useSpectatorManager</a></li><li><a href="global.html#useStatistics">useStatistics</a></li><li><a href="global.html#useTitles">useTitles</a></li><li><a href="global.html#useWebSocketConnector">useWebSocketConnector</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Fri Nov 07 2025 20:48:43 GMT+0100 (Central European Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

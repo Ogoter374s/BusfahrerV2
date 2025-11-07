@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: pages/Access.jsx</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: pages/Access.jsx</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @fileoverview Access component for user authentication.
+ * &lt;br>&lt;br>
+ * This component allows users to log in or register an account with a username and password. &lt;br>
+ * It manages the authentication state and displays error messages through a popup modal when login or registration fails.
+ */
+
+// Components
+import MenuInput from '../components/MenuInput';
+import MenuButton from '../components/MenuButton';
+import BackButton from '../components/BackButton';
+import PopupModal from '../components/PopUpModal';
+
+// Utilities
+import BASE_URL from '../utils/config';
+import { PopupManager } from '../utils/popupManager';
+
+// React
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+/**
+ * Access component serves as the user authentication interface.
+ * &lt;br>&lt;br>
+ * It allows users to log in or register an account with a username and password. &lt;br>
+ * The component manages the authentication state and displays error messages
+ * through a popup modal when login or registration fails.
+ * &lt;br>&lt;br>
+ * &lt;strong>useEffect:&lt;/strong> &lt;br>
+ * Initializes the PopupManager to handle popup messages when the component mounts. &lt;br>
+ * This ensures that the popup system is ready to display messages for user actions.
+ * &lt;br>&lt;br>
+ * &lt;strong>handleSubmit:&lt;/strong> &lt;br>
+ * Handles the form submission for either logging in or registering a user. &lt;br>
+ * It sends a POST request to the server with the username and password,
+ * and processes the response to either navigate to the home page on success
+ * or display an error message in a popup modal on failure.
+ * 
+ * @function Access
+ * @returns {JSX.Element} The rendered Access interface.
+ */
+function Access() {
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [isLogin, setIsLogin] = useState(true);
+    const [popup, setPopup] = useState(PopupManager.defaultPopup);
+
+    const navigate = useNavigate();
+
+    /**
+     * Initializes the PopupManager to handle popup messages when the component mounts.
+     * This ensures that the popup system is ready to display messages for user actions.
+     */
+    useEffect(() => {
+        PopupManager.initPopupManager(setPopup);
+    }, []);
+    
+    /**
+     * Handles the form submission for either logging in or registering a user.
+     * It sends a POST request to the server with the username and password,
+     * and processes the response to either navigate to the home page on success
+     * or display an error message in a popup modal on failure.
+     */
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        const endpoint = isLogin ? 'login' : 'register';
+
+        try {
+            const response = await fetch(`${BASE_URL}${endpoint}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password }),
+                credentials: 'include',
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                navigate('/');
+            } else {
+                PopupManager.showPopup({
+                    title: data.title, 
+                    message: data.error, 
+                    icon: '🚫'
+                });
+            }
+        } catch (error) {
+            PopupManager.showPopup({
+                title: 'Error',
+                message: 'An unexpected error occurred. Please try again later.',
+                icon: '❌',
+            });
+            console.error(error);
+        }
+    };
+
+    return (
+        &lt;div className="@container/access flex flex-col items-center justify-center h-screen">
+            
+            {/* Background overlay image */}
+            &lt;div className="access-wrapper"
+            >
+                {/* Game Logo displayed above the form */}
+                &lt;div className="access-logo">
+                    &lt;img 
+                        src="/logos/logo.svg" 
+                        alt="Game Logo"
+                        className="
+                            pointer-events-none select-none 
+                            mx-auto block w-full h-auto"
+                    />
+                &lt;/div>
+
+                {/* Title dynamically switches between Login and Register */}
+                &lt;h1 className="access-home">
+                    {isLogin ? 'Login' : 'Register'}
+                &lt;/h1>
+
+                {/* Form for handling user input (login or registration) */}
+                &lt;form className="
+                        flex flex-col
+                        items-center justify-center
+                        w-full max-w-md
+                        gap-3"
+                    onSubmit={handleSubmit}
+                >
+                    {/* Username input field */}
+                    &lt;MenuInput
+                        type="text"
+                        placeholder="Username"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        img="wood_green"
+                        required
+                    />
+
+                    {/* Password input field */}
+                    &lt;MenuInput
+                        type="password"
+                        placeholder="Password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        img="wood_green"
+                        required
+                    />
+
+                    {/* Submit button container */}
+                    &lt;MenuButton
+                        wrapper={true}
+                        buttonClass="access-btn"
+                        textClass="btn-txt"
+                        icon="button"
+                        text={isLogin ? 'Login' : 'Register'}
+                    />
+                &lt;/form>
+
+                {/* Switch button to toggle between Login and Register */}
+                &lt;MenuButton
+                    wrapper={true}
+                    buttonClass="access-btn"
+                    textClass="access-txt"
+                    textOnly={true}
+                    text={
+                        isLogin
+                            ? 'Create an Account'
+                            : 'Already have an account? Login'
+                    }
+                    onClick={() => setIsLogin(!isLogin)}
+                />
+            &lt;/div>
+
+            {/* Back button to navigate to the home page */}
+            &lt;BackButton />
+
+            {/* Popup modal for displaying messages */}
+            &lt;PopupModal
+                isOpen={popup.show}
+                title={popup.title}
+                message={popup.message}
+                icon={popup.icon}
+                onOk={PopupManager.okPopup}
+                onCancel={PopupManager.cancelPopup}
+                useCancel={popup.useCancel}
+            />
+        &lt;/div>
+    );
+}
+
+export default Access;</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#Access">Access</a></li><li><a href="global.html#Account">Account</a></li><li><a href="global.html#Achievements">Achievements</a></li><li><a href="global.html#Avatar">Avatar</a></li><li><a href="global.html#AvatarInfo">AvatarInfo</a></li><li><a href="global.html#AvatarUploader">AvatarUploader</a></li><li><a href="global.html#BackButton">BackButton</a></li><li><a href="global.html#BricksCard">BricksCard</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#ChatMessages">ChatMessages</a></li><li><a href="global.html#ChatSidebar">ChatSidebar</a></li><li><a href="global.html#ChatTabs">ChatTabs</a></li><li><a href="global.html#ChatToggleButton">ChatToggleButton</a></li><li><a href="global.html#Create">Create</a></li><li><a href="global.html#DefaultCard">DefaultCard</a></li><li><a href="global.html#FriendCode">FriendCode</a></li><li><a href="global.html#FriendInput">FriendInput</a></li><li><a href="global.html#FriendList">FriendList</a></li><li><a href="global.html#FriendMessages">FriendMessages</a></li><li><a href="global.html#FriendRequestList">FriendRequestList</a></li><li><a href="global.html#Game">Game</a></li><li><a href="global.html#GameLogo">GameLogo</a></li><li><a href="global.html#GetCardTheme">GetCardTheme</a></li><li><a href="global.html#GetCardThemeURL">GetCardThemeURL</a></li><li><a href="global.html#HexagonCard">HexagonCard</a></li><li><a href="global.html#Home">Home</a></li><li><a href="global.html#Join">Join</a></li><li><a href="global.html#LeafsCard">LeafsCard</a></li><li><a href="global.html#LeaveButton">LeaveButton</a></li><li><a href="global.html#Lobbies">Lobbies</a></li><li><a href="global.html#Lobby">Lobby</a></li><li><a href="global.html#LobbyInvitation">LobbyInvitation</a></li><li><a href="global.html#LobbyList">LobbyList</a></li><li><a href="global.html#MenuButton">MenuButton</a></li><li><a href="global.html#MenuCheckBox">MenuCheckBox</a></li><li><a href="global.html#MenuInput">MenuInput</a></li><li><a href="global.html#MenuSelect">MenuSelect</a></li><li><a href="global.html#MessageInput">MessageInput</a></li><li><a href="global.html#NewGameButton">NewGameButton</a></li><li><a href="global.html#NextPhaseButton">NextPhaseButton</a></li><li><a href="global.html#NextPlayerButton">NextPlayerButton</a></li><li><a href="global.html#PLAYER_GENDER">PLAYER_GENDER</a></li><li><a href="global.html#Phase1">Phase1</a></li><li><a href="global.html#Phase1Layout">Phase1Layout</a></li><li><a href="global.html#Phase2">Phase2</a></li><li><a href="global.html#Phase2Layout">Phase2Layout</a></li><li><a href="global.html#Phase3">Phase3</a></li><li><a href="global.html#Phase3Layout">Phase3Layout</a></li><li><a href="global.html#PlayerActionButton">PlayerActionButton</a></li><li><a href="global.html#PlayerCards">PlayerCards</a></li><li><a href="global.html#PlayerListItem">PlayerListItem</a></li><li><a href="global.html#PopupModal">PopupModal</a></li><li><a href="global.html#PopupOptions">PopupOptions</a></li><li><a href="global.html#RetryButton">RetryButton</a></li><li><a href="global.html#SettingsButton">SettingsButton</a></li><li><a href="global.html#ShinglesCard">ShinglesCard</a></li><li><a href="global.html#SoundManager">SoundManager</a></li><li><a href="global.html#SquareCard">SquareCard</a></li><li><a href="global.html#StatisticBox">StatisticBox</a></li><li><a href="global.html#ThemeSelector">ThemeSelector</a></li><li><a href="global.html#TurnInfo">TurnInfo</a></li><li><a href="global.html#achievLabels">achievLabels</a></li><li><a href="global.html#busfahrerSelectionMode">busfahrerSelectionMode</a></li><li><a href="global.html#cardMatchStyles">cardMatchStyles</a></li><li><a href="global.html#cardThemes">cardThemes</a></li><li><a href="global.html#drinkQuotes">drinkQuotes</a></li><li><a href="global.html#playSound">playSound</a></li><li><a href="global.html#playerActionFeatures">playerActionFeatures</a></li><li><a href="global.html#schluckGiveMode">schluckGiveMode</a></li><li><a href="global.html#shuffleStyles">shuffleStyles</a></li><li><a href="global.html#statLabels">statLabels</a></li><li><a href="global.html#turnModes">turnModes</a></li><li><a href="global.html#useAuthGuard">useAuthGuard</a></li><li><a href="global.html#useAvatarInfo">useAvatarInfo</a></li><li><a href="global.html#useAvatarUpload">useAvatarUpload</a></li><li><a href="global.html#useBusfahrer">useBusfahrer</a></li><li><a href="global.html#useCardTheme">useCardTheme</a></li><li><a href="global.html#useChatManager">useChatManager</a></li><li><a href="global.html#useFriendChatManager">useFriendChatManager</a></li><li><a href="global.html#useGameCards">useGameCards</a></li><li><a href="global.html#useGameGuard">useGameGuard</a></li><li><a href="global.html#useGameInfo">useGameInfo</a></li><li><a href="global.html#useGameManager">useGameManager</a></li><li><a href="global.html#useLobbiesManager">useLobbiesManager</a></li><li><a href="global.html#useLobbyGuard">useLobbyGuard</a></li><li><a href="global.html#useLobbyManager">useLobbyManager</a></li><li><a href="global.html#usePlayerCards">usePlayerCards</a></li><li><a href="global.html#useSpectatorManager">useSpectatorManager</a></li><li><a href="global.html#useStatistics">useStatistics</a></li><li><a href="global.html#useTitles">useTitles</a></li><li><a href="global.html#useWebSocketConnector">useWebSocketConnector</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Fri Nov 07 2025 20:48:43 GMT+0100 (Central European Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

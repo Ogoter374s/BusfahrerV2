@@ -1,2292 +1,1843 @@
-@import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Vollkorn:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap');
+
+@import "tailwindcss";
+@import './css/animate.css';
+
+@utility container {
+    margin-inline: auto;
+    padding-inline: 1rem;
+}
 
 /* #region Root Elements */
 
 :root {
-    background: url('/panels.png') no-repeat center center fixed;
+    background: url('/backgrounds/panels.png') no-repeat center center fixed;
     background-size: cover;
     min-height: 100vh;
 }
 
-.overlay-cont {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+.modal-style {
+    @apply
+        fixed inset-0
+        w-screen h-screen
+        bg-black/60
+        flex items-center justify-center
+        z-[1000]
+    ;
 }
 
-.overlay-img {
-    position: absolute;
-    width: 86%;
-    z-index: 1;
-    filter: drop-shadow(10px 10px 30px rgba(0, 0, 0, 1));
-    pointer-events: none;
-    user-select: none;
+.modal-btn {
+    @apply
+        mt-1 sm:mt-1 lg:mt-1 xl:mt-2 2xl:mt-2
+        px-1 sm:px-1.5 lg:px-2 xl:px-2 2xl:px-2
+        py-1 sm:py-1.5 lg:py-2 xl:py-2 2xl:py-2
+        border-none bg-[#e33e3e] text-white
+        text-[1.25rem] sm:text-[0.75rem] lg:text-[1.25rem] xl:text-[1.75rem] 2xl:text-[1.75rem]
+        cursor-pointer rounded
+        transition-transform duration-200 ease-in-out
+        hover:scale-110 hover:bg-[#e33e3e]
+    ;
 }
-
-.overlay-pyramid-img {
-    position: absolute;
-    top: -5px;
-    width: 70%;
-    z-index: -100;
-    filter: drop-shadow(10px 10px 30px rgba(0, 0, 0, 1));
-    pointer-events: none;
-    user-select: none;
-}
-
-form {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-/* #region Back Button */
-
-.back-cont {
-    position: absolute;
-    display: inline-block;
-    bottom: 145px;
-    left: 15px;
-    z-index: 999;
-}
-
-.back-cont button {
-    position: absolute;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-back img {
-    width: 125px;
-    height: auto;
-    display: block;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.4);
-    border-radius: 70px;
-    transition: all 0.1s ease-in-out;
-    pointer-events: none;
-    user-select: none;
-}
-
-.btn-back:hover img {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
-    transform: translateY(-3px);
-}
-
-.btn-back:active img {
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    transform: translateY(2px);
-}
-
-/* #endregion */
 
 .highlight {
-    color: red;
-    margin-left: 15px;
+    @apply
+    text-red-600
+        ml-1 sm:ml-1.5 lg:ml-3.5 xl:ml-4 2xl:ml-4.5
+    ;
 }
 
-/* #region Input Fields */
-
-.rustic-input {
-    background: url('/wood_blue.svg');
-    background-size: cover;
-    font-family: 'Cinzel', serif;
-    font-size: 27px;
-    color: #f5e1a4;
-    box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.6);
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-    border-radius: 5px;
-    outline: none;
-    height: 45px;
+.highlight-player {
+    @apply
+        text-[#a65a2e]
+        font-bold
+    ;
 }
 
-.rustic-input:focus {
-    border-color: #c49a6c;
-    box-shadow: 0 0 8px rgba(196, 154, 108, 0.8);
-}
-
-.rustic-label {
-    font-family: 'Cinzel', serif;
-    font-size: 27px;
-    color: #f5e1a4;
-}
-
-.gender-select {
-    padding: 8px;
-    font-size: 20px;
-    font-family: 'Cinzel', serif;
-    border-radius: 5px;
-    border: none;
-    margin-bottom: 15px;
-    width: 100%;
+.highlight-count {
+    @apply
+        text-[#a12727]
+        font-bold
+    ;
 }
 
 /* #endregion */
 
-/* #region Option Select */
+/* #region Button */
 
-.options-selection {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin: 15px 0;
+.btn-container {
+    @apply 
+        relative inline-block
+        hover:scale-105
+    ;
 }
 
-.options-selection label {
-    font-size: 25px;
-    font-weight: bold;
-    margin-bottom: 5px;
-    user-select: none;
+.btn-container button {
+    @apply 
+        disabled:pointer-events-none
+        hover:scale-105
+    ;
 }
 
-#optionsSelect {
-    width: 200px;
-    padding: 8px;
-    border-radius: 8px;
-    border: 2px solid #a65a2e;
-    background-color: #222;
-    color: #fff;
-    font-size: 20px;
-    outline: none;
-    transition: all 0.3s ease;
+.btn-container img {
+    @apply 
+        hover:[filter:drop-shadow(6px_6px_12px_rgba(0,0,0,0.6))]
+        hover:scale-105
+    ;
 }
 
-#optionsSelect:hover {
-    border-color: #e33e3e;
-}
-
-#optionsSelect option {
-    background-color: #333;
-    color: #fff;
-    font-size: 14px;
+.btn-txt {
+    @apply
+        text-[2.75rem] sm:text-[1rem] lg:text-[2rem] xl:text-[2.5rem]
+        min-w-[30rem] sm:min-w-[10rem] lg:min-w-[30rem]
+        text-white font-bold font-[Luckiest_Guy]
+        [text-shadow:1px_1px_2px_black]
+        hover:scale-105
+    ;
 }
 
 /* #endregion */
 
-.current-player {
-    color: #a65a2e;
-    font-weight: bold;
+/* #region Text */
+
+.txt-highlight {
+    @apply
+        text-red-600 
+        ml-[15px] sm:ml-[5px] lg:ml-[10px] xl:ml-[15px] 2xl:ml-[20px]
+    ;
 }
 
-.drink-count {
-    color: #a12727;
-    font-weight: bold;
-}
-
-.player-cards {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    justify-content: center;
-    position: absolute;
-    bottom: 10px;
-}
-
-/* #region Next Player Button */
-
-.next-cont {
-    position: absolute;
-    display: inline-block;
-    bottom: 150px;
-    right: 150px;
-}
-
-.next-cont button {
-    position: absolute;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-next-disabled {
-    position: absolute;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-next img {
-    width: 135px;
-    height: auto;
-    display: block;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.4);
-    border-radius: 70px;
-    transition: all 0.1s ease-in-out;
-    user-select: none;
-    pointer-events: none;
-}
-
-.btn-next-disabled img {
-    width: 135px;
-    height: auto;
-    display: block;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.4);
-    border-radius: 70px;
-    transition: all 0.1s ease-in-out;
-    user-select: none;
-    pointer-events: none;
-}
-
-.btn-next:hover img {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
-    transform: translateY(-3px);
-}
-
-.btn-next:active img {
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    transform: translateY(2px);
+.txt-hover {
+    @apply
+        transition duration-200 ease-in-out 
+        group-[&:not(:disabled)]:hover:shadow-[6px_6px_12px_rgba(0,0,0,0)]
+        group-[&:not(:disabled)]:hover:-translate-y-[3px]
+        group-[&:not(:disabled)]:active:translate-y-[2px]
+        group-[&:not(:disabled)]:active:shadow-[2px_2px_4px_rgba(0,0,0,0.3)] 
+    ;
 }
 
 /* #endregion */
 
-.busfahrer-cont {
-    text-align: center;
-    color: white;
-    font-family: 'Vollkorn', serif;
-    color: #1b0e1e;
-    user-select: none;
+/* #region Input */
+
+.input-style {
+    @apply
+        bg-cover
+        border border-white
+        font-serif text-[#f5e1a4] 
+        text-[27px] sm:text-[0.5rem] lg:text-[1.15rem] xl:text-[1.3rem] 2xl:text-[1.5rem]
+        outline-none
+        rounded-[.5vh] sm:rounded-[.6vh] lg:rounded-[1vh] xl:rounded-[1vh]
+        h-[5vh] sm:h-[6vh] lg:h-[6vh] xl:h-[6vh] 2xl:h-[5.5vh]
+        w-[17vw] sm:w-[17vw] lg:w-[22.5vw] xl:w-[20vw] 2xl:w-[17.5vw]
+        px-3 sm:px-1 lg:px-2 xl:px-2 2xl:px-2
+        mb-3 sm:-mb-2 lg:-mb-1 xl:mb-0 2xl:mb-0
+    ;
 }
 
-.busfahrer-title {
-    font-family: 'Luckiest Guy', cursive;
-    font-size: 40px;
-    color: #f5e1a4;
-    font-weight: bold;
-    margin-top: 35px;
+/* #endregion */
+
+/* #region Select */
+
+.select-wrapper {
+    @apply
+        flex flex-col items-center
+        my-0.5
+    ;
 }
 
-.busfahrer-name {
-    color: #a65a2e;
-    font-weight: bold;
+.select-label {
+    @apply
+        text-[1.5rem] sm:text-[0.75rem] lg:text-[1.35rem] xl:text-[1.75rem] 2xl:text-[1.8rem]
+        font-bold select-none
+        mb-1 sm:mb-0.5 lg:mb-0.5 xl:mb-0.5 2xl:mb-1
+    ;
+}
+
+.select-style {
+    @apply
+        w-[40vw] sm:w-[17.5vw] lg:w-[15vw] xl:w-[15vw] 2xl:w-[12.5vw]
+        px-1
+        py-0.5
+        rounded font-sans
+        border-2 sm:border-1 lg:border-2
+        border-[#a65a2e] bg-[#222] text-white
+        text-[1.5rem] sm:text-[0.75rem] lg:text-[1.25rem] xl:text-[1.5rem] 2xl:text-[1.75rem]
+        outline-none transition-all duration-300 ease-in-out 
+        hover:border-[#e33e3e]
+    ;
+}
+
+.select-option {
+    @apply
+        bg-[#333] text-white
+        text-[1.5rem] sm:text-[0.75rem] lg:text-[1.25rem] xl:text-[1.5rem] 2xl:text-[1.75rem]
+    ;
+}
+
+/* #endregion */
+
+/* #region Checkbox */
+
+.checkbox-label {
+    @apply
+        flex items-center
+        font-serif
+        text-[27px] sm:text-[0.6rem] lg:text-[1.35rem] xl:text-[1.5rem] 2xl:text-[1.8rem]
+        font-bold
+        text-[#f5e1a4]
+    ;
+}
+
+.checkbox-input {
+    @apply
+        w-[30px] sm:w-[15px] lg:w-[25px] xl:w-[28px] 2xl:w-[30px]
+        h-[30px] sm:h-[15px] lg:h-[25px] xl:h-[28px] 2xl:h-[30px]
+        mr-3 sm:mr-1 lg:mr-2 xl:mr-2 2xl:mr-3
+        accent-[#5a3e22]
+    ;
+}
+
+/* #endregion */
+
+/* #region NumberInc */
+
+.numberInc-label {
+    @apply
+        text-[1.75rem] sm:text-[0.75rem] lg:text-[1.5rem] xl:text-[1.65rem] 2xl:text-[1.75rem]
+        font-bold
+        mb-1 sm:mb-0 lg:mb-1 xl:mb-1 2xl:mb-1
+        select-none
+    ;
+}
+
+.numberInc-input {
+    @apply
+        w-[120px] sm:w-[80px] lg:w-[100px] xl:w-[120px] 2xl:w-[100px]
+        p-1
+        rounded
+        border-2 sm:border-1 lg:border-2 xl:border-2 2xl:border-2
+        border-[#a65a2e]
+        bg-[#222]
+        text-white
+        text-[1.65rem] sm:text-[0.65rem] lg:text-[1.35rem] xl:text-[1.5rem] 2xl:text-[1.5rem]
+        outline-none
+        transition-all duration-300 ease-in-out
+        hover:border-[#e33e3e]
+    ;
+}
+
+/* #endregion */
+
+/* #region Quote Logo */
+
+.quote-wrapper {
+    @apply
+        flex flex-col items-center 
+        gap-2
+        mb-2 sm:mb-0 lg:mb-2 xl:mb-4 2xl:mb-4
+        mt-[-30vh] sm:mt-[-20vh] lg:mt-[-27.5vh] xl:mt-[-20vh] 2xl:mt-[-20vh]
+        w-[15vw] sm:w-[15vw] lg:w-[20vw] xl:w-[17.5vw] 2xl:w-[15vw]
+        pointer-events-none select-none
+    ;
+}
+
+.quote-txt {
+    @apply
+        relative 
+        top-[3vh] sm:top-[3vh] lg:top-[2.5vh] xl:top-[2vh] 2xl:top-[2.5vh]
+        ml-[25vh] sm:ml-[17.5vh] lg:ml-[20vh] xl:ml-[20vh] 2xl:ml-[25vh]
+        font-bold text-[#d10000]
+        text-[1.5rem] sm:text-[0.5rem] lg:text-[1.2rem] xl:text-[1.35rem] 2xl:text-[1.5rem]
+        rotate-[8deg]
+        min-w-[30rem] sm:min-w-[10rem] lg:min-w-[30rem]
+        z-[10]
+        pointer-events-none text-center
+        [text-shadow:1px_1px_2px_#000]
+        animate-[pulsate_2.2s_ease-in-out_infinite]
+    ;
 }
 
 /* #endregion */
 
 /* #region PopUp */
 
-.popup-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.65);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 999;
-}
-
-.popup-box {
-    background: #2c2c2c;
-    border: 2px solid #aaa;
-    border-radius: 10px;
-    padding: 24px 32px;
-    max-width: 250px;
-    min-width: 125px;
-    min-height: 125px;
-    color: white;
-    text-align: center;
-    user-select: none;
+.popup-wrapper {
+    @apply
+        bg-[#2c2c2c] 
+        border-2 lg:border-3
+        border-[#aaa] 
+        rounded-[1rem] sm:rounded-[1rem]
+        px-8 sm:px-6 lg:px-4
+        py-6 sm:py-4 lg:py-6
+        max-w-[250px] sm:max-w-[35vw] lg:max-w-[50vw] xl:max-w-[40vw] 2xl:max-w-[25vw]
+        min-w-[125px] sm:min-w-[25vw] lg:min-w-[17.5vw]
+        text-white text-center
+        select-none
+    ;
 }
 
 .popup-header {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
+    @apply 
+        flex items-center justify-center 
+        gap-2 sm:gap-1 lg:gap-1
+        mb-2 sm:mb-2 lg:mb-2
+    ;
 }
 
-.popup-icon {
-    font-size: 1.6rem;
-}
-
-.popup-button {
-    margin-top: 2.5rem;
-    padding: 10px 30px;
-    font-weight: bold;
-    font-size: 1rem;
-    background: #00c4ff;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
+.popup-btn {
+    @apply
+        mt-10 sm:mt-6 lg:mt-4
+        px-6 sm:px-4 lg:px-6
+        py-2 sm:py-1 lg:py-1
+        font-bold 
+        text-[1.2rem] sm:text-[1rem] lg:text-[1.75rem] 2xl:text-[2rem]
+        border-none 
+        rounded-[.3rem]
+        cursor-pointer
+        hover:scale-110
+    ;
 }
 
 /* #endregion */
 
-/* #region Chat */
+/* #region Back Button */
 
-.message-area {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 10px;
-    border-radius: 6px;
-    overflow-y: auto;
+.backBtn-style {
+    @apply
+        bg-contain bg-no-repeat bg-center z-30
+        fixed
+        bottom-4 sm:bottom-1.5 lg:bottom-6 xl:bottom-8 2xl:bottom-4
+        left-4 sm:left-2 lg:left-4 xl:left-6 2xl:left-4
+        w-[175px] sm:w-[60px] lg:w-[120px] xl:w-[140px] 2xl:w-[155px]
+        h-[175px] sm:h-[60px] lg:h-[120px] xl:h-[140px] 2xl:h-[155px]
+        rounded-full
+        overflow-hidden
+        transition duration-200 ease-in-out 
+        cursor-pointer
+        hover:shadow-[6px_6px_12px_rgba(0,0,0,0.6)] hover:-translate-y-[3px]
+        hover:scale-105
+    ;
 }
 
-.message-wrapper {
-    display: flex;
+/* #endregion */
+
+/* #region Player Action Button */
+
+.playerActionBtn {
+    @apply
+        bg-contain bg-no-repeat bg-center z-30
+        fixed
+        bottom-4 sm:bottom-1.5 lg:bottom-6 xl:bottom-8 2xl:bottom-4
+        right-4 sm:right-2 lg:right-4 xl:right-6 2xl:right-4
+        w-[175px] sm:w-[60px] lg:w-[120px] xl:w-[140px] 2xl:w-[155px]
+        h-[175px] sm:h-[60px] lg:h-[120px] xl:h-[140px] 2xl:h-[155px]
+        rounded-full
+        overflow-hidden
+        transition duration-200 ease-in-out 
+        cursor-pointer
+    ;
 }
 
-.sent-wrapper {
-    justify-content: flex-end;
+/* #endregion */
+
+/* #region Chat Sidebar */
+
+.chatSidebar {
+    @apply 
+        fixed top-0 left-0 z-[1000]
+        h-screen
+        w-[23.5vw] sm:w-[25vw] lg:w-[43.5vw] xl:w-[35vw] 2xl:w-[25vw]
+        bg-black/95 text-white flex flex-col
+        transition-transform duration-300 ease-in-out
+    ;
 }
 
-.received-wrapper {
-    justify-content: flex-start;
+/* #region Chat Toggle */
+
+.chatToggleWrapper {
+    @apply
+        fixed top-0 left-0 z-[1000] 
+        flex flex-col items-center 
+        transition-transform duration-300 ease-in-out
+    ;
 }
 
-.message-bubble {
-    display: inline-block;
-    max-width: 80%;
-    padding: 6px 10px;
-    border-radius: 8px;
-    font-size: 14px;
-    word-break: break-word;
+.chatToggleBtn {
+    @apply
+        w-10 sm:w-5 lg:w-11
+        h-15 sm:h-8 lg:h-15
+        bg-black/90 text-white font-bold font-[Luckiest_Guy]
+        text-[2rem] sm:text-[1.35rem] lg:text-[2.75rem]
+        border-none 
+        rounded-md
+        cursor-pointer
+        transition-colors duration-300
+        flex items-center justify-center
+    ;
 }
 
-.sent {
-    background-color: #2196f3;
-    color: white;
-    text-align: right;
+.pendingRequestWrapper {
+    @apply
+        flex flex-col
+        mt-3 sm:mt-1 lg:mt-2 xl:mt-2 2xl:mt-2
+        items-center
+    ;
 }
 
-.received {
-    background-color: #444;
-    color: white;
-    text-align: left;
+.pendingRequest {
+    @apply
+        w-[10px] sm:w-[15.5px] lg:w-[37.5px] xl:w-[37.5px] 2xl:w-[37.5px]
+        h-[10px] sm:h-[15.5px] lg:h-[37.5px] xl:h-[37.5px] 2xl:h-[37.5px]
+        bg-[#27c1a0] 
+        border-black rounded-full
+        text-black font-bold
+        text-[1.5rem] sm:text-[0.75rem] lg:text-[1.75rem] xl:text-[1.75rem] 2xl:text-[1.75rem]
+        flex items-center justify-center
+        select-none
+    ;
 }
 
-/* #region Friend Wrapper */
-
-.chat-toggle-wrapper {
-    position: absolute;
-    top: 0;
-    left: 0;
-    transition: left 0.3s ease;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    z-index: 1000;
+.pendingMessagWrapper {
+    @apply
+        flex flex-col
+        mt-3 sm:mt-1 lg:mt-2 xl:mt-2 2xl:mt-2
+        items-center
+    ;
 }
 
-.friend-request-circles {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    align-items: center;
-    margin-top: 10px;
+.pendingMessage {
+    @apply
+        w-[10px] sm:w-[15.5px] lg:w-[37.5px] xl:w-[37.5px] 2xl:w-[37.5px]
+        h-[10px] sm:h-[15.5px] lg:h-[37.5px] xl:h-[37.5px] 2xl:h-[37.5px]
+        bg-[#c1272d] 
+        border-black rounded-full
+        text-black font-bold
+        text-[1.5rem] sm:text-[.75rem] lg:text-[1.75rem] xl:text-[1.75rem] 2xl:text-[1.5rem]
+        flex items-center justify-center
+        select-none
+    ;
 }
 
-.circle-request {
-    width: 30px;
-    height: 30px;
-    background-color: #27c1a0;
-    border: 2px solid black;
-    border-radius: 50%;
-    font-size: 20px;
-    font-weight: bold;
-    color: black;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    user-select: none;
+/* #endregion */
+
+/* #region Chat-Tab Wrapper */
+
+.chatTab-wrapper {
+    @apply
+        flex w-full
+        h-[5vh] sm:h-[7vh] lg:h-[6.5vh] xl:h-[7vh] 2xl:h-[5vh]
+    ;
 }
 
-.circle-msg {
-    width: 30px;
-    height: 30px;
-    background-color: #c1272d;
-    border: 2px solid black;
-    border-radius: 50%;
-    font-size: 20px;
-    font-weight: bold;
-    color: black;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    user-select: none;
-}
-
-.chat-sidebar {
-    position: absolute;
-    left: -450px;
-    top: 0;
-    width: 450px;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.95);
-    color: white;
-    transition: left 0.3s ease-in-out;
-    display: flex;
-    flex-direction: column;
-    z-index: 1000;
-}
-
-.chat-sidebar.open {
-    left: 0px;
-}
-
-.chat-sidebar.open + .chat-toggle-button {
-    left: 450px;
-}
-
-.chat-toggle-button {
-    width: 40px;
-    height: 60px;
-    background: rgba(0, 0, 0, 0.9);
-    color: white;
-    border: none;
-    border-radius: 5px;
-    font-size: 35px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    font-family: 'Luckiest Guy', cursive;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.chat-tabs {
-    display: flex;
-    width: 100%;
-    height: 40px;
-    border-bottom: 2px solid #444;
-}
-
-.chat-tab-btn {
-    flex: 1;
-    height: 100%;
-    border: none;
-    background: #222;
-    color: #fff;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-.chat-tab-btn.active {
-    background: #333;
-    border-bottom: 2px solid #c1272d;
-}
-
-.chat-tab-btn:disabled {
-    background: #111;
-    opacity: 0.5;
-    cursor: not-allowed;
+.chatTab {
+    @apply
+        flex-1 
+        h-full text-white font-bold
+        text-[1.5rem] sm:text-[.75rem] lg:text-[1.75rem] xl:text-[1.75rem] 2xl:text-[1.75rem]
+        cursor-pointer
+        transition-colors duration-200
+    ;
 }
 
 /* #endregion */
 
 /* #region Friend Request */
 
-.pending-requests {
-    background: rgba(255, 255, 255, 0.1);
-    padding: 10px;
-    border-radius: 5px;
-    margin-top: 5px;
-    font-family: 'Luckiest Guy', cursive;
-    user-select: none;
+.friendRequest-wrapper {
+    @apply
+        bg-white/10
+        p-2 sm:p-1 lg:p-2 xl:p-2 2xl:p-1
+        mt-1 sm:mt-0 lg:mt-1 xl:mt-1 2xl:mt-0.5
+        font-[Luckiest_Guy]
+        select-none
+    ;
 }
 
-.request-header {
-    font-size: 18px;
-    color: #fff;
-    margin-bottom: 10px;
-    text-align: center;
-    font-weight: bold;
+.friendRequest-item {
+    @apply
+        flex justify-between items-center
+        bg-[#1b3e80]
+        p-2.5 sm:p-1 lg:p-2 xl:p-2 2xl:p-2.5
+        rounded
+        mb-1 sm:-mb-0 lg:mb-1 xl:mb-1 2xl:mb-0.5
+    ;
 }
 
-.friend-request {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: #1b3e80;
-    padding: 10px;
-    border-radius: 6px;
-    margin-bottom: 8px;
+.friendRequest-txt {
+    @apply
+        text-white flex-1
+        text-[1.25rem] sm:text-[.55rem] lg:text-[1.5rem] xl:text-[1.5rem] 2xl:text-[1.25rem]
+    ;
 }
 
-.request-text {
-    color: #fff;
-    font-size: 18.5px;
-    flex: 1;
-}
-
-.request-actions {
-    display: flex;
-    gap: 8px;
-}
-
-.accept-btn,
-.decline-btn {
-    border: none;
-    padding: 7px 7px;
-    cursor: pointer;
-    font-size: 15px;
-    border-radius: 4px;
-    transition: 0.2s ease-in-out;
-}
-
-.accept-btn {
-    background-color: #4caf50;
-    color: white;
-}
-
-.decline-btn {
-    background-color: #e74c3c;
-    color: white;
-}
-
-.accept-btn:hover {
-    background-color: #3e8e41;
-}
-
-.decline-btn:hover {
-    background-color: #c0392b;
+.friendRequest-btn {
+    @apply
+        leading-none
+        text-[1.25rem] sm:text-[.8rem] lg:text-[2.5rem] xl:text-[2.5rem] 2xl:text-[2rem]
+        px-[.5vw] sm:px-[.5vw] lg:px-[.75vw] xl:px-[.5vw] 2xl:px-[.5vw]
+        py-[.5vw] sm:py-[.5vw] lg:py-[.5vw] xl:py-[.35vw] 2xl:py-[.35vw]
+        rounded
+        h-fit
+        transition-colors duration-200
+    ;
 }
 
 /* #endregion */
 
 /* #region Friend List */
 
-.friend-list {
-    max-height: calc(4 * 80px);
-    overflow-y: auto;
-    flex-shrink: 0;
+.friendList-wrapper {
+    @apply
+        max-h-[35vh] sm:max-h-[27.5vh] lg:max-h-[30vh] xl:max-h-[30vh] 2xl:max-h-[25vh]
+        overflow-y-auto
+        shrink-0
+    ;
 }
 
-.friend-list::-webkit-scrollbar {
-    width: 6px;
+.friendList-item {
+    @apply
+        flex items-center justify-between
+        p-4 sm:p-1 lg:p-4 xl:p-5 2xl:p-4
+        text-[.1rem]
+        border-b border-white/20 
+        cursor-pointer select-none
+        hover:bg-white/20 transition-colors
+    ;   
 }
 
-.friend-list::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.3);
-    border-radius: 6px;
+.friendList-avatar {
+    @apply
+        w-[2.5vw] sm:w-[2.75vw] lg:w-[4.5vw] xl:w-[4vw] 2xl:w-[2.5vw] 
+        h-[5vh] sm:h-[5vh] lg:h-[6vh] xl:h-[6vh] 2xl:h-[5vh]
+        rounded-full bg-gray-500
+        pointer-events-none select-none
+    ;
 }
 
-.friend {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 15px;
-    padding: 15px;
-    cursor: pointer;
-    font-size: 18px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-    user-select: none;
+.friendList-txt {
+    @apply
+        text-white
+        text-[1.5rem] sm:text-[0.6rem] lg:text-[1.5rem] xl:text-[1.5rem] 2xl:text-[1.5rem]
+        font-[Luckiest_Guy]
+    ;
 }
 
-.friend:hover {
-    background: rgba(255, 255, 255, 0.2);
+.friendList-msg {
+    @apply
+        w-[10px] sm:w-[12.5px] lg:w-[32.5px] xl:w-[37.5px] 2xl:w-[37.5px]
+        h-[10px] sm:h-[12.5px] lg:h-[32.5px] xl:h-[37.5px] 2xl:h-[37.5px]
+        bg-red-600 rounded-full
+        flex items-center justify-center
+        ml-2 sm:ml-0 lg:ml-1 xl:ml-0 2xl:ml-1
+        text-white font-bold
+        text-[1.25rem] sm:text-[0.5rem] lg:text-[1.25rem] xl:text-[1.4rem] 2xl:text-[1.4rem]
+    ;
 }
 
-.friend-avatar {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    background: gray;
-    pointer-events: none;
-    user-select: none;
-}
-
-.friend-text {
-    font-family: 'Luckiest Guy', cursive;
-    color: #fff;
-    font-size: 20px;
-}
-
-.friend-info {
-    display: flex;
-    align-items: center;
-    gap: 10px; /* Space between avatar and name */
-}
-
-.remove-friend-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    background-color: #c1272d;
-    border: none;
-    background-image: url('/remove.svg');
-    background-size: 85% auto;
-    background-position: center;
-    background-repeat: no-repeat;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-    text-shadow: 1px 1px 2px black;
-    right: 30px;
-}
-
-.remove-friend-btn:active {
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    transform: translateY(2px);
-}
-
-.remove-friend-btn:hover {
-    transform: scale(1.2);
-}
-
-.unread-indicator {
-    width: 20px;
-    height: 20px;
-    background-color: red;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-left: 8px;
-    margin-bottom: 2.5px;
+.friendList-btn {
+    @apply
+        w-[2.5vw] sm:w-[2.75vw] lg:w-[5vw] xl:w-[4.25vw] 2xl:w-[2.5vw]
+        h-[5vh] sm:h-[5vh] lg:h-[6.5vh] xl:h-[6vh] 2xl:h-[5vh]
+        rounded
+        cursor-pointer transition-all duration-200
+        hover:scale-[1.1]
+        active:shadow-[2px_2px_4px_rgba(0,0,0,0.3)] active:translate-y-[2px]
+    ;
 }
 
 /* #endregion */
 
 /* #region Friend Add */
 
-.add-friend-container {
-    display: flex;
-    align-items: center;
-    margin: 10px 0;
-    z-index: 0;
+.friendAdd-wrapper {
+    @apply
+        flex items-center z-0
+        overflow-y-auto
+        my-2 sm:my-0.5 lg:my-2 xl:my-2 2xl:my-2
+        min-h-[5vh]
+    ;
 }
 
-.add-friend-input {
-    flex-grow: 1;
-    padding: 8px;
-    border: 1px solid #ccc;
-    font-size: 18px;
+.friendAdd-input {
+    @apply
+        flex-grow
+        px-2 sm:px-1 lg:px-1.5 xl:px-1.5 2xl:px-2
+        py-2 sm:py-1 lg:py-1.5 xl:py-1.5 2xl:py-2
+        border border-[#ccc]
+        text-[1.25rem] sm:text-[0.35rem] lg:text-[1rem] xl:text-[1.15rem] 2xl:text-[1.25rem]
+        rounded focus:outline-none
+    ;
 }
 
-.add-friend-container button {
-    padding: 8px 12px;
-    margin-left: 5px;
-    margin-right: 5px;
-    background: #c49a6c;
-    color: white;
-    border: none;
-    cursor: pointer;
-    font-size: 18px;
-}
-
-.add-friend-container button:hover {
-    transform: scale(1.05);
-}
-
-/* #endregion */
-
-/* #region Friend Chat */
-
-.message-area {
-    flex-grow: 1;
-    overflow-y: auto;
-    user-select: none;
-    font-family: Tahoma;
-}
-
-.message-area p {
-    line-height: 1.4;
-    word-wrap: break-word;
-    word-break: break-word;
-    padding: 5px 10px;
-    margin: 5px 0;
-    border-radius: 5px;
-}
-
-.message-area .sent {
-    background-color: #007bff;
-    color: white;
-    align-self: flex-end;
-    text-align: right;
-}
-
-.message-area .received {
-    background-color: #444;
-    color: white;
-    align-self: flex-start;
-    text-align: left;
+.friendAdd-btn {
+    @apply
+        ml-2 sm:ml-1 lg:ml-2 xl:ml-2 2xl:ml-2
+        mr-2 sm:mr-1 lg:mr-2 xl:mr-2 2xl:mr-2
+        px-3 sm:px-1 lg:px-1.5 xl:px-1.5 2xl:px-3
+        py-2 sm:py-1 lg:py-1.5 xl:py-1.5 2xl:py-2
+        text-[1.25rem] sm:text-[0.35rem] lg:text-[1rem] xl:text-[1.15rem] 2xl:text-[1.25rem]
+        text-white bg-[#c49a6c]
+        rounded border-none cursor-pointer
+        transition-transform duration-150 hover:scale-[1.05]
+    ;
 }
 
 /* #endregion */
 
-/* #region Game Chat */
+/* #region Friend Messages */
 
-.game-chat-section {
-    padding: 10px;
-    background: rgba(0, 0, 0, 0.4);
+.friendMessages-wrapper {
+    @apply
+        flex-grow overflow-y-auto
+        select-none
+        font-[Tahoma]
+        flex flex-col
+        gap-1 sm:gap-0.5 lg:gap-1 xl:gap-1 2xl:gap-1
+        p-2 sm:p-1 lg:p-2 xl:p-2 2xl:p-2
+    ;
 }
 
-.chat-title {
-    font-size: 50px;
-    font-weight: bold;
-    color: #c1272d;
-    margin-left: 10px;
-    user-select: none;
+.friendMessages-item {
+    @apply
+        max-w-[80%]
+        px-3 sm:px-1.5 lg:px-3 xl:px-3 2xl:px-3
+        py-1.5 sm:py-0.5 lg:py-1.5 xl:py-1.5 2xl:py-1.5
+        text-[1.25rem] sm:text-[0.5rem] lg:text-[1.15rem] xl:text-[1.15rem] 2xl:text-[1.5rem]
+        rounded
+        break-words leading-snug
+    ;
+}
+
+.friendMessages-txt {
+    @apply
+        flex-grow overflow-y-auto
+        select-none
+        font-[Tahoma]
+        p-2 sm:p-1 lg:p-2 xl:p-2 2xl:p-2
+        text-white
+        shrink-0
+        text-[1rem] sm:text-[0.5rem] lg:text-[1rem] xl:text-[1rem] 2xl:text-[1.5rem]
+    ;
 }
 
 /* #endregion */
 
-/* #region Self Code */
+/* #region Chat */
 
-.friend-code-display {
-    font-family: 'Luckiest Guy', cursive;
-    display: flex;
-    text-align: center;
-    justify-content: center;
-    font-size: 25px;
-    font-weight: bold;
-    color: white;
-    user-select: none;
+.chatTitle {
+    @apply
+        font-bold text-[#c1272d]
+        text-[3rem] sm:text-[1.35rem] lg:text-[2.5rem] xl:text-[3rem] 2xl:text-[2.75rem]
+        ml-2 sm:ml-1 lg:ml-2 xl:ml-2 2xl:ml-2
+        select-none
+    ;
 }
 
-.friend-code-display span {
-    color: #c49a6c;
-    font-weight: bold;
+.chatMessages-wrapper {
+    @apply
+        flex-grow overflow-y-auto
+        select-none
+        font-[Tahoma]
+        flex flex-col
+        gap-1 sm:gap-0.5 lg:gap-1 xl:gap-1 2xl:gap-1
+        p-2 sm:p-1 lg:p-2 xl:p-2 2xl:p-2
+    ;
 }
 
-.clipboard-icon {
-    width: 40px;
-    height: 40px;
-    margin-left: 8px;
-    cursor: pointer;
-    padding-top: 18px;
-    transition: transform 0.2s ease;
+.chatMessages-item {
+    @apply
+        max-w-[80%]
+        px-3 sm:px-1.5 lg:px-3 xl:px-3 2xl:px-3
+        py-1.5 sm:py-0.5 lg:py-1.5 xl:py-1.5 2xl:py-1.5
+        text-[1.25rem] sm:text-[0.5rem] lg:text-[1.15rem] xl:text-[1.15rem] 2xl:text-[1.5rem]
+        rounded
+        break-words leading-snug
+        self-start bg-[#444] text-white text-left
+    ;
 }
 
-.clipboard-icon:hover {
-    transform: scale(1.1);
+.chatMessages-txt {
+    @apply
+        flex-grow overflow-y-auto
+        select-none
+        font-[Tahoma]
+        p-2 sm:p-1 lg:p-2 xl:p-2 2xl:p-2
+        text-white
+        shrink-0
+        text-[1rem] sm:text-[0.5rem] lg:text-[1rem] xl:text-[1rem] 2xl:text-[1.5rem]
+    ;
+}
+
+/* #endregion */
+
+/* #region Friend Code */
+
+.friendCode-wrapper {
+    @apply
+        flex items-center justify-center text-white
+        text-[1.75rem] sm:text-[0.6rem] lg:text-[1.5rem] xl:text-[1.5rem] 2xl:text-[1.75rem]
+        font-bold font-[Luckiest_Guy] select-none
+    ;
+}
+
+.friendCode-img {
+    @apply 
+        w-12.5 sm:w-5 lg:w-12.5 xl:w-12.5 2xl:w-12.5
+        h-12.5 sm:h-5 lg:h-12.5 xl:h-12.5 2xl:h-12.5
+        ml-2 sm:ml-0.5 lg:ml-1 xl:ml-1 2xl:ml-2
+        cursor-pointer
+        transition-transform duration-200
+        hover:scale-110
+    ;
 }
 
 /* #endregion */
 
 .message-input {
-    width: 100%;
-    padding: 10px;
-    box-sizing: border-box;
-    border: 1px solid #ccc;
-    background-color: white;
-    margin-bottom: 10px;
-    font-size: 18px;
+    @apply
+        w-full
+        p-2 sm:p-0.5 lg:p-1.5 xl:p-2 2xl:p-2
+        box-border border border-[#ccc] bg-white text-black
+        mb-2 sm:mb-0.5 lg:mb-1.5 xl:mb-2 2xl:mb-2
+        text-[1.25rem] sm:text-[0.5rem] lg:text-[1.25rem] xl:text-[1.25rem] 2xl:text-[1.25rem]
+    ;
+}
+
+/* #endregion */
+
+/* #region Lobby Invitation */
+
+.lobby-invitation-wrapper {
+    @apply
+        fixed top-8 right-8
+        font-[Luckiest_Guy]
+        select-none
+        z-80
+    ;
+}
+
+.lobby-invitation-item {
+    @apply
+        flex flex-col items-center justify-center text-center
+        bg-gradient-to-r from-[#5a3e2b] to-[#3b2a1a]
+        border-2 border-[#8b5e3b]
+        p-2 sm:p-1 lg:p-2 xl:p-2.5 2xl:p-3
+        rounded gap-2
+        mb-1
+    ;
+}
+
+.lobby-invitation-txt {
+    @apply
+        text-white 
+        text-[1.25rem] sm:text-[.55rem] lg:text-[1.5rem] xl:text-[1.5rem] 2xl:text-[1.65rem]
+    ;
+}
+
+.lobby-invitation-btn {
+    @apply
+        leading-none
+        text-[1.25rem] sm:text-[.8rem] lg:text-[2.5rem] xl:text-[2.5rem] 2xl:text-[2rem]
+        px-[.5vw] sm:px-[.5vw] lg:px-[.75vw] xl:px-[.5vw] 2xl:px-[.5vw]
+        py-[.5vw] sm:py-[.5vw] lg:py-[.5vw] xl:py-[.35vw] 2xl:py-[.35vw]
+        rounded
+        h-fit
+        transition-colors duration-200
+    ;
+}
+
+/* #endregion */
+
+/* #region Avatar Icon */
+
+.avatar {
+    @apply
+        w-[80px] sm:w-[55px] lg:w-[100px] xl:w-[135px] 2xl:w-[155px]
+        h-[80px] sm:h-[55px] lg:h-[100px] xl:h-[135px] 2xl:h-[155px]
+        rounded-full cursor-pointer
+        border-2
+        border-white
+        mt-2 sm:mt-1 lg:mt-2 xl:mt-2 2xl:mt-2
+        transition-transform duration-200 ease-in-out
+        pointer-events-auto select-none
+        hover:scale-105
+    ;
 }
 
 /* #endregion */
 
 /* #region Avatar Info */
 
-/* #region Avatar Icons */
-
-.player-avatars {
-    position: absolute;
-    left: 15px;
-    top: 2.5%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    user-select: none;
+.avatar-wrapper {
+    @apply
+        fixed z-500
+        flex flex-col items-start
+        top-5 sm:top-1 lg:top-3 xl:top-3 2xl:top-4
+        left-5 sm:left-1 lg:left-3 xl:left-3 2xl:left-4
+        gap-1 sm:gap-0 lg:gap-1 xl:gap-1.5 2xl:gap-1
+        select-none
+    ;
 }
 
-.avatar-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    z-index: 10;
+.avatar-info-icon {
+    @apply
+        w-[100px] sm:w-[50px] lg:w-[90px] xl:w-[95px] 2xl:w-[100px]
+        h-[100px] sm:h-[50px] lg:h-[90px] xl:h-[95px] 2xl:h-[100px]
+        border-3 sm:border-2 lg:border-3 xl:border-3 2xl:border-3
+        rounded-full
+        z-10
+    ;
 }
 
-.avatar-image {
-    width: 85px;
-    height: 85px;
-    border-radius: 50%;
-    border: 3px solid transparent;
-    z-index: 1;
+.avatar-info-wrapper {
+    @apply
+        bg-black/80
+        rounded-xl sm:rounded-lg lg:rounded-xl xl:rounded-lg 2xl:rounded-xl
+        min-w-[250px] sm:min-w-[125px] lg:min-w-[250px] xl:min-w-[200px] 2xl:min-w-[250px]
+        h-[95px] sm:h-[50px] lg:h-[85px] xl:h-[85px] 2xl:h-[95px]
+        flex flex-row items-center justify-between
+        shadow-[2px_2px_6px_rgba(0,0,0,0.6)]
+        pl-[60px] sm:pl-[30px] lg:pl-[60px] xl:pl-[55px] 2xl:pl-[60px]
+        pr-4 sm:pr-2 lg:pr-4 xl:pr-4 2xl:pr-4
+        -ml-[50px] sm:-ml-[25px] lg:-ml-[50px] xl:-ml-[45px] 2xl:-ml-[50px]
+        animate-[slideIn_0.3s_ease-out_forwards]
+    ;
 }
 
-.active-player .avatar-image {
-    border-color: red;
+.avatar-info-name {
+    @apply
+        text-[1.5rem] sm:text-[0.75rem] lg:text-[1.25rem] xl:text-[1.25rem] 2xl:text-[1.5rem]
+        font-bold
+    ;
+}
+
+.avatar-info-title {
+    @apply
+        text-[1.2rem] sm:text-[0.6rem] lg:text-[1rem] xl:text-[1rem] 2xl:text-[1.2rem]
+        font-semibold
+        -mt-1
+    ;
+}
+
+.avatar-info-btn-wrapper {
+    @apply
+        flex flex-col
+        gap-1 sm:gap-0.5 lg:gap-1 xl:gap-1 2xl:gap-1
+        mr-1
+        items-center justify-center
+    ;
+}
+
+.avatar-info-btn {
+    @apply
+        bg-[#ff4b4b] border-none
+        w-[25px] sm:w-[12px] lg:w-[22px] xl:w-[22px] 2xl:w-[25px]
+        h-[25px] sm:h-[12px] lg:h-[22px] xl:h-[22px] 2xl:h-[25px]
+        rounded-md sm:rounded-[2px] lg:rounded-sm xl:rounded-md 2xl:rounded-md
+        text-[1.5rem] sm:text-[0.75rem] lg:text-[1.25rem] xl:text-[1.3rem] 2xl:text-[1.5rem]
+        font-semibold text-white
+        cursor-pointer transition-transform duration-200
+        flex items-center justify-center
+        p-1.5
+    ;
+}
+
+.avatar-info-text {
+    @apply
+        inline-block
+        -translate-y-[0.75px] sm:-translate-y-[0.75px] lg:-translate-y-[2.5px] xl:-translate-y-[0.75px] 2xl:-translate-y-[2px]
+    ;
 }
 
 /* #endregion */
 
-.avatar-popup {
-    position: absolute;
-    top: 3px;
-    left: 100%;
-    margin-left: -50px;
-    background: rgba(0, 0, 0, 0.8);
-    border-radius: 12px;
-    min-width: 220px;
-    height: 85px;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.6);
-    animation: slideIn 0.2s ease-out;
+/* #region Theme Selector */
+
+.theme-wrapper {
+    @apply
+        fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+        bg-black/90 rounded text-center
+        p-5 sm:p-2.5 lg:p-4 xl:p-4 2xl:p-6
+        font-[Luckiest_Guy] text-[#a65a2e] z-10
+        w-[40vw] sm:w-[45vw] lg:w-[60vw] xl:w-[55vw] 2xl:w-[40vw]
+        max-h-[80vh] sm:max-h-[95vh] lg:max-h-[90vh] xl:max-h-[90vh] 2xl:max-h-[90vh]
+    ;
 }
 
-.popup-content {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    color: white;
-    margin-left: 55px;
-    font-family: 'Luckiest Guy', cursive;
+.theme-title {
+    @apply
+        font-bold pointer-events-none select-none
+        text-[2rem] sm:text-[1rem] lg:text-[2rem] xl:text-[3rem]
+        mb-1 sm:mb-1 lg:mb-2
+    ;
 }
 
-.popup-name {
-    font-size: 25px;
-    font-weight: bold;
-    margin-top: 20px;
+.theme-styles {
+    @apply
+        flex flex-wrap justify-center
+        gap-2 sm:gap-2.5 lg:gap-3 xl:gap-4 2xl:gap-3
+        mt-2
+    ;
 }
 
-.popup-title {
-    font-size: 16px;
-    text-align: center;
-    margin-top: -20px;
+.theme-item {
+    @apply
+        w-[120px] sm:w-[60px] lg:w-[120px] xl:w-[135px] 2xl:w-[145px]
+        h-[170px] sm:h-[85px] lg:h-[170px] xl:h-[185px] 2xl:h-[195px]
+        border-3 sm:border-2 lg:border-3 xl:border-4
+        rounded sm:rounded-md lg:rounded-xl xl:rounded-xl 2xl:rounded-2xl
+        flex items-center justify-center overflow-hidden
+        transition-transform duration-200 ease-in-out
+        hover:scale-105 
+    ;
 }
 
-.popup-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    margin-right: 10px;
-    align-items: center;
-    justify-content: center;
+.picker-wrapper {
+    @apply
+        flex justify-center items-center
+        gap-1 sm:gap-1 lg:gap-2 xl:gap-3 2xl:gap-4
+        mt-1 sm:mt-1.5 lg:mt-2 xl:mt-2 2xl:mt-2
+        py-1 sm:py-1 lg:py-2 xl:py-3 2xl:py-3
+        bg-black/60 rounded
+        border-2
+        border-[#a65a2e] w-full
+    ;
 }
 
-.popup-actions button {
-    background-color: #ff4b4b;
-    border: none;
-    color: white;
-    width: 22px;
-    height: 22px;
-    border-radius: 6px;
-    font-size: 15px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    align-content: center;
-    line-height: 15px;
-    padding: 0px;
-    text-align: center;
+.picker-text {
+    @apply
+        text-[1rem] sm:text-[0.65rem] lg:text-[1.5rem] xl:text-[1.75rem] 2xl:text-[2rem]
+        font-bold text-[#a65a2e]
+        pointer-events-none select-none
+    ;
 }
 
-.popup-actions button:hover {
-    transform: scale(1.1);
+.picker-color {
+    @apply
+        w-[25px] sm:w-[25px] lg:w-[40px] xl:w-[45px] 2xl:w-[50px]
+        h-[25px] sm:h-[25px] lg:h-[40px] xl:h-[45px] 2xl:h-[50px]
+        rounded-full
+        cursor-pointer bg-transparent
+        transition-transform duration-200 ease-in-out
+        hover:scale-110 hover:border-[#e33e3e]
+    ;
 }
 
-.popup-actions button:active {
-    transform: scale(1);
+.rounded-color-fix {
+  -webkit-appearance: none;
+     -moz-appearance: none;
+          appearance: none;
+  padding: 0;
 }
 
-@keyframes slideIn {
-    from {
-        transform: translateX(-10px);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
+.rounded-color-fix::-webkit-color-swatch-wrapper {
+  padding: 0;
+  border: none;
 }
 
-.arrow-up,
-.arrow-down {
-    display: inline-block;
-    transform: translateY(-3px);
+.rounded-color-fix::-webkit-color-swatch {
+  border: none;
+  border-radius: 50%;
 }
 
-.avatar-image:hover {
-    transform: scale(1.1);
+.rounded-color-fix::-moz-color-swatch {
+  border: none;
+  border-radius: 50%;
 }
 
-.avatar-image:active {
-    transform: scale(1);
+.theme-btns {
+    @apply
+        flex justify-center
+        gap-2 sm:gap-2 lg:gap-3 xl:gap-4 2xl:gap-5
+        mt-2 sm:mt-0.5 lg:mt-3 xl:mt-4 2xl:mt-5
+    ;
+}
+
+
+
+/* #endregion */
+
+/* #region Picture Cropper */
+
+.cropper-wrapper {
+    @apply
+        fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+        bg-black/80
+        p-5 sm:p-5 lg:p-4 xl:p-5 2xl:p-6
+        rounded text-center
+        font-[Luckiest_Guy] text-[#a65a2e] z-10
+        min-w-[50vw] sm:min-w-[40vw] lg:min-w-[55vw] xl:min-w-[40vw] 2xl:min-w-[30vw]
+    ;
+}
+
+.cropper-h2 {
+    @apply
+        pointer-events-none select-none
+        text-[1.5rem] sm:text-[1.25rem] lg:text-[1.75rem] xl:text-[2.25rem] 2xl:text-[2.5rem]
+    ;
+}
+
+.cropper-list {
+    @apply
+        flex justify-center
+        gap-2 sm:gap-2 lg:gap-3 xl:gap-3 2xl:gap-4
+        mt-1 sm:mt-0.5 lg:mt-2 xl:mt-2 2xl:mt-3
+        mb-1 sm:mb-0.5 lg:mb-2 xl:mb-2 2xl:mb-3
+        select-none
+    ;
+}
+
+.cropper-item {
+    @apply
+        w-[120px] sm:w-[60px] lg:w-[125px] xl:w-[125px] 2xl:w-[150px]
+        h-[120px] sm:h-[60px] lg:h-[125px] xl:h-[125px] 2xl:h-[150px]
+        rounded-full
+        cursor-pointer border-white
+        border-2 lg:border-3
+        transition-transform duration-200 ease-in-out
+        hover:scale-105 hover:border-[#a12727]
+    ;
+}
+
+.cropper-h3 {
+    @apply
+        pointer-events-none select-none
+        text-[1.25rem] sm:text-[1rem] lg:text-[1.5rem] xl:text-[2rem] 2xl:text-[2.25rem]
+        mb-2
+    ;
+}
+
+.cropper-upload {
+    @apply
+        inline-block
+        px-1 sm:px-1.5 lg:px-2 xl:px-2.5 2xl:px-2.5
+        py-1 sm:py-1.5 lg:py-2 xl:py-2.5 2xl:py-2.5
+        bg-[#ff4b4b] text-white rounded
+        cursor-pointer text-center
+        text-[1.25rem] sm:text-[0.75rem] lg:text-[1.25rem] xl:text-[1.75rem] 2xl:text-[2rem]
+        transition-colors duration-200
+        hover:bg-[#e03e3e]
+    ;
+}
+
+.upload-wrapper {
+    @apply
+        relative w-full
+        mt-3 sm:mt-1 lg:mt-2 xl:mt-2 2xl:mt-2
+        h-[400px] sm:h-[120px] lg:h-[320px] xl:h-[360px] 2xl:h-[390px]
+        bg-[#222]
+        rounded-[10px]
+        overflow-hidden
+        flex flex-col items-center justify-center
+    ;
+}
+
+.upload-actions {
+    @apply
+        mt-1 sm:mt-0 lg:mt-2 xl:mt-1 2xl:mt-1
+        w-full flex justify-center
+        mb-1 sm:mb-0 lg:mb-1 xl:mb-1 2xl:mb-1
+    ;
+}
+
+/* #endregion */
+
+/* #region Player Cards */
+
+.player-cards-wrapper {
+    @apply
+        flex items-center justify-center
+        gap-2 sm:gap-0.5 lg:gap-1 xl:gap-1.5 2xl:gap-2
+        z-30
+    ;
+}
+
+/* #endregion */
+
+/* #region Card */
+
+.card-wrapper {
+    @apply
+        relative 
+        h-[200px] sm:h-[79px] lg:h-[128px] xl:h-[163px] 2xl:h-[200px]
+        w-[140px] sm:w-[55px] lg:w-[90px] xl:w-[115px] 2xl:w-[140px]
+        cursor-pointer select-none
+        [transform-style:preserve-3d] 
+        transition-all duration-500 ease-in-out
+    ;
+}
+
+.card-front {
+    @apply
+        absolute 
+        w-full 
+        h-full 
+        rounded-xl sm:rounded-md lg:rounded-lg xl:rounded-lg 2xl:rounded-xl
+        flex items-center justify-center 
+        box-border
+        bg-center bg-contain bg-no-repeat
+        bg-white [backface-visibility:hidden]
+        transition-transform duration-200 ease-in-out
+    ;
+}
+
+.card-back {
+    @apply
+        absolute 
+        w-full 
+        h-full 
+        rounded-xl sm:rounded-md lg:rounded-lg xl:rounded-xl 2xl:rounded-xl
+        flex items-center justify-center
+        bg-center bg-cover
+        bg-white
+        [backface-visibility:hidden]
+        transition-transform duration-200 ease-in-out
+    ;
+}
+
+/* #endregion */
+
+/* #region Turn Info */
+
+.turn-info-wrapper {
+    @apply
+        font-['Luckiest_Guy']
+        text-[2.5rem] sm:text-[1rem] lg:text-[1.5rem] xl:text-[1.9rem] 2xl:text-[2.4rem]
+        text-[#f5e1a4]
+        -mt-3 sm:-mt-2 lg:-mt-2 xl:-mt-2 2xl:-mt-4
+        select-none
+    ;
+}
+
+/* #endregion */
+
+/* #region Phase 1 Layout */
+
+.phase1-cards-wrapper {
+    @apply
+        flex flex-col items-center justify-center
+        mt-5 sm:mt-2 lg:mt-4 xl:mt-5 2xl:mt-6
+        select-none
+    ;
+}
+
+.phase1-cards-row {
+    @apply
+        flex justify-center
+        gap-14 sm:gap-4.5 lg:gap-8.5 xl:gap-9.5 2xl:gap-11
+        -mt-11 sm:-mt-3.5 lg:-mt-7 xl:-mt-7.5 2xl:-mt-9
+    ;
+}
+
+.phase1-cards-row .card-wrapper {
+    @apply
+        h-[200px] sm:h-[54px] lg:h-[106px] xl:h-[118px] 2xl:h-[150px]
+        w-[140px] sm:w-[38px] lg:w-[75px] xl:w-[85px] 2xl:w-[110px]
+    ;
+}
+
+/* #endregion */
+
+/* #region Phase 2 Layout */
+
+.phase2-cards-wrapper {
+    @apply
+        flex justify-center items-center
+        gap-2 sm:gap-1 lg:gap-2 xl:gap-2 2xl:gap-2
+        mt-2 sm:-mt-1 lg:mt-1 xl:mt-1 2xl:mt-2
+        mb-6 sm:mb-2 lg:mb-2 xl:mb-2 2xl:mb-6
+        min-h-[290px] sm:min-h-[100px] lg:min-h-[220px] xl:min-h-[230px] 2xl:min-h-[290px]
+    ;
+}
+
+/* #endregion */
+
+/* #region Phase 3 Layout */
+
+.phase3-cards-wrapper {
+    @apply
+        flex flex-row items-center justify-center
+        mt-2 sm:mt-0 lg:mt-2 xl:mt-0 2xl:mt-2
+        mb-6 sm:mb-2 lg:mb-2 xl:mb-1 2xl:mb-6
+        gap-1 sm:gap-0.5 lg:gap-1 xl:gap-1 2xl:gap-1
+    ;
+}
+
+.phase3-cards-row {
+    @apply
+        flex flex-col justify-center
+        gap-1 sm:gap-0.5 lg:gap-1 xl:gap-1 2xl:gap-1
+    ;
+}
+
+.card-action-btn-wrapper {
+    @apply
+        absolute
+        top-1/2
+        left-1/2
+        -translate-x-1/2
+        -translate-y-1/2
+        flex flex-col justify-center items-center
+        [transform:rotateY(-180deg)]
+        gap-1 sm:gap-0.25 lg:gap-1 xl:gap-1 2xl:gap-1
+        transition-opacity duration-370 ease-in-out
+    ;
+}
+
+.card-action-btn {
+    @apply
+        bg-white
+        border-[2px]
+        w-[30px] sm:w-[15px] lg:w-[30px] xl:w-[30px] 2xl:w-[30px]
+        h-[30px] sm:h-[15px] lg:h-[30px] xl:h-[30px] 2xl:h-[30px]
+        flex justify-center items-center font-mono 
+        text-[1.5rem] sm:text-[0.75rem] lg:text-[1.5rem] xl:text-[1.5rem] 2xl:text-[1.5rem]
+        leading-none rounded
+        transition-all duration-200 ease-in-out
+        hover:scale-105 hover:origin-center
+        active:scale-95
+    ;
+}
+
+.phase3-cards-row .card-wrapper {
+    @apply
+        h-[200px] sm:h-[54px] lg:h-[106px] xl:h-[118px] 2xl:h-[140px]
+        w-[140px] sm:w-[38px] lg:w-[75px] xl:w-[85px] 2xl:w-[100px]
+    ;
 }
 
 /* #endregion */
 
 /* #region Home Page */
 
-.main-menu {
-    text-align: center;
-    color: white;
-    height: 98vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 2;
+.home-wrapper {
+    @apply
+        bg-[url('/backgrounds/overlay.webp')] 
+        bg-contain bg-no-repeat bg-center z-20
+        aspect-[2.25/2.5]
+        w-[47.5vw] sm:w-[95vw] lg:w-[90vw] 2xl:w-[100vw]
+        h-[92.5vh] sm:h-[90vh] lg:h-[92.5vh] 2xl:h-[95vh]
+        flex flex-col items-center justify-center text-center
+        drop-shadow-[20px_20px_30px_rgba(0,0,0,1)]
+    ;
 }
 
-.home-logo {
-    pointer-events: none;
-    user-select: none;
-    width: 85%;
+.home-menu {
+    @apply
+        font-serif 
+        font-bold text-white
+        mt-[-4vh] sm:mt-[-1vh] lg:mt-[-3vh] xl:mt-[-4vh] 2xl:mt-[-4vh]
+        text-[4.5rem] sm:text-[1.5rem] lg:text-[3.5rem] xl:text-[4rem] 2xl:text-[4.25rem]
+        pointer-events-none select-none
+    ;
 }
 
-@keyframes pulsate {
-    0% {
-        transform: scale(1) rotate(12.5deg);
-        opacity: 1;
-    }
-    50% {
-        transform: scale(1.08) rotate(12.5deg);
-        opacity: 1;
-    }
-    100% {
-        transform: scale(1) rotate(12.5deg);
-        opacity: 1;
-    }
+.home-btn {
+    @apply
+        w-[15.5vw] sm:w-[20vw] lg:w-[40vw] xl:w-[45vw] 2xl:w-[25vw]
+        h-[10vh] sm:h-[10vh] lg:h-[10vh] xl:h-[10vh] 2xl:h-[10vh]
+    ;
 }
 
-.drink-quote {
-    position: absolute;
-    top: -40px;
-    right: -70px;
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: #d10000;
-    transform: rotate(12.5deg);
-    text-shadow: 1px 1px 2px #000;
-    animation: pulsate 2.2s ease-in-out infinite;
-    z-index: 10;
-    pointer-events: none;
+.settings-btn {
+    @apply
+        bg-contain bg-no-repeat bg-center z-30
+        fixed
+        bottom-4 sm:bottom-1.5 lg:bottom-6 xl:bottom-8 2xl:bottom-4
+        right-4 sm:right-2 lg:right-4 xl:right-6 2xl:right-4
+        w-[175px] sm:w-[70px] lg:w-[130px] xl:w-[150px] 2xl:w-[175px]
+        h-[175px] sm:h-[70px] lg:h-[130px] xl:h-[150px] 2xl:h-[175px]
+        rounded-full
+        overflow-hidden
+        transition duration-200 ease-in-out 
+        cursor-pointer
+        hover:shadow-[6px_6px_12px_rgba(0,0,0,0.6)]
+        hover:scale-105
+    ;
 }
-
-.game-logo-wrapper {
-    position: absolute;
-    top: 90px;
-}
-
-.home-title {
-    font-family: serif;
-    font-size: 4.5rem;
-    margin-bottom: 2%;
-    pointer-events: none;
-    user-select: none;
-}
-
-/* #region Play Button */
-
-.play-cont {
-    position: relative;
-    display: inline-block;
-}
-
-.play-cont button {
-    position: relative;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-play img {
-    width: 310px;
-    height: auto;
-    display: block;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2);
-    border-radius: 10px;
-    transition: all 0.1s ease-in-out;
-    pointer-events: none;
-    user-select: none;
-}
-
-.btn-play-disabled img {
-    width: 310px;
-    height: auto;
-    display: block;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2);
-    border-radius: 10px;
-    transition: all 0.1s ease-in-out;
-    pointer-events: none;
-    user-select: none;
-}
-
-.btn-text-play {
-    position: absolute;
-    top: -17%;
-    left: 15%;
-    font-family: 'Luckiest Guy', cursive;
-    font-size: 35px;
-    color: white;
-    text-shadow: 3px 3px 8px rgba(0, 0, 0, 0.7);
-    pointer-events: none;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-play:hover img {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
-    transform: translateY(-3px);
-}
-
-.btn-play:active img {
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    transform: translateY(2px);
-}
-
-.btn-play:hover p {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0);
-    transform: translateY(-3px);
-}
-
-/* #endregion */
-
-/* #region Join Button */
-
-.lobby-cont {
-    position: relative;
-    display: inline-block;
-    margin-top: 10px;
-}
-
-.lobby-cont button {
-    position: relative;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-lobby img {
-    width: 310px;
-    height: auto;
-    display: block;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2);
-    border-radius: 10px;
-    transition: all 0.1s ease-in-out;
-    pointer-events: none;
-    user-select: none;
-}
-
-.btn-lobby-disabled img {
-    width: 310px;
-    height: auto;
-    display: block;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2);
-    border-radius: 10px;
-    transition: all 0.1s ease-in-out;
-    pointer-events: none;
-    user-select: none;
-}
-
-.btn-text-lobby {
-    position: absolute;
-    top: -17%;
-    left: 22%;
-    font-family: 'Luckiest Guy', cursive;
-    font-size: 35px;
-    color: white;
-    text-shadow: 3px 3px 8px rgba(0, 0, 0, 0.7);
-    pointer-events: none;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-lobby:hover img {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
-    transform: translateY(-3px);
-}
-
-.btn-lobby:active img {
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    transform: translateY(2px);
-}
-
-.btn-lobby:hover p {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0);
-    transform: translateY(-3px);
-}
-
-/* #endregion */
-
-/* #region Settings Button */
-
-.settings-button {
-    position: absolute;
-    display: inline-block;
-    bottom: 180px;
-    right: 180px;
-}
-
-.settings-button button {
-    position: absolute;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn img {
-    width: 150px;
-    height: auto;
-    display: block;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.4);
-    border-radius: 65px;
-    transition: all 0.1s ease-in-out;
-    pointer-events: none;
-}
-
-.btn:hover img {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
-    transform: translateY(-3px);
-}
-
-.btn:active img {
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    transform: translateY(2px);
-}
-
-/* #endregion */
 
 /* #endregion */
 
 /* #region Access Page */
 
-.access-menu {
-    text-align: center;
-    color: white;
-    height: 98vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 2;
+.access-wrapper {
+    @apply
+        bg-[url('/backgrounds/overlay.webp')] 
+        bg-contain bg-no-repeat bg-center z-20
+        aspect-[2.25/2.5]
+        w-[47.5vw] sm:w-[95vw] lg:w-[90vw] 2xl:w-[100vw]
+        h-[92.5vh] sm:h-[90vh] lg:h-[92.5vh] 2xl:h-[95vh]
+        flex flex-col items-center justify-center text-center
+        drop-shadow-[20px_20px_30px_rgba(0,0,0,1)]
+    ;
 }
 
 .access-logo {
-    position: absolute;
-    width: 12%;
-    top: 70px;
-    pointer-events: none;
-    user-select: none;
+    @apply
+        flex flex-col items-center 
+        gap-2
+        mb-2 sm:mb-0 lg:mb-0 xl:mb-4 2xl:mb-4
+        mt-[-30vh] sm:mt-[-5vh] lg:mt-[-7.5vh] xl:mt-[-7.5vh] 2xl:mt-[-10vh]
+        w-[15vw] sm:w-[12.5vw] lg:w-[17.5vw] xl:w-[15vw] 2xl:w-[12vw]
+        pointer-events-none select-none
+    ;
 }
 
-.access-title {
-    font-family: serif;
-    font-size: 4rem;
-    margin-bottom: 5%;
-    pointer-events: none;
-    user-select: none;
+.access-home {
+    @apply
+        font-serif 
+        font-bold text-white
+        text-[4.5rem] sm:text-[1.25rem] lg:text-[3.25rem] xl:text-[3rem] 2xl:text-[3.5rem]
+        pointer-events-none select-none
+    ;
 }
 
-.rustic-input-access {
-    background: url('/wood_green.svg');
-    background-size: cover;
-    font-family: 'Cinzel', serif;
-    font-size: 27px;
-    color: #f5e1a4;
-    box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.6);
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-    border-radius: 5px;
-    outline: none;
-    height: 45px;
+.access-btn {
+    @apply
+        w-[15.5vw] sm:w-[20vw] lg:w-[40vw] xl:w-[45vw] 2xl:w-[20vw]
+        h-[10vh] sm:h-[10vh] lg:h-[10vh] xl:h-[10vh] 2xl:h-[10vh]
+        text-[2.75rem] sm:text-[0.75rem] lg:text-[2rem] xl:text-[2.5rem] 2xl:text-[2.5rem]
+        cursor-pointer
+    ;
 }
 
-/* #region Access Button */
-
-.access-cont {
-    position: relative;
-    display: inline-block;
+.access-txt {
+    @apply
+        text-[2.75rem] sm:text-[0.75rem] lg:text-[1.75rem] xl:text-[2.25rem]
+        min-w-[30rem] sm:min-w-[10rem] lg:min-w-[30rem]
+        pt-1 sm:pt-0 lg:pt-4 xl:pt-8 2xl:pt-5
+        text-white font-bold font-[Luckiest_Guy]
+        [text-shadow:1px_1px_2px_black]
+        hover:scale-105
+    ;
 }
-
-.access-cont button {
-    position: relative;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-access img {
-    width: 280px;
-    height: auto;
-    display: block;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2);
-    border-radius: 10px;
-    transition: all 0.1s ease-in-out;
-    pointer-events: none;
-    user-select: none;
-}
-
-.btn-access {
-    position: relative;
-    display: inline-block;
-    border: none;
-    background: none;
-    padding: 0;
-    cursor: pointer;
-}
-
-.btn-text-access {
-    position: absolute;
-    top: 5%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-family: 'Luckiest Guy', cursive;
-    font-size: 35px;
-    color: white;
-    text-shadow: 3px 3px 8px rgba(0, 0, 0, 0.7);
-    pointer-events: none;
-    transition: all 0.1s ease-in-out;
-    text-align: center;
-    white-space: nowrap;
-}
-
-.btn-access:hover img {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
-    transform: translateY(-3px);
-}
-
-.btn-access:active img {
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    transform: translateY(2px);
-}
-
-.btn-access:hover p {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0);
-    transform: translate(-50%, -25px);
-}
-
-/* #endregion */
-
-/* #region Switch Button */
-
-.switch-cont {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-}
-
-.btn-switch {
-    position: absolute;
-    margin-top: 3%;
-    font-family: 'Luckiest Guy', cursive;
-    font-size: 30px;
-    color: white;
-    text-shadow: 3px 3px 8px rgba(0, 0, 0, 0.7);
-    transition: all 0.1s ease-in-out;
-    text-align: center;
-    background: none;
-    border: none;
-}
-
-.btn-switch:hover {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.2);
-    transform: translateY(-3px);
-}
-
-.btn-switch:active {
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    transform: translateY(2px);
-}
-
-/* #endregion */
 
 /* #endregion */
 
 /* #region Account Page */
 
+.account-wrapper {
+    @apply
+        bg-[url('/backgrounds/overlay_account.webp')] 
+        bg-contain bg-no-repeat bg-center z-20
+        aspect-[2.25/2.5]
+        w-[47.5vw] sm:w-[95vw] lg:w-[100vw] 2xl:w-[100vw]
+        h-[92.5vh] sm:h-[90vh] lg:h-[92.5vh] 2xl:h-[95vh]
+        flex flex-col items-center justify-center text-center
+        drop-shadow-[20px_20px_30px_rgba(0,0,0,1)]
+    ;
+}
+
+.account-home {
+    @apply
+        font-serif 
+        font-bold text-white
+        text-[4.5rem] sm:text-[1.25rem] lg:text-[2.75rem] xl:text-[3rem] 2xl:text-[3.5rem]
+        mt-2 sm:-mt-2 lg:-mt-2 xl:-mt-5 2xl:-mt-10
+        mb-2 sm:-mb-3 lg:-mb-4 xl:-mb-4 2xl:-mb-2
+        pointer-events-none select-none
+    ;
+}
+
 .account-menu {
-    text-align: center;
-    color: white;
-    height: 98vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 2;
+    @apply
+        flex w-full justify-center
+        font-[Luckiest_Guy]
+        text-[#f5e1a4]
+        gap-16 sm:gap-10 lg:gap-10 xl:gap-15
+        min-h-[725px] sm:min-h-[60vh] lg:min-h-[50vh] xl:min-h-[50vh] 2xl:min-h-[65vh]
+    ;
 }
 
-.account-title {
-    position: absolute;
-    font-size: 4rem;
-    top: 20px;
-    font-family: 'Luckiest Guy', cursive;
-    color: white;
-    pointer-events: none;
-    user-select: none;
-}
-
-.account-container {
-    position: absolute;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    font-family: 'Luckiest Guy', cursive;
-    font-size: 20px;
-    color: #f5e1a4;
-    top: 140px;
+.account-btn {
+    @apply
+        w-[15.5vw] sm:w-[25.5vw] lg:w-[30vw] xl:w-[40vw] 2xl:w-[28.5vw]
+        h-[10vh] sm:h-[10vh] lg:h-[10vh] xl:h-[11vh] 2xl:h-[10vh]
+    ;
 }
 
 /* #region Account Options */
 
-.options-box {
-    position: absolute;
-    text-align: center;
-    width: 350px;
-    right: 100px;
+.options-wrapper {
+    @apply
+        flex flex-col items-center
+        text-center
+        w-[50vw] sm:w-[25vw] lg:w-[35vw] xl:w-[35vw] 2xl:w-[25vw]
+    ;
 }
 
-.options-box h2 {
-    text-align: center;
-    font-size: 45px;
-    margin-top: 10px;
-    color: #a65a2e;
-    margin-bottom: 0px;
-    border-bottom: 2px solid #a65a2e;
-    pointer-events: none;
-    user-select: none;
+.options-title {
+    @apply
+        text-[3rem] sm:text-[1rem] lg:text-[2rem] xl:text-[2.5rem] 2xl:text-[3rem]
+        text-[#a65a2e] 
+        border-b-2 sm:border-b-1 lg:border-b-2
+        border-[#a65a2e]
+        select-none pointer-events-none
+        w-[50vw] sm:w-[25vw] lg:w-[35vw] xl:w-[35vw] 2xl:w-[25vw]
+    ;
 }
 
-.avatar {
-    width: 150px;
-    height: 150px;
-    border-radius: 50%;
-    cursor: pointer;
-    border: 2px solid white;
-    transition: transform 0.2s ease-in-out;
-    margin-top: 25px;
-    pointer-events: auto;
-    user-select: none;
-    -webkit-user-drag: none;
-}
-
-.avatar:hover {
-    transform: scale(1.1);
-}
-
-.dropdown-style {
-    font-family: 'Arial ', sans-serif;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 170px;
-    padding: 10px;
-    background-color: #222;
-    color: white;
-    border: 2px solid #a65a2e;
-    border-radius: 7px;
-    cursor: pointer;
-    font-size: 20px;
-    user-select: none;
-}
-
-.dropdown-style:hover {
-    border-color: #e33e3e;
+.options-theme {
+    @apply
+        flex items-center justify-between
+        w-[40vw] sm:w-[17.5vw] lg:w-[15vw] xl:w-[15vw] 2xl:w-[12.5vw]
+        px-1
+        py-0.5
+        bg-[#222] text-white
+        text-[1.5rem] sm:text-[0.75rem] lg:text-[1.25rem] xl:text-[1.5rem] 2xl:text-[1.75rem]
+        border-2 sm:border-1 lg:border-2
+        border-[#a65a2e] 
+        rounded font-sans
+        cursor-pointer select-none
+        transition-all duration-300 ease-in-out
+        hover:border-[#e33e3e]
+    ;
 }
 
 /* #endregion */
 
 /* #region Account Statistics */
 
-.stats-box {
-    position: absolute;
-    text-align: center;
-    width: 400px;
-    left: 100px;
+.statistics-wrapper {
+    @apply
+        flex flex-col
+        text-center
+        w-[400px] sm:w-[25vw] lg:w-[35vw] xl:w-[35vw] 2xl:w-[25vw]
+    ;
 }
 
-.stats-content {
-    max-height: 580px;
-    overflow-y: auto;
-    padding-right: 15px;
+.statistics-title {
+    @apply
+        text-[3rem] sm:text-[1rem] lg:text-[2rem] xl:text-[2.5rem] 2xl:text-[3rem]
+        text-[#a65a2e] 
+        border-b-2 sm:border-b-1 lg:border-b-2
+        border-[#a65a2e]
+        select-none pointer-events-none
+    ;
 }
 
-.stats-content::-webkit-scrollbar {
-    width: 8px;
-}
-.stats-content::-webkit-scrollbar-thumb {
-    background-color: #ffd700;
-    border-radius: 4px;
-}
-
-.stats-box h2 {
-    text-align: center;
-    font-size: 45px;
-    margin-top: 10px;
-    color: #a65a2e;
-    margin-bottom: 0px;
-    border-bottom: 2px solid #a65a2e;
-    pointer-events: none;
-    user-select: none;
+.statistics-list {
+    @apply
+        mt-2
+        max-h-[725px] sm:max-h-[55vh] lg:max-h-[40vh] xl:max-h-[50vh] 2xl:max-h-[52vh]
+        overflow-y-auto
+        pr-4
+    ;
 }
 
-.stats-box p {
-    font-size: 25px;
-    display: flex;
-    justify-content: space-between;
-    padding: 4px;
-    border-bottom: 1px solid #f5e1a4;
-    pointer-events: none;
-    user-select: none;
-}
-
-/* #endregion */
-
-/* #region Logout Button */
-
-.account-cont {
-    position: absolute;
-    display: inline-block;
-    bottom: 65px;
-}
-
-.account-cont button {
-    position: relative;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    transition: all 0.1s ease-in-out;
-    margin-right: 10px;
-}
-
-.btn-account img {
-    width: 310px;
-    height: auto;
-    display: block;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2);
-    border-radius: 10px;
-    transition: all 0.1s ease-in-out;
-    pointer-events: none;
-    user-select: none;
-}
-
-.btn-text-account {
-    position: absolute;
-    top: -18%;
-    left: 29%;
-    font-family: 'Luckiest Guy', cursive;
-    font-size: 35px;
-    color: white;
-    text-shadow: 3px 3px 8px rgba(0, 0, 0, 0.7);
-    pointer-events: none;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-account:hover img {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
-    transform: translateY(-3px);
-}
-
-.btn-account:active img {
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    transform: translateY(2px);
-}
-
-.btn-account:hover p {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0);
-    transform: translateY(-3px);
-}
-
-.btn-achievements img {
-    width: 310px;
-    height: auto;
-    display: block;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2);
-    border-radius: 10px;
-    transition: all 0.1s ease-in-out;
-    pointer-events: none;
-    user-select: none;
-}
-
-.btn-text-achievements {
-    position: absolute;
-    top: -18%;
-    left: 11%;
-    font-family: 'Luckiest Guy', cursive;
-    font-size: 35px;
-    color: white;
-    text-shadow: 3px 3px 8px rgba(0, 0, 0, 0.7);
-    pointer-events: none;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-achievements:hover img {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
-    transform: translateY(-3px);
-}
-
-.btn-achievements:active img {
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    transform: translateY(2px);
-}
-
-.btn-achievements:hover p {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0);
-    transform: translateY(-3px);
-}
-
-/* #endregion */
-
-.modal-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-}
-
-/* #region Avatar Modal */
-
-.avatar-modal {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(0, 0, 0, 0.8);
-    padding: 20px;
-    border-radius: 10px;
-    text-align: center;
-    font-family: 'Luckiest Guy', cursive;
-    color: #a65a2e;
-    z-index: 10;
-}
-
-.avatar-modal h2 {
-    pointer-events: none;
-    user-select: none;
-}
-
-.avatar-modal h3 {
-    pointer-events: none;
-    user-select: none;
-}
-
-.avatar-selection {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin-bottom: 10px;
-    user-select: none;
-}
-
-.avatar-option {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    cursor: pointer;
-    border: 2px solid white;
-    transition: transform 0.2s ease-in-out;
-}
-
-.avatar-option:hover {
-    transform: scale(1.2);
-    border-color: #a12727;
-}
-
-.hidden-file-input {
-    display: none;
-}
-
-.custom-file-upload {
-    display: inline-block;
-    padding: 10px 15px;
-    background-color: #ff4b4b;
-    color: white;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 16px;
-    text-align: center;
-    margin-bottom: 15px;
-    font-family: 'Arial ', sans-serif;
-    user-select: none;
-}
-
-.custom-file-upload:hover {
-    background-color: #e33e3e;
-}
-
-/* #endregion */
-
-/* #region Picture Cropper */
-
-.crop-container {
-    position: relative;
-    width: 100%;
-    height: 400px;
-    background: #222;
-    border-radius: 10px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-}
-
-.crop-actions {
-    margin-top: 15px;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-}
-
-.crop-actions button {
-    background-color: #ff4b4b;
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    cursor: pointer;
-    border-radius: 5px;
-    font-size: 16px;
-    position: relative;
-    z-index: 10;
-}
-
-.crop-actions button:hover {
-    transform: scale(1.1);
-    background-color: #e33e3e;
-}
-
-/* #endregion */
-
-/* #region Card Style Modal */
-
-.theme-modal {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(0, 0, 0, 0.9);
-    padding: 20px;
-    border-radius: 10px;
-    text-align: center;
-    font-family: 'Luckiest Guy', cursive;
-    color: #a65a2e;
-    z-index: 10;
-    width: 600px;
-}
-
-.theme-modal h2 {
-    font-size: 20px;
-    font-weight: bold;
-    text-transform: uppercase;
-    margin-bottom: 15px;
-    pointer-events: none;
-    user-select: none;
-}
-
-.theme-selection {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 10px;
-    margin-top: 15px;
-}
-
-.card-theme-option {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    cursor: pointer;
-}
-
-.card-container.selected {
-    border-color: #00c3ff;
-}
-
-.card-theme-option p {
-    margin-top: 5px;
-    font-size: 14px;
-    font-weight: bold;
-    text-transform: uppercase;
-    color: white;
-    text-align: center;
-    font-family: 'Arial ', sans-serif;
-    pointer-events: none;
-    user-select: none;
-}
-
-.card-container {
-    width: 120px;
-    height: 170px;
-    border: 3px solid #a65a2e;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    transition: transform 0.2s ease;
-}
-
-.card-container:hover {
-    transform: scale(1.1);
-    border-color: #e33e3e;
-}
-
-.card-container.selected:hover {
-    transform: scale(1.1);
-    border-color: #00c3ff;
-}
-
-/* #region Color Picker */
-
-.color-picker-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 15px;
-    margin-top: 15px;
-    padding-top: 10px;
-    padding-bottom: 10px;
-    background: rgba(0, 0, 0, 0.6);
-    border-radius: 10px;
-    border: 2px solid #a65a2e;
-    width: 100%;
-}
-
-.color-picker-container label {
-    font-size: 14px;
-    font-weight: bold;
-    color: #a65a2e;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    pointer-events: none;
-    user-select: none;
-}
-
-.color-picker-container input[type='color'] {
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    border: 3px solid #a65a2e;
-    width: 40px;
-    height: 40px;
-    cursor: pointer;
-    border-radius: 50%;
-    transition:
-        transform 0.2s ease,
-        box-shadow 0.2s ease;
-    background: transparent;
-}
-
-.color-picker-container input[type='color']:hover {
-    transform: scale(1.1);
-    border-color: #e33e3e;
-}
-
-.color-picker-container input[type='color']::-webkit-color-swatch {
-    border: none;
-    border-radius: 50%;
-    padding: 0;
-    background: none;
-}
-
-.color-picker-container input[type='color']::-webkit-color-swatch-wrapper {
-    padding: 0;
-    border-radius: 50%;
-    background: none;
-}
-
-.color-picker-container input[type='color']::-moz-color-swatch {
-    border: none;
-    border-radius: 50%;
-    background: none;
-}
-
-.color-picker-container input[type='color']::-moz-focus-inner {
-    border: none;
+.statistics-item {
+    @apply
+        text-[25px] sm:text-[0.65rem] lg:text-[1.35rem] xl:text-[1.75rem] 2xl:text-[2rem]
+        flex justify-between
+        px-1
+        py-1
+        border-b border-[#f5e1a4]
+        select-none pointer-events-none
+    ;
 }
 
 /* #endregion */
 
 /* #endregion */
 
-.modal-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-}
+/* #region Achievement Page */
 
-.modal-btn {
-    margin-top: 10px;
-    padding: 8px 15px;
-    border: none;
-    background-color: #ff4b4b;
-    color: white;
-    font-size: 16px;
-    cursor: pointer;
-    border-radius: 5px;
-}
-
-.modal-btn:hover {
-    transform: scale(1.1);
-    background-color: #e33e3e;
-}
-
-/* #endregion */
-
-/* #region Achievements Page */
-
-.achievements-container {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    z-index: 2;
-    margin-top: 25px;
-    align-items: center;
+.achievements-wrapper {
+    @apply
+        bg-[url('/backgrounds/overlay_account.webp')] 
+        bg-contain bg-no-repeat bg-center z-20
+        aspect-[2.25/2.5]
+        w-[47.5vw] sm:w-[95vw] lg:w-[100vw] 2xl:w-[100vw]
+        h-[92.5vh] sm:h-[90vh] lg:h-[92.5vh] 2xl:h-[95vh]
+        flex flex-col items-center justify-center text-center
+        drop-shadow-[20px_20px_30px_rgba(0,0,0,1)]
+    ;
 }
 
 .achievements-title {
-    font-family: 'Luckiest Guy', cursive;
-    font-size: 3.5rem;
-    color: white;
-    user-select: none;
+    @apply
+        font-serif 
+        font-bold text-white
+        text-[4.5rem] sm:text-[1.25rem] lg:text-[2.75rem] xl:text-[3rem] 2xl:text-[3.5rem]
+        mt-2 sm:-mt-5 lg:-mt-10 xl:-mt-12 2xl:-mt-10
+        mb-2 sm:-mb-0 lg:-mb-0 xl:-mb-0 2xl:-mb-0
+        pointer-events-none select-none
+    ;
 }
 
-.achievements-list {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.5rem;
-    width: 60%;
-    margin-top: -40px;
-    max-height: 710px;
-    overflow-y: auto;
-    padding-right: 10px;
-    scroll-behavior: smooth;
+.achievement-list {
+    @apply
+        flex flex-wrap justify-center 
+        gap-2 sm:gap-1 lg:gap-2 2xl:gap-2
+        w-[60%] sm:w-[70%] lg:w-[75%] xl:w-[75%] 2xl:w-[57%]
+        max-h-[250px] sm:max-h-[240px] lg:max-h-[420px] xl:max-h-[530px] 2xl:max-h-[690px]
+        pr-[10px] sm:pr-[10px] lg:pr-[15px] 2xl:pr-[15px]
+        overflow-y-auto scroll-smooth
+        [&::-webkit-scrollbar]:w-2 
+        [&::-webkit-scrollbar-thumb]:bg-white/40 [&::-webkit-scrollbar-thumb]:rounded 
+        [&::-webkit-scrollbar-track]:bg-transparent
+    ;
 }
 
-.achievements-list::-webkit-scrollbar {
-    width: 8px;
-}
-
-.achievements-list::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.4);
-    border-radius: 4px;
-}
-.achievements-list::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-/* #region Achievement */
-
-.achievement-box {
-    border: 2px solid #a65a2e;
-    border-radius: 12px;
-    background: #1e1e1e;
-    padding: 0.75rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    width: 100%;
-    user-select: none;
-}
-
-.achievement-box:hover {
-    border-color: #e33e3e;
-}
-
-.achievement-header {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    justify-content: space-between;
+.achievement-wrapper {
+    @apply
+        border-2 sm:border-1 lg:border-2
+        border-[#a65a2e]
+        rounded-xl sm:rounded-sm lg:rounded-lg xl:rounded-xl 2xl:rounded-xl
+        bg-[#1e1e1e]
+        p-3 sm:p-1 lg:p-2 xl:p-3 2xl:p-3
+        cursor-pointer transition-all duration-300 ease-in-out
+        w-full select-none
+        hover:border-[#e33e3e]
+    ;
 }
 
 .achievement-icon {
-    width: 60px;
-    height: 60px;
-    user-select: none;
-    pointer-events: none;
+    @apply
+        w-[60px] sm:w-[25px] lg:w-[45px] xl:w-[60px] 2xl:w-[60px]
+        h-[60px] sm:h-[25px] lg:h-[45px] xl:h-[60px] 2xl:h-[60px]
+        select-none pointer-events-none
+    ;
 }
 
 .achievement-name {
-    flex: 1;
-    font-size: 2.5rem;
-    font-weight: bold;
-    color: #f5e1a4;
+    @apply
+        text-[2.5rem] sm:text-[1.15rem] lg:text-[2.2rem] xl:text-[2.5rem] 2xl:text-[2.5rem]
+        font-bold
+        text-[#f5e1a4]
+        ml-4 sm:ml-1 lg:ml-2 xl:ml-4 2xl:ml-4
+    ;
 }
 
 .achievement-title {
-    font-size: 2.5rem;
-    font-weight: bold;
-    color: #f5e1a4;
+    @apply
+        text-[2.5rem] sm:text-[1.15rem] lg:text-[2.2rem] xl:text-[2.5rem] 2xl:text-[2.5rem]
+        font-bold 
+        text-[#f5e1a4]
+    ;
 }
 
 .achievement-status {
-    font-size: 2.5rem;
-    margin-right: 0.5rem;
-    margin-left: 1rem;
+    @apply
+        text-[2.5rem] sm:text-[1.15rem] lg:text-[2.2rem] xl:text-[2.5rem] 2xl:text-[2.5rem]
+        mr-2 sm:mr-1 lg:mr-2 xl:mr-2 2xl:mr-2
+        ml-4 sm:ml-1 lg:ml-2 xl:ml-4 2xl:ml-4
+    ;
 }
 
-.achievement-details {
-    margin-top: 1rem;
-    padding-left: 1rem;
-    color: #f5e1a4;
-    font-size: 1.25rem;
+.achievement-dropdown {
+    @apply
+        mt-4 sm:mt-1 lg:mt-1 xl:mt-2 2xl:mt-2
+        pl-4 sm:pl-2 lg:pl-4 xl:pl-4 2xl:pl-4
+        text-left
+        text-[#f5e1a4] 
+        text-[2rem] sm:text-[0.65rem] lg:text-[1.25rem] xl:text-[1.25rem] 2xl:text-[1.25rem]
+    ;
 }
 
-.achievement-description {
-    margin-bottom: 0.5rem;
+.dropdown-text {
+    @apply
+        mb-2 sm:mb-1 lg:mb-1 xl:mb-2 2xl:mb-2
+    ;
 }
 
-.achievement-conditions ul {
-    margin: 0;
-    padding-left: 1.5rem;
+.dropdown-list {
+    @apply
+        pl-6 sm:pl-3 lg:pl-6 xl:pl-6 2xl:pl-6
+        list-disc 
+    ;
 }
-
-/* #endregion */
 
 /* #endregion */
 
 /* #region Create Page */
 
-.create-menu {
-    text-align: center;
-    color: white;
-    height: 98vh;
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    align-items: center;
-    z-index: 2;
+.create-wrapper {
+    @apply
+        bg-[url('/backgrounds/overlay_account.webp')] 
+        bg-contain bg-no-repeat bg-center z-20
+        aspect-[2.25/2.5]
+        w-[47.5vw] sm:w-[95vw] lg:w-[100vw] 2xl:w-[100vw]
+        h-[92.5vh] sm:h-[90vh] lg:h-[92.5vh] 2xl:h-[95vh]
+        flex items-center justify-center text-center
+        drop-shadow-[20px_20px_30px_rgba(0,0,0,1)]
+        text-white
+    ;
 }
 
-.create-form-box {
-    padding: 30px 50px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 320px;
-    margin-left: 120px;
-    user-select: none;
-}
-
-.create-options-box {
-    padding: 20px;
-    border-radius: 15px;
-    width: 500px;
-    color: white;
-    font-family: 'Georgia', serif;
-    margin-top: -50px;
-    color: #f5e1a4;
-    user-select: none;
-}
-
-.create-options-title {
-    font-size: 4rem;
-    font-weight: bold;
-    text-align: center;
-    margin-bottom: 15px;
-    color: white;
+.create-game {
+    @apply
+        flex flex-col items-center
+        w-[320px] sm:w-[100px] lg:w-[200px] xl:w-[250px] 2xl:w-[400px]
+        ml-[120px] sm:ml-[50px] lg:ml-[80px] xl:ml-[100px] 2xl:ml-[100px]
+        select-none
+        mt-12 sm:mt-5 lg:mt-5 xl:mt-16 2xl:mt-24
+        mr-5 sm:mr-3 lg:mr-5 xl:mr-5 2xl:mr-5
+    ;
 }
 
 .create-logo {
-    position: absolute;
-    width: 11%;
-    top: 70px;
-    user-select: none;
-    pointer-events: none;
+    @apply
+        flex flex-col items-center
+        mb-2 sm:mb-0 lg:mb-0 xl:-mb-2 2xl:-mb-1
+        mt-[-30vh] sm:mt-[-5vh] lg:mt-[-3vh] xl:mt-[-7.5vh] 2xl:mt-[-10vh]
+        w-[15vw] sm:w-[11vw] lg:w-[13vw] xl:w-[14vw] 2xl:w-[11vw]
+        pointer-events-none select-none
+    ;
 }
 
 .create-title {
-    font-family: serif;
-    font-size: 4rem;
-    margin-bottom: 5%;
+    @apply
+        font-serif
+        text-[4rem] sm:text-[1.5rem] lg:text-[2.5rem] xl:text-[3rem] 2xl:text-[3.5rem]
+        mb-1 sm:mb-0 lg:mb-1 xl:mb-2 2xl:mb-2
+        font-bold
+    ;
 }
 
-.rustic-form {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+.create-btn {
+    @apply
+        w-[15.5vw] sm:w-[20vw] lg:w-[40vw] xl:w-[45vw] 2xl:w-[20vw]
+        h-[10vh] sm:h-[10vh] lg:h-[10vh] xl:h-[10vh] 2xl:h-[10vh]
+        text-[2.75rem] sm:text-[0.75rem] lg:text-[2rem] xl:text-[2.5rem] 2xl:text-[2.5rem]
+        cursor-pointer
+    ;
 }
 
-.rustic-checkbox {
-    display: flex;
-    align-items: center;
-    font-family: 'Cinzel', serif;
-    font-size: 27px;
-    color: #f5e1a4;
+.create-options {
+    @apply
+        rounded
+        w-[520px] sm:w-[200px] lg:w-[350px] xl:w-[450px] 2xl:w-[500px]
+        font-serif
+        -mt-5 sm:mt-0 lg:-mt-5 xl:-mt-2 2xl:-mt-7
+        text-[#f5e1a4]
+        flex flex-col items-center
+        select-none
+    ;
 }
 
-.rustic-checkbox input {
-    width: 30px;
-    height: 30px;
-    margin-right: 12px;
-    accent-color: #5a3e22;
+.create-options-title {
+    @apply
+        text-[4rem] sm:text-[1.5rem] lg:text-[2.5rem] xl:text-[3rem] 2xl:text-[3.5rem]
+        font-bold
+        text-center
+        -mb-3 sm:mb-1 lg:-mb-1 xl:-mb-1 2xl:-mb-1
+        text-white
+    ;
 }
 
-.limit-input {
-    background-color: #222;
-    color: white;
-    border: 2px solid #a65a2e;
-    border-radius: 4px;
-    padding: 6px 10px;
-    font-size: 16px;
-    outline: none;
-    width: 100px;
-}
-
-.limit-input:hover {
-    border-color: #e33e3e;
-}
-
-/* #region Create Button */
-
-.create-cont {
-    position: absolute;
-    display: inline-block;
-    bottom: 7%;
-    z-index: 2;
-}
-
-.create-cont button {
-    position: relative;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-create img {
-    width: 310px;
-    height: auto;
-    display: block;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2);
-    border-radius: 10px;
-    transition: all 0.1s ease-in-out;
-    user-select: none;
-    pointer-events: none;
-}
-
-.btn-text-create {
-    position: absolute;
-    top: -18%;
-    left: 15%;
-    font-family: 'Luckiest Guy', cursive;
-    font-size: 35px;
-    color: white;
-    text-shadow: 3px 3px 8px rgba(0, 0, 0, 0.7);
-    pointer-events: none;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-create:hover img {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
-    transform: translateY(-3px);
-}
-
-.btn-create:active img {
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    transform: translateY(2px);
-}
-
-.btn-create:hover p {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0);
-    transform: translateY(-3px);
+.create-options-wrapper {
+    @apply
+        flex flex-col items-center
+        gap-1 sm:gap-1 lg:gap-2 xl:gap-3 2xl:gap-2
+        max-h-[220px] sm:max-h-[240px] lg:max-h-[410px] xl:max-h-[550px] 2xl:max-h-[720px]
+        overflow-y-auto
+        w-full
+        -mt-2 sm:-mt-2 lg:mt-2 xl:mt-2 2xl:mt-1
+    ;
 }
 
 /* #endregion */
 
-/* #endregion */
+/* #region Lobbies Page */
 
-/* #region Lobbys Page */
-
-.lobbys-menu {
-    text-align: center;
-    color: white;
-    height: 98vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 2;
+.lobbies-wrapper {
+    @apply
+        bg-[url('/backgrounds/overlay.webp')] 
+        bg-contain bg-no-repeat bg-center z-20
+        aspect-[2.25/2.5]
+        w-[47.5vw] sm:w-[95vw] lg:w-[90vw] 2xl:w-[100vw]
+        h-[92.5vh] sm:h-[90vh] lg:h-[92.5vh] 2xl:h-[95vh]
+        flex flex-col items-center justify-center text-center
+        drop-shadow-[20px_20px_30px_rgba(0,0,0,1)]
+    ;
 }
 
-.lobbys-title {
-    position: absolute;
-    font-family: serif;
-    font-size: 4rem;
-    margin-bottom: 10%;
-    top: 30px;
-    user-select: none;
+.lobbies-home {
+    @apply
+        text-center
+        text-white
+        flex flex-col items-center justify-center
+        z-2
+        -mt-5 sm:-mt-2 lg:-mt-5 xl:-mt-5 2xl:-mt-5
+    ;
 }
 
-.game-list {
-    position: absolute;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    top: 170px;
+.lobbies-title {
+    @apply
+        font-serif font-bold
+        text-[4rem] sm:text-[1.5rem] lg:text-[3.5rem] xl:text-[4rem] 2xl:text-[4rem]
+        mb-5 sm:mb-3 lg:mb-4 xl:mb-1 2xl:mb-6
+        select-none
+    ;
 }
 
-/* #region Game Item */
-
-.game-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: linear-gradient(to right, #5a3e2b, #3b2a1a);
-    padding: 12px 20px;
-    border-radius: 8px;
-    border: 1px solid #8b5e3b;
-    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
-    font-size: 25px;
-    color: #f5deb3;
-    font-family: 'Luckiest Guy', cursive;
-    width: 550px;
-    height: 25px;
-    user-select: none;
+.private-wrapper {
+    @apply
+        flex items-center
+        gap-4 sm:gap-1 lg:gap-3 xl:gap-3 2xl:gap-3
+        mt-6 sm:mt-3 lg:mt-5 xl:mt-6 2xl:mt-7
+    ;
 }
 
-.game-item span {
-    flex-grow: 1;
+.private-btn {
+    @apply
+        w-[55px] sm:w-[25px] lg:w-[45px] xl:w-[55px] 2xl:w-[55px]
+        h-[55px] sm:h-[25px] lg:h-[45px] xl:h-[55px] 2xl:h-[55px]
+        rounded-lg sm:rounded-md lg:rounded-lg xl:rounded-lg 2xl:rounded-lg
+        mt-0 sm:mt-2 lg:mt-0.5 xl:mt-0 2xl:mt-0
+        bg-[#469ff1] border-none
+        bg-[url('/icons/join.svg')] bg-no-repeat bg-center
+        bg-[length:85%_auto]
+        cursor-pointer
+        transition-all duration-100 ease-in-out
+        hover:shadow-[6px_6px_12px_rgba(0,0,0,0.6)] hover:-translate-y-[3px]
+        active:shadow-[2px_2px_4px_rgba(0,0,0,0.3)] active:translate-y-[2px]
+    ;
 }
 
-.game-item button {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    background-color: #c1272d;
-    border: none;
-    background-image: url('/join.svg');
-    background-size: 85% auto;
-    background-position: center;
-    background-repeat: no-repeat;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-    text-shadow: 1px 1px 2px black;
-    margin-right: -15px;
+/* #region Lobby List */
+
+.lobby-list-wrapper {
+    @apply
+        flex flex-col
+        gap-2 sm:gap-0.5 lg:gap-2 xl:gap-2 2xl:gap-3
+        -mt-3 sm:-mt-3 lg:-mt-5 xl:-mt-3 2xl:-mt-5
+        min-h-[650px] sm:min-h-[220px] lg:min-h-[500px] xl:min-h-[560px] 2xl:min-h-[650px]
+    ;
 }
 
-.game-item button:hover {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
-    transform: translateY(-2px);
+.lobby-list-item {
+    @apply
+        bg-gradient-to-r from-[#5a3e2b] to-[#3b2a1a]
+        rounded-lg sm:rounded-sm lg:rounded-lg xl:rounded-lg 2xl:rounded-lg
+        border border-[#8b5e3b]
+        shadow-[2px_2px_5px_rgba(0,0,0,0.3)]
+        text-[2rem] sm:text-[0.75rem] lg:text-[1.5rem] xl:text-[1.75rem] 2xl:text-[1.75rem]
+        text-[#f5deb3] font-['Luckiest_Guy']
+        w-[650px] sm:w-[250px] lg:w-[520px] xl:w-[600px] 2xl:w-[670px]
+        px-5 sm:px-1.5 lg:px-4 xl:px-4 2xl:px-4
+        py-3 sm:py-1 lg:py-2 xl:py-2 2xl:py-2
+        select-none
+    ;
 }
 
-.game-item button:active {
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    transform: translateY(2px);
+.lobby-list-avatar {
+    @apply
+        w-[40px] sm:w-[20px] lg:w-[40px] xl:w-[40px] 2xl:w-[45px]
+        h-[40px] sm:h-[20px] lg:h-[40px] xl:h-[40px] 2xl:h-[45px]
+        rounded-full
+        border-[#ccc]
+    ;
 }
 
-.game-avatars {
-    display: flex;
-    gap: 4px;
-    pointer-events: none;
+.lobby-list-more {
+    @apply
+        text-white font-bold
+        text-[1.5rem] sm:text-[0.75rem] lg:text-[1.5rem] xl:text-[1.75rem] 2xl:text-[1.75rem]
+        -ml-1 sm:ml-0 lg:ml-1 xl:-ml-1 2xl:-ml-0
+        mt-3 sm:mt-1 lg:mt-2 xl:mt-2 2xl:mt-2
+    ;
 }
 
-.avatar-preview {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 1px solid #ccc;
+.lobby-list-title {
+    @apply
+        ml-3 sm:ml-1 lg:ml-2 xl:ml-2 2xl:ml-3
+        text-[#ffe2a7]
+        text-[2rem] sm:text-[0.75rem] lg:text-[1.5rem] xl:text-[1.75rem] 2xl:text-[1.75rem]
+        flex
+        whitespace-nowrap
+        overflow-hidden
+        text-ellipsis
+    ;
 }
 
-.more-players {
-    color: #fff;
-    margin-left: 4px;
-    font-size: 18px;
-    font-weight: bold;
-    margin-top: 14px;
-    margin-left: -5px;
+.lobby-list-info {
+    @apply
+        flex items-center
+        gap-1 sm:gap-1 lg:gap-2 xl:gap-2 2xl:gap-2.5
+        h-full
+    ;
 }
 
-.game-name {
-    margin-left: 12px;
-    color: #ffe2a7;
-    font-size: 20px;
-    flex: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+.lobby-list-spectator {
+    @apply
+        w-[40px] sm:w-[20px] lg:w-[40px] xl:w-[40px] 2xl:w-[45px]
+        h-[40px] sm:h-[20px] lg:h-[40px] xl:h-[40px] 2xl:h-[45px]
+        invert-[88%] sepia-[17%] hue-rotate-[337deg] brightness-[104%] saturate-[831%] contrast-[101%]
+    ;
 }
 
-.game-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+.lobby-list-join {
+    @apply
+        w-[30px] sm:w-[15px] lg:w-[35px] xl:w-[35px] 2xl:w-[35px] 
+        h-[30px] sm:h-[15px] lg:h-[35px] xl:h-[35px] 2xl:h-[35px]
+        rounded-lg sm:rounded-sm lg:rounded-lg xl:rounded-lg 2xl:rounded-lg
+        bg-[#469ff1]
+        border-none cursor-pointer
+        transition-all duration-200 ease-in-out
+        -mr-2 sm:-mr-1 lg:-mr-2 xl:-mr-2 2xl:-mr-2
+        bg-[url('/icons/join.svg')] bg-no-repeat bg-center
+        bg-[length:85%_auto]
+        hover:shadow-[6px_6px_12px_rgba(0,0,0,0.6)]
+        hover:-translate-y-[2px] sm:hover:-translate-y-[1px] lg:hover:-translate-y-[2px]
+        active:shadow-[2px_2px_4px_rgba(0,0,0,0.3)]
+        active:translate-y-[2px]
+    ;
 }
 
-.game-join {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    height: 100%;
+.lobby-list-extended {
+    @apply
+        mt-4 sm:mt-2 lg:mt-2 xl:mt-2 2xl:mt-2
+        pl-4 sm:pl-2 lg:pl-3 xl:pl-4 2xl:pl-4
+        text-left
+        text-[#f5e1a4] 
+        text-[2rem] sm:text-[0.65rem] lg:text-[1.4rem] xl:text-[1.55rem] 2xl:text-[1.55rem]
+        flex justify-between
+    ;
 }
 
-.game-spectator {
-    display: flex;
-    align-items: center; 
-    padding-right: 15px;
-    padding-top: 3px;
+.lobby-list-player-wrapper {
+    @apply
+        flex items-center 
+        gap-3 sm:gap-1 lg:gap-2 xl:gap-2 2xl:gap-3
+        mb-2 sm:mb-1 lg:mb-1 xl:mb-2 2xl:mb-2
+    ;
 }
 
-.game-spectator span {
-    font-size: 30px;
-    line-height: 1;
+.lobby-list-player-icon {
+    @apply
+        w-[30px] sm:w-[15px] lg:w-[30px] xl:w-[30px] 2xl:w-[30px]
+        h-[30px] sm:h-[15px] lg:h-[30px] xl:h-[30px] 2xl:h-[30px]
+        rounded-full
+        object-cover
+    ;
 }
 
-.spectator-icon {
-    width: 55px;
-    height: 55px;
-    filter: brightness(0) saturate(100%) invert(88%) sepia(17%) saturate(831%) hue-rotate(337deg) brightness(104%) contrast(101%);
+.lobby-list-spectator-wrapper {
+    @apply
+        flex items-center 
+        gap-3 sm:gap-1 lg:gap-2 xl:gap-2 2xl:gap-3
+        mb-0
+    ;
 }
 
-/* #endregion */
-
-/* #region Private Game Code */
-
-.private-game-cont {
-    position: absolute;
-    display: inline-block;
-    bottom: 10%;
+.lobby-list-spectator-icon {
+    @apply
+        w-[30px] sm:w-[15px] lg:w-[30px] xl:w-[30px] 2xl:w-[30px]
+        h-[30px] sm:h-[15px] lg:h-[30px] xl:h-[30px] 2xl:h-[30px]
+        invert-[88%] sepia-[17%] hue-rotate-[337deg] brightness-[104%] saturate-[831%] contrast-[101%]
+    ;
 }
 
-.private-game-cont button {
-    position: absolute;
-    width: 55px;
-    height: 55px;
-    border-radius: 10px;
-    background-color: #c1272d;
-    border: none;
-    background-image: url('/join.svg');
-    background-size: 85% auto;
-    background-position: center;
-    background-repeat: no-repeat;
-    cursor: pointer;
-    transition: all 0.1s ease-in-out;
-    margin-top: -2.5px;
-}
-
-.private-game {
-    background: url('/wood_green.svg');
-    background-size: cover;
-    font-family: 'Cinzel', serif;
-    font-size: 27px;
-    color: #f5e1a4;
-    box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.6);
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-    border-radius: 5px;
-    outline: none;
-    height: 45px;
-    margin-right: 20px;
-}
-
-.btn-private:hover {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
-    transform: translateY(-3px);
-}
-
-.btn-private:active {
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    transform: translateY(2px);
+.lobby-list-date {
+    @apply
+        pr-4 sm:pr-2 lg:pr-2 xl:pr-2 2xl:pr-2
+        text-right text-[#ffe2a7]
+        text-[1.35rem] sm:text-[0.5rem] lg:text-[1.3rem] xl:text-[1.4rem] 2xl:text-[1.4rem]
+    ;
 }
 
 /* #endregion */
@@ -2295,658 +1846,285 @@ form {
 
 /* #region Join Page */
 
+.join-wrapper {
+    @apply
+        bg-[url('/backgrounds/overlay.webp')] 
+        bg-contain bg-no-repeat bg-center z-20
+        aspect-[2.25/2.5]
+        w-[47.5vw] sm:w-[95vw] lg:w-[90vw] 2xl:w-[100vw]
+        h-[92.5vh] sm:h-[90vh] lg:h-[92.5vh] 2xl:h-[95vh]
+        flex flex-col items-center justify-center text-center
+        drop-shadow-[20px_20px_30px_rgba(0,0,0,1)]
+    ;
+}
+
 .join-menu {
-    text-align: center;
-    color: white;
-    height: 98vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 2;
-    user-select: none;
+    @apply
+        flex flex-col justify-center items-center
+        text-center text-white
+        h-full
+        z-2
+        select-none
+    ;
 }
 
 .join-logo {
-    position: absolute;
-    width: 12%;
-    top: 70px;
-    user-select: none;
-    pointer-events: none;
+    @apply
+        flex
+        w-[12vw] sm:w-[12vw] lg:w-[16vw] xl:w-[16vw] 2xl:w-[12vw]
+        mt-0 sm:mt-0 lg:mt-0 xl:mt-0 2xl:mt-0
+        mb-10 sm:-mb-1 lg:mb-5 xl:mb-0 2xl:mb-1
+        pointer-events-none select-none
+    ;
 }
 
 .join-title {
-    position: absolute;
-    font-family: serif;
-    font-size: 4rem;
-    margin-bottom: 5%;
-    top: 310px;
+    @apply
+        font-serif
+        text-[4rem] sm:text-[1.5rem] lg:text-[2.75rem] xl:text-[3.5rem] 2xl:text-[4rem]
+        font-bold
+        mb-2 sm:mb-0 lg:mb-0 xl:mb-0 2xl:mb-0
+        -mt-2 sm:-mt-0 lg:-mt-5 xl:-mt-2 2xl:-mt-2
+    ;
 }
 
-.rustic-form-join {
-    position: absolute;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    top: 450px;
+.join-btn {
+    @apply
+        w-[15.5vw] sm:w-[20vw] lg:w-[40vw] xl:w-[45vw] 2xl:w-[20vw]
+        h-[10vh] sm:h-[10vh] lg:h-[10vh] xl:h-[10vh] 2xl:h-[10vh]
+        text-[2.75rem] sm:text-[0.75rem] lg:text-[2rem] xl:text-[2.5rem] 2xl:text-[2.5rem]
+        cursor-pointer
+    ;
 }
 
-/* #region Join Button */
-
-.join-cont {
-    position: absolute;
-    display: inline-block;
-    bottom: 80px;
-}
-
-.join-cont button {
-    position: relative;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-join img {
-    width: 310px;
-    height: auto;
-    display: block;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2);
-    border-radius: 10px;
-    transition: all 0.1s ease-in-out;
-    pointer-events: none;
-}
-
-.btn-text-join {
-    position: absolute;
-    top: -16%;
-    left: 22%;
-    font-family: 'Luckiest Guy', cursive;
-    font-size: 35px;
-    color: white;
-    text-shadow: 3px 3px 8px rgba(0, 0, 0, 0.7);
-    pointer-events: none;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-join:hover img {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
-    transform: translateY(-3px);
-}
-
-.btn-join:active img {
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    transform: translateY(2px);
-}
-
-.btn-join:hover p {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0);
-    transform: translateY(-3px);
+.join-game {
+    @apply
+        flex flex-col
+        gap-2.5 sm:gap-2 lg:gap-3 xl:gap-2.5 2xl:gap-2
+        mt-2 sm:mt-1 lg:mt-3 xl:mt-2 2xl:mt-0
+    ;
 }
 
 /* #endregion */
+
+/* #region Lobby Page */
+
+.lobby-wrapper {
+    @apply
+        bg-[url('/backgrounds/overlay.webp')] 
+        bg-contain bg-no-repeat bg-center z-20
+        aspect-[2.25/2.5]
+        w-[47.5vw] sm:w-[95vw] lg:w-[90vw] 2xl:w-[100vw]
+        h-[92.5vh] sm:h-[90vh] lg:h-[92.5vh] 2xl:h-[95vh]
+        flex flex-col items-center justify-center text-center
+        drop-shadow-[20px_20px_30px_rgba(0,0,0,1)]
+    ;
+}
+
+.lobby-home {
+    @apply
+        text-center text-white
+        h-full
+        flex flex-col justify-center items-center
+        z-2
+        select-none
+    ;
+}
+
+.lobby-title {
+    @apply
+        font-serif font-bold
+        text-[4rem] sm:text-[1.25rem] lg:text-[2.75rem] xl:text-[3.25rem] 2xl:text-[3.25rem]
+        mb-2 sm:mb-0 lg:mb-1 xl:mb-2 2xl:mb-2
+        mt-0 sm:mt-0 lg:mt-0 xl:mt-0 2xl:mt-0
+    ;
+}
+
+.lobby-user-list-wrapper {
+    @apply
+        max-h-[62.5vh] sm:max-h-[60vh] lg:max-h-[62vh] xl:max-h-[61vh] 2xl:max-h-[62.5vh]
+        min-h-[62.5vh] sm:min-h-[60vh] lg:min-h-[62vh] xl:min-h-[61vh] 2xl:min-h-[62.5vh]
+        overflow-y-auto
+        flex flex-col justify-start
+        gap-2 sm:gap-1 lg:gap-2 xl:gap-2 2xl:gap-2
+    ;
+}
+
+.lobby-user-list-part {
+    @apply
+        flex flex-col items-center
+        -mt-2 sm:-mt-1 lg:-mt-2 xl:-mt-2 2xl:-mt-2
+    ;
+}
+
+.lobby-user-list-title {
+    @apply
+        text-[2rem] sm:text-[1rem] lg:text-[2rem] xl:text-[2rem] 2xl:text-[2rem]
+        font-bold text-center text-[#f5deb3]
+        mb-2 sm:mb-1 lg:mb-2 xl:mb-2 2xl:mb-2
+        w-[500px] sm:w-[220px] lg:w-[420px] xl:w-[500px] 2xl:w-[500px]
+        font-['Luckiest_Guy']
+        border-b-2 sm:border-b-1 lg:border-b-2 xl:border-b-2 2xl:border-b-2
+        border-[#f5deb3]
+    ;
+}
+
+.player-list-wrapper {
+    @apply
+        flex justify-between items-center
+        bg-gradient-to-r from-[#5a3e2b] to-[#3b2a1a]
+        px-5 sm:px-2 lg:px-5 xl:px-5 2xl:px-5
+        py-2 sm:py-1 lg:py-2 xl:py-2 2xl:py-2
+        rounded-lg sm:rounded-md lg:rounded-lg xl:rounded-lg 2xl:rounded-lg
+        border border-[#8b5e3b]
+        shadow-[2px_2px_5px_rgba(0,0,0,0.3)]
+        text-[#f5deb3]
+        font-['Luckiest_Guy']
+        w-[420px] sm:w-[190px] lg:w-[370px] xl:w-[420px] 2xl:w-[420px]
+        mb-2 sm:mb-1 lg:mb-2 xl:mb-2 2xl:mb-2
+    ;
+}
+
+.player-list-avatar {
+    @apply
+        w-[60px] sm:w-[25px] lg:w-[45px] xl:w-[60px] 2xl:w-[60px]
+        h-[60px] sm:h-[25px] lg:h-[45px] xl:h-[60px] 2xl:h-[60px]
+        rounded-full
+        mr-2 sm:mr-1 lg:mr-2 xl:mr-2 2xl:mr-2
+        object-cover
+        pointer-events-none
+    ;
+}
+
+.player-list-name {
+    @apply
+        text-[1.75rem] sm:text-[0.75rem] lg:text-[1.5rem] xl:text-[1.75rem] 2xl:text-[1.75rem]
+        font-bold leading-tight
+        -mb-1 sm:-mb-1 lg:-mb-1 xl:-mb-1 2xl:-mb-1
+    ;
+}
+
+.player-list-title {
+    @apply
+        text-[1.25rem] sm:text-[0.5rem] lg:text-[1rem] xl:text-[1.25rem] 2xl:text-[1.25rem]
+        font-medium
+    ;
+}
+
+.player-list-btn {
+    @apply
+        w-[50px] sm:w-[22.5px] lg:w-[42.5px] xl:w-[50px] 2xl:w-[50px]
+        h-[50px] sm:h-[22.5px] lg:h-[42.5px] xl:h-[50px] 2xl:h-[50px]
+        rounded-lg sm:rounded-md lg:rounded-lg xl:rounded-lg 2xl:rounded-lg
+        border-none
+        bg-[url('/icons/remove.svg')] bg-[length:80%_auto] bg-center bg-no-repeat
+        transition-all duration-200
+    ;
+}
+
+.lobby-btn {
+    @apply
+        w-[15.5vw] sm:w-[20vw] lg:w-[40vw] xl:w-[45vw] 2xl:w-[20vw]
+        h-[10vh] sm:h-[10vh] lg:h-[10vh] xl:h-[10vh] 2xl:h-[10vh]
+        text-[2.75rem] sm:text-[0.75rem] lg:text-[2rem] xl:text-[2.5rem] 2xl:text-[2.5rem]
+        cursor-pointer
+    ;
+}
 
 /* #endregion */
 
 /* #region Game Page */
 
-.game-menu {
-    text-align: center;
-    color: white;
-    height: 98vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 2;
-    user-select: none;
+/* #region Phase 1 */
+
+.phase1-wrapper {
+    @apply
+        bg-[url('/backgrounds/overlay_phase.webp')] 
+        bg-contain bg-no-repeat bg-center z-20
+        aspect-[2.25/2.5]
+        w-[78vw] sm:w-[74vw] lg:w-[90vw] xl:w-[80vw] 2xl:w-[78vw]
+        h-[78vh] sm:h-[74vh] lg:h-[78vh] xl:h-[75vh] 2xl:h-[78vh]
+        flex flex-col items-center justify-center text-center
+        drop-shadow-[20px_20px_30px_rgba(0,0,0,0.6)]
+    ;
 }
 
-.game-title {
-    position: absolute;
-    font-family: serif;
-    font-size: 4rem;
-    margin-bottom: 5%;
-    top: 40px;
-}
-
-.scroll-container {
-    max-height: 62.5vh;
-    min-height: 62.5vh;
-    overflow-y: auto;
-    padding-right: 100px;
-    padding-left: 100px;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-}
-
-.list-section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-top: -1rem;
-}
-
-.list-heading {
-    font-size: 2rem;
-    font-weight: bold;
-    text-align: center;
-    color: #f5deb3;
-    margin-bottom: 1rem;
-    width: 500px;
-    font-family: 'Luckiest Guy', cursive;
-    border-bottom: 2px solid #f5deb3;
-}
-
-/* #region Player Item */
-
-.player-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: linear-gradient(to right, #5a3e2b, #3b2a1a);
-    padding: 12px 20px;
-    border-radius: 8px;
-    border: 1px solid #8b5e3b;
-    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
-    font-size: 25px;
-    color: #f5deb3;
-    font-family: 'Luckiest Guy', cursive;
-    width: 400px;
-    height: 40px;
-    margin-bottom: 5px;
-}
-
-.player-avatar {
-    width: 55px;
-    height: 55px;
-    border-radius: 50%;
-    margin-right: 10px;
-    object-fit: cover;
-    pointer-events: none;
-}
-
-.player-text {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    flex: 1;
-}
-
-.player-name {
-    font-size: 1.4rem;
-    font-weight: bold;
-    margin-bottom: -4px; /* Pull the name slightly up */
-}
-
-.player-title {
-    font-size: 1rem;
-    font-weight: 500;
-}
-
-.player-item span {
-    flex-grow: 1;
-}
-
-.player-item-button {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    background-color: #c1272d;
-    border: none;
-    background-image: url('/remove.svg');
-    background-size: 85% auto;
-    background-position: center;
-    background-repeat: no-repeat;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-    text-shadow: 1px 1px 2px black;
-}
-
-.player-item-button-disabled {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    background-color: #626262;
-    border: none;
-    background-image: url('/remove.svg');
-    background-size: 85% auto;
-    background-position: center;
-    background-repeat: no-repeat;
-    cursor: default;
-    transition: all 0.2s ease-in-out;
-    text-shadow: 1px 1px 2px black;
-}
-
-.player-item-button:hover {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
-    transform: translateY(-2px);
-}
-
-.player-item-button:active {
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    transform: translateY(2px);
+.give-drink-wrapper {
+    @apply
+        font-['Luckiest_Guy']
+        text-[2.5rem] sm:text-[0.75rem] lg:text-[1.2rem] xl:text-[1.65rem] 2xl:text-[2.1rem]
+        text-[#f5e1a4]
+        -mt-3 sm:-mt-1 lg:-mt-2 xl:-mt-3 2xl:-mt-3
+        select-none
+    ;
 }
 
 /* #endregion */
 
-/* #region Start Game Button */
+/* #region Phase 2 */
 
-.startGame-cont {
-    position: absolute;
-    display: inline-block;
-    bottom: 80px;
+.phase2-wrapper {
+    @apply
+        bg-[url('/backgrounds/overlay_phase.webp')] 
+        bg-contain bg-no-repeat bg-center z-20
+        aspect-[2.25/2.5]
+        w-[78vw] sm:w-[74vw] lg:w-[90vw] xl:w-[80vw] 2xl:w-[78vw]
+        h-[78vh] sm:h-[74vh] lg:h-[78vh] xl:h-[75vh] 2xl:h-[78vh]
+        flex flex-col items-center justify-center text-center
+        drop-shadow-[20px_20px_30px_rgba(0,0,0,0.6)]
+    ;
 }
 
-.startGame-cont button {
-    position: relative;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    transition: all 0.1s ease-in-out;
+.phase2-busfahrer {
+    @apply
+        mt-0 sm:-mt-1 lg:mt-0 xl:mt-0 2xl:mt-0
+        font-['Luckiest_Guy'] 
+        text-[2.5rem] sm:text-[1.25rem] lg:text-[1.75rem] xl:text-[2rem] 2xl:text-[2.5rem]
+        font-bold text-[#f5e1a4]
+        select-none
+    ;
 }
 
-.btn-startGame-disabled {
-    position: relative;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: default;
-    transition: all 0.1s ease-in-out;
+.phase2-instructions {
+    @apply
+        text-[2rem] sm:text-[0.9rem] lg:text-[1.5rem] xl:text-[1.75rem] 2xl:text-[2rem]
+        font-extrabold
+        -mt-2 sm:-mt-1 lg:-mt-2 xl:-mt-2 2xl:-mt-2
+    ;
 }
 
-.btn-startGame img {
-    width: 310px;
-    height: auto;
-    display: block;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2);
-    border-radius: 10px;
-    transition: all 0.1s ease-in-out;
-    pointer-events: none;
-}
-
-.btn-startGame-disabled img {
-    width: 310px;
-    height: auto;
-    display: block;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2);
-    border-radius: 10px;
-    transition: all 0.1s ease-in-out;
-    pointer-events: none;
-}
-
-.btn-text-startGame {
-    position: absolute;
-    top: -17%;
-    left: 19%;
-    font-family: 'Luckiest Guy', cursive;
-    font-size: 35px;
-    color: white;
-    text-shadow: 3px 3px 8px rgba(0, 0, 0, 0.7);
-    pointer-events: none;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-startGame:hover img {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
-    transform: translateY(-3px);
-}
-
-.btn-startGame:active img {
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    transform: translateY(2px);
-}
-
-.btn-startGame:hover p {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0);
-    transform: translateY(-3px);
+.phase2-rules {
+    @apply
+        list-none
+        text-[1.65rem] sm:text-[0.65rem] lg:text-[1.25rem] xl:text-[1.45rem] 2xl:text-[1.65rem]
+        font-bold
+        -mt-2 sm:-mt-1 lg:-mt-2 xl:-mt-2 2xl:-mt-2
+    ;
 }
 
 /* #endregion */
 
-/* #endregion */
+/* #region Phase 3 */
 
-/* #region Phase 1 Page */
-
-.phase1-menu {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    z-index: 2;
+.phase3-wrapper {
+    @apply
+        bg-[url('/backgrounds/overlay_phase.webp')] 
+        bg-contain bg-no-repeat bg-center z-20
+        aspect-[2.25/2.5]
+        w-[100vw] sm:w-[100vw] lg:w-[100vw] xl:w-[100vw] 2xl:w-[100vw]
+        h-[100vh] sm:h-[100vh] lg:h-[75vw] xl:h-[100vh] 2xl:h-[100vh]
+        flex flex-col items-center justify-center text-center
+        drop-shadow-[20px_20px_30px_rgba(0,0,0,0.6)]
+    ;
 }
 
-.phase1-cards {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-top: 50px;
-    justify-content: center;
-    user-select: none;
-}
-
-.phase-row {
-    display: flex;
-    justify-content: center;
-    gap: 55px;
-    margin-top: -45px;
-}
-
-.phase-row .card {
-    height: 160px;
-    width: 110px;
-    transform: rotate(90deg);
-}
-
-.turn-info {
-    font-family: 'Luckiest Guy', cursive;
-    position: absolute;
-    font-size: 37px;
-    color: #f5e1a4;
-    bottom: 255px;
-    user-select: none;
-}
-
-.given-info {
-    font-family: 'Luckiest Guy', cursive;
-    position: absolute;
-    font-size: 32px;
-    color: #f5e1a4;
-    bottom: 255px;
-    user-select: none;
-}
-
-/* #endregion */
-
-/* #region Card */
-
-.card {
-    height: 200px;
-    width: 140px;
-    position: relative;
-    transform-style: preserve-3d;
-    transition: all 0.5s ease-in-out;
-    cursor: pointer;
-    user-select: none;
-}
-
-.card img {
-    width: 100%;
-    height: 100%;
-    border-radius: 12px;
-    position: absolute;
-    transition: transform 0.4s ease-in-out;
-    backface-visibility: hidden;
-}
-
-.card.show:hover .front {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
-    transform: rotateY(180deg) translateY(-20px);
-    transition:
-        transform 0.2s ease,
-        box-shadow 0.2s ease;
-}
-
-.card.show:active .front {
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    transform: rotateY(180deg) translateY(-10px);
-    transition:
-        transform 0.2s ease,
-        box-shadow 0.2s ease;
-}
-
-.card .front {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    box-sizing: border-box;
-    background-color: white;
-    transform: rotateY(180deg);
-}
-
-.card .back {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-image: url('/cardtheme/default.svg');
-}
-
-.card.flipped {
-    transform: rotateZ(90deg) rotateY(180deg);
-}
-
-.card.show {
-    transform: rotateY(180deg);
-}
-
-/* #endregion */
-
-/* #region Phase 2 Page */
-
-.phase2-menu {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    z-index: 2;
-}
-
-.busfahrer-subtitle {
-    font-size: 35px;
-    font-weight: bolder;
-    margin-top: -30px;
-}
-
-.busfahrer-rules {
-    list-style-type: none;
-    padding: 0;
-    font-size: 27px;
-    margin-top: -40px;
-    font-weight: bold;
-}
-
-.phase2-cards {
-    display: flex;
-    gap: 15px;
-    align-items: center;
-    margin-top: 0px;
-    justify-content: center;
-}
-
-.turn-info-phase2 {
-    font-family: 'Luckiest Guy', cursive;
-    position: absolute;
-    font-size: 37px;
-    color: #f5e1a4;
-    bottom: 220px;
-    user-select: none;
-}
-
-/* #endregion */
-
-/* #region Phase 3 Page */
-
-.overlay-diamond-img {
-    position: absolute;
-    top: -3px;
-    width: 89%;
-    z-index: 1;
-    filter: drop-shadow(10px 10px 30px rgba(0, 0, 0, 1));
-    pointer-events: none;
-    user-select: none;
-}
-
-.phase3-menu {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    z-index: 2;
-}
-
-.phase3-cards {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    margin-top: -10px;
-}
-
-/* #region Phase 3 Row */
-
-.phase3-row {
-    display: flex;
-    justify-content: center;
-    gap: 42.5px;
-    margin-top: -37.5px;
-}
-
-.phase3-row .card {
-    height: 120px;
-    width: 80px;
-    transform: rotate(90deg);
-}
-
-.phase3-row .card {
-    height: 120px;
-    width: 80px;
-    transform: rotate(90deg);
-}
-
-.phase3-row .flipped {
-    transform: rotateZ(90deg) rotateY(180deg);
-}
-
-.phase3-row:first-child {
-    margin-left: -125px;
-}
-
-.phase3-row:last-child {
-    margin-left: 125px;
-}
-
-/* #endregion */
-
-/* #region Phase 3 Card */
-
-.card-buttons {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotateZ(-90deg);
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    align-items: center;
-    gap: 5px;
-    background: rgba(255, 255, 255, 0.8);
-}
-
-.card-btn {
-    background-color: white;
-    border: 2px solid black;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-}
-
-.lower {
-    transform: rotate(90deg);
-    display: inline-block;
-}
-
-.higher {
-    transform: rotate(90deg);
-    display: inline-block;
-}
-
-.card-btn:hover {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.4);
-    transform: translateY(-3px);
-}
-
-.card-btn:active {
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
-    transform: translateY(2px);
-}
-
-.higher:hover,
-.lower:hover {
-    transform: rotate(90deg) translateX(-3px);
-}
-
-.higher:active,
-.lower:active {
-    transform: rotate(90deg) translateX(2px);
-}
-
-/* #endregion */
-
-.turn-info-phase3 {
-    font-family: 'Luckiest Guy', cursive;
-    position: absolute;
-    font-size: 37px;
-    color: #f5e1a4;
-    bottom: 25px;
-}
-
-/* #region Retry Button */
-
-.try-cont {
-    position: absolute;
-    display: inline-block;
-    bottom: 150px;
-    right: 150px;
-    z-index: 5;
-}
-
-.try-cont button {
-    position: absolute;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-try-disabled {
-    position: absolute;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    transition: all 0.1s ease-in-out;
-}
-
-.btn-try img {
-    width: 135px;
-    height: auto;
-    display: block;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.4);
-    border-radius: 70px;
-    transition: all 0.1s ease-in-out;
-    pointer-events: none;
-    user-select: none;
-}
-
-.btn-try-disabled img {
-    width: 135px;
-    height: auto;
-    display: block;
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.4);
-    border-radius: 70px;
-    transition: all 0.1s ease-in-out;
-    pointer-events: none;
-    user-select: none;
-}
-
-.btn-try:hover img {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.6);
-    transform: translateY(-3px);
-}
-
-.btn-try:active img {
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    transform: translateY(2px);
+.phase3-busfahrer {
+    @apply
+        font-['Luckiest_Guy'] 
+        text-[2.5rem] sm:text-[1.25rem] lg:text-[1.75rem] xl:text-[2rem] 2xl:text-[2.5rem]
+        font-bold text-[#f5e1a4]
+        select-none
+    ;
 }
 
 /* #endregion */

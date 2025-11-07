@@ -17,6 +17,7 @@ dist/
 .vite/
 .out/
 coverage/
+/client/src/main.css
 
 # Logs
 logs/
@@ -39,6 +40,9 @@ Thumbs.db
 # Git specific
 .git/
 
+# Docs
+esdoc-tmp/
+
 # Certificates
 *.cert
 *.key
@@ -46,3 +50,6 @@ Thumbs.db
 
 # User Avatars
 avatars/
+
+# Ticket keys
+/server/ticket-keys.bin

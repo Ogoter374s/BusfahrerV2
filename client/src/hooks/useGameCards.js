@@ -1,27 +1,40 @@
+/**
+ * @fileoverview useGameCards Hook
+ * <br><br>
+ * This custom React hook manages the fetching and state of game cards for a specific game. <br>
+ * It provides functionality to retrieve game cards from the server and store them in state.
+ */
+
 // Utilities
 import BASE_URL from "../utils/config";
 
 // React
 import { useState } from 'react';
-import { useParams } from "react-router-dom";
 
-const useGameCards = () => {
-    const { gameId } = useParams();
+/**
+ * A custom React hook that manages the fetching and state of game cards for a specific game. <br>
+ * It provides functionality to retrieve game cards from the server and store them in state.
+ * <br><br>
+ * <strong>fetchGameCards:</strong> <br>
+ * This asynchronous function fetches the game cards from the server for the specified game ID. <br>
+ * It updates the `cards` state variable with the retrieved data.
+ * <br><br>
+ * 
+ * @function useGameCards
+ * @param {string} gameId - The ID of the game for which to fetch cards.
+ * @returns {object} An object containing the `cards` state variable, `setCards` function, and `fetchGameCards` function.
+ */
+const useGameCards = (gameId) => {
+    const [cards, setCards] = useState([]);
 
-    const [gameCards, setGameCards] = useState([]);
-    const [isRowFlipped, setIsRowFlipped] = useState(false);
-
-    const fetchGameCards = async (phase) => {
+    /**
+     * Fetches the game cards from the server for the specified game ID. <br>
+     * It updates the `cards` state variable with the retrieved data.
+     */
+    const fetchGameCards = async () => {
         try {
-            let url = '';
-            if (phase === 2) {
-                url = `${BASE_URL}get-phase-cards?gameId=${gameId}`;
-            } else {
-                url = `${BASE_URL}get-game-cards?gameId=${gameId}`;
-            }
-
             const response = await fetch(
-                url,
+                `${BASE_URL}get-game-cards/${gameId}`,
                 {
                     method: 'GET',
                     headers: { 'Content-Type': 'application/json' },
@@ -29,77 +42,19 @@ const useGameCards = () => {
                 },
             );
 
-            if (!response.ok) {
-                throw new Error('Failed to fetch game cards');
-            }
+            const data = await response.json();
 
-            const gCards = await response.json();
-
-            let structured = [];
-
-            if (phase === 1) {
-                // Pyramid: 1 -> 5 rows
-                let idx = 0;
-                for (let row = 1; row <= 5; row++) {
-                structured.push(gCards.slice(idx, idx + row));
-                idx += row;
-                }
-
-            } else if (phase === 2) {
-                // 3-column layout from backend format
-                for (let i = 0; i < 3; i++) {
-                structured.push(gCards?.[i]?.cards || []);
-                }
-
-            } else if (phase === 3) {
-                // Diamond: 2-5-2 (in/out)
-                let idx = 0;
-                structured.push(gCards.slice(idx, idx + 2));
-                idx += 2;
-
-                for (let row = 2; row <= 5; row++) {
-                structured.push(gCards.slice(idx, idx + row));
-                idx += row;
-                }
-
-                for (let row = 4; row >= 2; row--) {
-                structured.push(gCards.slice(idx, idx + row));
-                idx += row;
-                }
-
-                structured.push(gCards.slice(idx, idx + 2));
-            }
-
-            setGameCards(structured);
+            setCards(data.cards);
         } catch (error) {
             console.error('Error fetching game cards:', error);
         }
     };
 
-    const fetchIsRowFlipped = async () => {
-        try {
-            const response = await fetch(
-                `${BASE_URL}get-is-row-flipped?gameId=${gameId}`,
-                {
-                    credentials: 'include',
-                },
-            );
-
-            const flipped = await response.json();
-
-            setIsRowFlipped(flipped);
-        } catch (error) {
-            console.error('Error fetching row flip status:', error);
-        }
-    };
-
     return {
-        gameCards,
-        setGameCards,
-        fetchGameCards,
-        isRowFlipped,
-        setIsRowFlipped,
-        fetchIsRowFlipped,
+        cards,
+        setCards,
+
+        fetchGameCards
     }
 };
 

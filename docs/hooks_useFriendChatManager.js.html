@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: hooks/useFriendChatManager.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: hooks/useFriendChatManager.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @fileoverview useFriendChatManager Hook
+ * &lt;br>&lt;br>
+ * This hook manages the friend chat functionality, including fetching friend requests, friends list,
+ * user friend code, and handling messages. &lt;br>
+ * It also manages the chat UI state and interactions.
+ */
+
+// Hooks
+import useWebSocketConnector from './useWebSocketConnector';
+
+// Utilities
+import BASE_URL from '../utils/config';
+import { SoundManager } from '../utils/soundManager';
+import { PopupManager } from '../utils/popupManager';
+
+// React
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+/**
+ * A custom hook that manages the friend chat functionality including: &lt;br>
+ * - Popup management &lt;br>
+ * - Chat toggle state &lt;br>
+ * - Active tab management (Friends/Requests) &lt;br>
+ * - Friend requests and friends list &lt;br>
+ * - Selected friend and friend code management &lt;br>
+ * - Message handling (fetching, sending, and input management) &lt;br>
+ * &lt;br>
+ * &lt;strong>useEffect:&lt;/strong> &lt;br>
+ * Initializes the PopupManager and sets the popup state when the component mounts. &lt;br>
+ * This ensures that the PopupManager is ready to handle popups throughout the application.
+ * &lt;br> &lt;br>
+ * &lt;strong>useWebSocketConnector:&lt;/strong> &lt;br>
+ * Connects to the WebSocket server to receive real-time updates on friend requests and friends list. &lt;br>
+ * It updates the state variables accordingly when a 'friendUpdate' message is received.
+ * &lt;br> &lt;br>
+ * &lt;strong>playClickSound:&lt;/strong> &lt;br>
+ * Plays a click sound when certain actions are performed, enhancing user experience.
+ * &lt;br> &lt;br>
+ * &lt;strong>toggleChat:&lt;/strong> &lt;br>
+ * Toggles the chat UI open/close state and plays a click sound.
+ * &lt;br> &lt;br>
+ * &lt;strong>fetchFriendRequests:&lt;/strong> &lt;br>
+ * Fetches the current user's friend requests from the server and updates the state.
+ * &lt;br> &lt;br>
+ * &lt;strong>fetchFriends:&lt;/strong> &lt;br>
+ * Fetches the current user's friends list from the server and updates the state.
+ * &lt;br> &lt;br>
+ * &lt;strong>fetchInvitations:&lt;/strong> &lt;br>
+ * Fetches the current user's lobby invitations from the server and updates the state.
+ * &lt;br> &lt;br>
+ * &lt;strong>fetchMessages:&lt;/strong> &lt;br>
+ * Fetches messages for the selected friend and marks them as read. &lt;br>
+ * It also plays a click sound and updates the selected friend state.
+ * &lt;br> &lt;br>
+ * &lt;strong>sendMessage:&lt;/strong> &lt;br>
+ * Sends a new message to the selected friend. &lt;br>
+ * If the message is empty, it does nothing. &lt;br>
+ * If the message is sent successfully, it updates the friends list. &lt;br>
+ * If there is an error, it shows a popup with an error message. 
+ * &lt;br> &lt;br>
+ * &lt;strong>handleAccept:&lt;/strong> &lt;br>
+ * Handles the acceptance of a friend request. &lt;br>
+ * Sends a POST request to the server to accept the friend request for the specified user ID. &lt;br>
+ * This function plays a click sound when the accept button is clicked.
+ * &lt;br> &lt;br>
+ * &lt;strong>handleDecline:&lt;/strong> &lt;br>
+ * Handles the decline of a friend request. &lt;br>
+ * Sends a POST request to the server to decline the friend request for the specified user ID. &lt;br>
+ * This function plays a click sound when the decline button is clicked.
+ * &lt;br> &lt;br>
+ * &lt;strong>sendFriendRequest:&lt;/strong> &lt;br>
+ * Handles the submission of the friend request. &lt;br> 
+ * It sends a POST request to the server with the entered friend code and displays a popup notification based on the response.
+ * If the friend code input is empty, it does nothing. &lt;br>
+ * This function plays a click sound when the send button is clicked.
+ * &lt;br> &lt;br>
+ * &lt;strong>removeFriend:&lt;/strong> &lt;br>
+ * Handles the removal of a friend. &lt;br>
+ * Sends a POST request to the server to remove the friend for the specified user ID. &lt;br>
+ * If the request is successful, it updates the friends list. &lt;br>
+ * If there is an error, it shows a popup with the error message.
+ * &lt;br> &lt;br>
+ * &lt;strong>inviteFriend:&lt;/strong> &lt;br>
+ * Invites a friend to join a lobby after user confirmation. &lt;br>
+ * Sends a POST request to the server to send the invitation. &lt;br>
+ * If the request is successful, shows a success message; otherwise, shows an error message.
+ * &lt;br> &lt;br>
+ * &lt;strong>handleInvitationAccept:&lt;/strong> &lt;br>
+ * Handles accepting a lobby invitation. &lt;br>
+ * Sends a POST request to the server to accept the invitation for the specified lobby ID. &lt;br>
+ * If the request is successful, navigates the user to the lobby join page. &lt;br>
+ * If there is an error, it shows a popup with the error message.
+ * &lt;br> &lt;br>
+ * &lt;strong>handleInvitationDecline:&lt;/strong> &lt;br>
+ * Handles declining a lobby invitation. &lt;br>
+ * Sends a POST request to the server to decline the invitation for the specified lobby ID. &lt;br>
+ * If there is an error, it shows a popup with the error message.
+ * &lt;br> &lt;br>
+ * 
+ * @function useFriendChatManager
+ * @returns {Object} An object containing methods and state variables for managing the friend chat functionality
+ */
+function useFriendChatManager() {
+    const [isChatOpen, setIsChatOpen] = useState(false);
+    const [pendingRequests, setPendingRequests] = useState([]);
+    const [pendingInvitations, setPendingInvitations] = useState([]);
+
+    const [friends, setFriends] = useState([]);
+    const [friendCode, setFriendCode] = useState('');
+    const [userFriendCode, setUserFriendCode] = useState('');
+
+    const [newFriendMessage, setNewFriendMessage] = useState('');
+    const [selectedFriend, setSelectedFriend] = useState('');
+
+    const init = useRef(false);
+    const navigate = useNavigate();
+
+    /**
+     * useEffect hook to initialize the friend chat manager.
+     * It fetches friend requests, friends list, and user friend code when the component mounts.
+     * This ensures that the initial state is set up correctly for the chat functionality.
+     */
+    useEffect(() => {
+        if (init.current) return;
+        init.current = true;
+
+        fetchFriendRequests();
+        fetchFriends();
+        fetchInvitations();
+    }, []);
+
+    /**
+     * useWebSocketConnector hook to listen for real-time updates from the server.
+     * It updates the friends list and pending requests when a 'friendUpdate' message is received.
+     * This allows the chat UI to reflect changes in friend status or requests without needing a page refresh.
+     */
+    useWebSocketConnector("friend", {}, init.current, (message) => {
+        if (message.type === 'friendUpdate') {
+            setPendingRequests(message.data.requests);
+            setFriends(message.data.friends);
+        }
+
+        if (message.type === 'invitationUpdate') {
+            setPendingInvitations(message.data.invitations);
+        }
+    });
+
+    // Function to play a click sound
+    const playClickSound = () => SoundManager.playClickSound();
+
+    /**
+     * Function to toggle the chat UI open/close state.
+     * It plays a click sound when the chat is toggled.
+     */
+    const toggleChat = () => {
+        playClickSound();
+        setIsChatOpen((prev) => !prev);
+    };
+
+    /**
+     * Function to fetch friend requests from the server.
+     * It sends a request to the server to get the current user's pending friend requests
+     * and updates the state with the received data.
+     * If no pending requests are found, it initializes the state with an empty array.
+     */
+    const fetchFriendRequests = async () => {
+        const res = await fetch(`${BASE_URL}get-friend-requests`, {
+            credentials: 'include',
+        });
+
+        const data = await res.json();
+
+        setPendingRequests(data.requests || []);
+    };
+
+    /**
+     * Function to fetch the friends list from the server.
+     * It sends a request to the server to get the current user's friends
+     * and updates the state with the received data.
+     * If no friends are found, it initializes the state with an empty array.
+     * This allows the chat UI to display the current friends list.
+     */
+    const fetchFriends = async () => {
+        const res = await fetch(`${BASE_URL}get-friends`, {
+            credentials: 'include',
+        });
+        
+        const data = await res.json();
+
+        setFriends(data.friends || []);
+        setUserFriendCode(data.friendCode);
+    };
+
+    /**
+     * Fetches lobby invitations from the server.
+     * It sends a request to the server to get the current user's pending lobby invitations
+     * and updates the state with the received data.
+     * If no pending invitations are found, it initializes the state with an empty array.
+     * This allows the chat UI to display the current lobby invitations.
+     */
+    const fetchInvitations = async () => {
+        const res = await fetch(`${BASE_URL}get-lobby-invitations`, {
+            credentials: 'include',
+        });
+
+        const data = await res.json();
+        setPendingInvitations(data.invitations || []);
+    };
+
+    /**
+     * Function to fetch messages for the selected friend.
+     * It sends a request to the server to get messages for the selected friend
+     * and marks them as read. It also plays a click sound and updates the selected friend state.
+     * If the selected friend has no messages, it initializes the messages state with an empty array.
+     * This allows the chat UI to display messages for the selected friend.
+     */
+    const markMessages = async (friendId) => {
+        playClickSound();
+        setSelectedFriend(friendId);
+
+        await fetch(`${BASE_URL}mark-friend-messages-read`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ friendId }),
+        });
+    };
+
+    /**
+     * Function to send a new message to the selected friend.
+     * It sends a request to the server with the selected friend's ID and the message content.
+     * If the message is empty, it does nothing.
+     * If the message is sent successfully, it updates the friends list.
+     * If there is an error, it shows a popup with an error message.
+     * This allows the user to send messages to their friends in real-time.
+     */
+    const sendFriendMessage = async () => {
+        if (!newFriendMessage.trim()) return;
+
+        const res = await fetch(`${BASE_URL}send-friend-message`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                friendId: selectedFriend,
+                message: newFriendMessage,
+            }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            PopupManager.showPopup({
+                title: 'Error',
+                message: 'An unexpected error occurred. Please try again later.',
+                icon: '❌',
+            });
+            console.error(data.error);
+        }
+    };
+
+    /**
+     * Handles the acceptance of a friend request.
+     * Sends a POST request to the server to accept the friend request for the specified user ID.
+     * This function plays a click sound when the accept button is clicked.
+     */
+    const handleFriendAccept = async (friendId) => {
+        playClickSound();
+
+        const ressponse = await fetch(`${BASE_URL}accept-friend-request`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ friendId }),
+        });
+
+        const data = await ressponse.json();
+
+        if (!data.success) {
+            PopupManager.showPopup({
+                title: "Add Friend",
+                message: data.error,
+                icon: '❌'
+            });
+        }
+    };
+
+    /**
+     * Handles the decline of a friend request.
+     * Sends a POST request to the server to decline the friend request for the specified user ID.
+     * This function plays a click sound when the decline button is clicked.
+     */
+    const handleFriendDecline = async (friendId) => {
+        playClickSound();
+        const response = await fetch(`${BASE_URL}decline-friend-request`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ friendId }),
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            PopupManager.showPopup({
+                title: "Add Friend",
+                message: data.error,
+                icon: '❌'
+            });
+        }
+    };
+
+    /**
+     * Handles sending a friend request.
+     * Sends a POST request to the server with the entered friend code and displays a popup notification based on the response.
+     * If the friend code input is empty, it does nothing.
+     * This function plays a click sound when the send button is clicked.
+     */
+    const sendFriendRequest = async (e) => {
+        e.preventDefault();
+
+        if (!friendCode.trim()) return;
+        SoundManager.playClickSound();
+
+        const res = await fetch(`${BASE_URL}send-friend-request`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ friendCode }),
+        });
+
+        setFriendCode(''); // Clear input after sending request
+
+        const data = await res.json();
+        
+        PopupManager.showPopup({
+            title: "Add Friend",
+            message: res.ok ? data.message : data.error,
+            icon: res.ok ? '✅' : '❌',
+        });
+    };
+
+    /**
+     * Removes a friend from the list after user confirmation.
+     * Sends a POST request to the server to remove the friend.
+     * If the request is successful, shows a success message; otherwise, shows an error message.
+     */
+    const removeFriend = async (friendId) => {
+        playClickSound();
+
+        const confirmed = await PopupManager.showPopup({
+            title: "Remove Friend",
+            message: "Are you sure you want to remove this friend? This action cannot be undone.",
+            icon: '❗️',
+            useCancel: true,
+        });
+
+        if (!confirmed) return;
+
+        const res = await fetch(`${BASE_URL}remove-friend`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ friendId }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            PopupManager.showPopup({
+                title: "Remove Friend",
+                message: data.error,
+                icon: '❌'
+            });
+        }
+    };
+
+    /**
+     * Invites a friend to join a lobby after user confirmation.
+     * Sends a POST request to the server to send the invitation.
+     * If the request is successful, shows a success message; otherwise, shows an error message.
+     */
+    const inviteFriend = async (friendId, lobbyId) => {
+        if (!lobbyId) return;
+
+        playClickSound();
+
+        const confirmed = await PopupManager.showPopup({
+            title: "Invite Friend",
+            message: "Are you sure you want to invite this friend to the Game?",
+            icon: '❗️',
+            useCancel: true,
+        });
+
+        if (!confirmed) return;
+
+        const res = await fetch(`${BASE_URL}send-lobby-invitation`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ friendId, lobbyId }),
+        });
+
+        const data = await res.json();
+
+        PopupManager.showPopup({
+            title: "Invite Friend",
+            message: res.ok ? data.message : data.error,
+            icon: res.ok ? '✅' : '❌',
+        });
+    };
+
+    /**
+     * Handles accepting a lobby invitation.
+     * Sends a POST request to the server to accept the invitation for the specified lobby ID.
+     * If the request is successful, navigates the user to the lobby join page.
+     * If there is an error, it shows a popup with the error message.
+     */
+    const handleInvitationAccept = async (lobbyId) => {
+        playClickSound();
+
+        const response = await fetch(`${BASE_URL}accept-lobby-invitation`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ lobbyId }),
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            navigate(`/join/${data.lobby}`);
+        } else {
+            PopupManager.showPopup({
+                title: data.title,
+                message: data.error,
+                icon: '❌'
+            });
+        }
+    };
+
+    /**
+     * Handles declining a lobby invitation.
+     * Sends a POST request to the server to decline the invitation for the specified lobby ID.
+     * If there is an error, it shows a popup with the error message.
+     */
+    const handleInvitationDecline = async (lobbyId) => {
+        playClickSound();
+
+        const response = await fetch(`${BASE_URL}decline-lobby-invitation`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ lobbyId }),
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            PopupManager.showPopup({
+                title: data.title,
+                message: data.error,
+                icon: '❌'
+            });
+        }
+    };
+
+    return {
+        isChatOpen,
+        toggleChat,
+
+        selectedFriend,
+
+        userFriendCode,
+        friendCode,
+        setFriendCode,
+
+        newFriendMessage,
+        setNewFriendMessage,
+
+        sendFriendMessage,
+        markMessages,
+
+        pendingRequests,
+        sendFriendRequest,
+        handleFriendAccept,
+        handleFriendDecline,
+
+        friends,
+        removeFriend,
+        inviteFriend,
+
+        pendingInvitations,
+        handleInvitationAccept,
+        handleInvitationDecline,
+    };
+}
+
+export default useFriendChatManager;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#Access">Access</a></li><li><a href="global.html#Account">Account</a></li><li><a href="global.html#Achievements">Achievements</a></li><li><a href="global.html#Avatar">Avatar</a></li><li><a href="global.html#AvatarInfo">AvatarInfo</a></li><li><a href="global.html#AvatarUploader">AvatarUploader</a></li><li><a href="global.html#BackButton">BackButton</a></li><li><a href="global.html#BricksCard">BricksCard</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#ChatMessages">ChatMessages</a></li><li><a href="global.html#ChatSidebar">ChatSidebar</a></li><li><a href="global.html#ChatTabs">ChatTabs</a></li><li><a href="global.html#ChatToggleButton">ChatToggleButton</a></li><li><a href="global.html#Create">Create</a></li><li><a href="global.html#DefaultCard">DefaultCard</a></li><li><a href="global.html#FriendCode">FriendCode</a></li><li><a href="global.html#FriendInput">FriendInput</a></li><li><a href="global.html#FriendList">FriendList</a></li><li><a href="global.html#FriendMessages">FriendMessages</a></li><li><a href="global.html#FriendRequestList">FriendRequestList</a></li><li><a href="global.html#Game">Game</a></li><li><a href="global.html#GameLogo">GameLogo</a></li><li><a href="global.html#GetCardTheme">GetCardTheme</a></li><li><a href="global.html#GetCardThemeURL">GetCardThemeURL</a></li><li><a href="global.html#HexagonCard">HexagonCard</a></li><li><a href="global.html#Home">Home</a></li><li><a href="global.html#Join">Join</a></li><li><a href="global.html#LeafsCard">LeafsCard</a></li><li><a href="global.html#LeaveButton">LeaveButton</a></li><li><a href="global.html#Lobbies">Lobbies</a></li><li><a href="global.html#Lobby">Lobby</a></li><li><a href="global.html#LobbyInvitation">LobbyInvitation</a></li><li><a href="global.html#LobbyList">LobbyList</a></li><li><a href="global.html#MenuButton">MenuButton</a></li><li><a href="global.html#MenuCheckBox">MenuCheckBox</a></li><li><a href="global.html#MenuInput">MenuInput</a></li><li><a href="global.html#MenuSelect">MenuSelect</a></li><li><a href="global.html#MessageInput">MessageInput</a></li><li><a href="global.html#NewGameButton">NewGameButton</a></li><li><a href="global.html#NextPhaseButton">NextPhaseButton</a></li><li><a href="global.html#NextPlayerButton">NextPlayerButton</a></li><li><a href="global.html#PLAYER_GENDER">PLAYER_GENDER</a></li><li><a href="global.html#Phase1">Phase1</a></li><li><a href="global.html#Phase1Layout">Phase1Layout</a></li><li><a href="global.html#Phase2">Phase2</a></li><li><a href="global.html#Phase2Layout">Phase2Layout</a></li><li><a href="global.html#Phase3">Phase3</a></li><li><a href="global.html#Phase3Layout">Phase3Layout</a></li><li><a href="global.html#PlayerActionButton">PlayerActionButton</a></li><li><a href="global.html#PlayerCards">PlayerCards</a></li><li><a href="global.html#PlayerListItem">PlayerListItem</a></li><li><a href="global.html#PopupModal">PopupModal</a></li><li><a href="global.html#PopupOptions">PopupOptions</a></li><li><a href="global.html#RetryButton">RetryButton</a></li><li><a href="global.html#SettingsButton">SettingsButton</a></li><li><a href="global.html#ShinglesCard">ShinglesCard</a></li><li><a href="global.html#SoundManager">SoundManager</a></li><li><a href="global.html#SquareCard">SquareCard</a></li><li><a href="global.html#StatisticBox">StatisticBox</a></li><li><a href="global.html#ThemeSelector">ThemeSelector</a></li><li><a href="global.html#TurnInfo">TurnInfo</a></li><li><a href="global.html#achievLabels">achievLabels</a></li><li><a href="global.html#busfahrerSelectionMode">busfahrerSelectionMode</a></li><li><a href="global.html#cardMatchStyles">cardMatchStyles</a></li><li><a href="global.html#cardThemes">cardThemes</a></li><li><a href="global.html#drinkQuotes">drinkQuotes</a></li><li><a href="global.html#playSound">playSound</a></li><li><a href="global.html#playerActionFeatures">playerActionFeatures</a></li><li><a href="global.html#schluckGiveMode">schluckGiveMode</a></li><li><a href="global.html#shuffleStyles">shuffleStyles</a></li><li><a href="global.html#statLabels">statLabels</a></li><li><a href="global.html#turnModes">turnModes</a></li><li><a href="global.html#useAuthGuard">useAuthGuard</a></li><li><a href="global.html#useAvatarInfo">useAvatarInfo</a></li><li><a href="global.html#useAvatarUpload">useAvatarUpload</a></li><li><a href="global.html#useBusfahrer">useBusfahrer</a></li><li><a href="global.html#useCardTheme">useCardTheme</a></li><li><a href="global.html#useChatManager">useChatManager</a></li><li><a href="global.html#useFriendChatManager">useFriendChatManager</a></li><li><a href="global.html#useGameCards">useGameCards</a></li><li><a href="global.html#useGameGuard">useGameGuard</a></li><li><a href="global.html#useGameInfo">useGameInfo</a></li><li><a href="global.html#useGameManager">useGameManager</a></li><li><a href="global.html#useLobbiesManager">useLobbiesManager</a></li><li><a href="global.html#useLobbyGuard">useLobbyGuard</a></li><li><a href="global.html#useLobbyManager">useLobbyManager</a></li><li><a href="global.html#usePlayerCards">usePlayerCards</a></li><li><a href="global.html#useSpectatorManager">useSpectatorManager</a></li><li><a href="global.html#useStatistics">useStatistics</a></li><li><a href="global.html#useTitles">useTitles</a></li><li><a href="global.html#useWebSocketConnector">useWebSocketConnector</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Fri Nov 07 2025 20:48:43 GMT+0100 (Central European Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

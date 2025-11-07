@@ -1,124 +1,106 @@
 /**
- * FriendList.jsx — Displays a list of the user's friends with avatars, usernames, and message notifications.
- *
- * Enables selection for chat initiation and removal of friends via a confirmation prompt.
- * Shows an unread message count indicator per friend.
+ * @fileoverview FriendList Component
+ * <br><br>
+ * This component displays a list of friends with options to select a friend or remove them from the list. <br>
+ * It uses the SoundManager utility to play click sounds when buttons are clicked
  */
-
-// Components
-import PopupModal from "../components/PopUpModal";
 
 // Utilities
 import BASE_URL from "../utils/config";
-import { SoundManager } from '../utils/soundManager';
-import { PopupManager } from "../utils/popupManager";
 
 // React
-import { useState, useEffect } from 'react';
+import { useParams } from "react-router-dom";
 
 /**
- * FriendList component function.
- *
- * Maps over the provided list of friends to render clickable friend items.
- * Allows selecting a friend to fetch messages and removing a friend via backend request.
- *
+ * A component that displays a list of friends with options to select a friend or remove them from the list. <br>
+ * It uses the SoundManager utility to play click sounds when buttons are clicked.
+ * <br><br>
+ * <strong>useEffect:</strong> <br>
+ * Initializes the PopupManager and sets the popup state when the component mounts. <br>
+ * This ensures that the PopupManager is ready to handle popups throughout the application.
+ * <br><br>
+ * <strong>playClickSound:</strong> <br>
+ * Plays a click sound when the remove friend button is clicked. <br>
+ * This enhances user experience by providing auditory feedback for interactions.
+ * <br><br>
+ * <strong>removeFriend:</strong> <br>
+ * Sends a POST request to remove a friend from the list. <br>
+ * It prompts the user for confirmation before proceeding with the removal. <br>
+ * If the request is successful, it shows a success message; otherwise, it shows an error message.
+ * 
  * @function FriendList
- * @param {Object} props - Component properties.
- * @param {Array} props.friends - Array of friend objects to display.
- * @param {Function} props.onSelect - Callback triggered when a friend is selected.
- * @returns {JSX.Element} The rendered list of friends.
+ * @param {Array} friends - An array of friend objects, each containing `userId`, `username`, `avatar`, and `unreadCount`.
+ * @returns {JSX.Element} The rendered FriendList component.
  */
-const FriendList = ({ friends, onSelect }) => {
-    const [popup, setPopup] = useState(PopupManager.defaultPopup);
-    
-    useEffect(() => {
-        PopupManager.initPopupManager(setPopup);
-    }, []);
+const FriendList = ({ friends, onSelect, removeFriend, inviteFriend }) => {
+    const { lobbyId } = useParams();
 
-    /**
-     * Plays a UI click sound for interaction feedback.
-     *
-     * Called before actions such as removing a friend.
-     */
-    const playClickSound = () => SoundManager.playClickSound();
-
-    /**
-     * Sends a request to remove a friend.
-     *
-     * Asks for confirmation, then sends a POST request to the backend.
-     * Alerts the user if the request fails.
-     *
-     * @param {string} friendId - The ID of the friend to remove.
-     */
-    const removeFriend = async (friendId) => {
-        playClickSound();
-        if (!window.confirm('Are you sure you want to remove this friend?'))
-            return;
-
-        const res = await fetch(`${BASE_URL}remove-friend`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ friendId }),
-        });
-
-        const data = await res.json();
-        if (!res.ok) {
-            PopupManager.showPopup({
-                title: "Remove Friend", 
-                message: data.error, 
-                icon: '❌'
-            });
-        }
-    };
-
-    /**
-     * Renders the friend list layout.
-     *
-     * Displays each friend's avatar, username, and unread message count.
-     * Includes a remove button that prevents event bubbling to avoid unintended chat opening.
-     */
     return (
         <>
-            <div className="friend-list">
+            {/* Friendlist Wrapper */}
+            <div className="friendList-wrapper">
                 {friends.map((friend) => (
+
+                    // Friend Item
                     <div
                         key={friend.userId}
-                        className="friend"
                         onClick={() => onSelect(friend.userId)}
+                        className="friendList-item scrollbar-thin scrollbar-thumb-white/30"
                     >
-                        <div className="friend-info">
+                        { /* Avatar and Username */}
+                        <div className="flex items-center
+                            gap-2.5 sm:gap-1 lg:gap-3 xl:gap-3 2xl:gap-2.5"
+                        >
                             <img
                                 src={`${BASE_URL}avatars/${friend.avatar}`}
                                 alt="Avatar"
-                                className="friend-avatar"
+                                className="friendList-avatar"
                             />
-                            <p className="friend-text">{friend.username}</p>
+
+                            <p className="friendList-txt">
+                                {friend.username}
+                            </p>
                             {friend.unreadCount > 0 && (
-                                <span className="unread-indicator">
-                                    {friend.unreadCount}
-                                </span>
+                                <div className="friendList-msg">
+                                    <span className="mb-[0.45px] sm:mb-[0.45px] lg:mb-[2.5px] xl:mb-[5px] 2xl:mb-[2.5px]">
+                                        {friend.unreadCount}
+                                    </span>
+                                </div>
                             )}
                         </div>
-                        <button
-                            className="remove-friend-btn"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                removeFriend(friend.userId);
-                            }}
-                        />
+
+                        <div className="flex gap-2">
+                            {/* Invite Friend to Lobby */}
+                            {lobbyId && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        inviteFriend(friend.userId, lobbyId);
+                                    }}
+                                    className="friendList-btn
+                                        bg-[url('/icons/join.svg')] bg-no-repeat bg-center
+                                        bg-[85%_auto]
+                                        bg-[#469ff1]
+                                    "
+                                />
+                            )}
+
+                            {/* Remove Friend Button */}
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    removeFriend(friend.userId);
+                                }}
+                                className="friendList-btn
+                                    bg-[url('/icons/remove.svg')] bg-no-repeat bg-center
+                                    bg-[85%_auto]
+                                    bg-[#c1272d]
+                                "
+                            />
+                        </div>
                     </div>
                 ))}
             </div>
-
-            {/* Popup modal for displaying messages */}
-            <PopupModal
-                isOpen={popup.show}
-                title={popup.title}
-                message={popup.message}
-                icon={popup.icon}
-                onClose={PopupManager.closePopup}
-            />
         </>
     );
 };

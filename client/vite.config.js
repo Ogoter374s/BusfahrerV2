@@ -13,5 +13,5 @@ export default defineConfig({
             key: fs.readFileSync(process.env.VITE_SSL_KEY),
             cert: fs.readFileSync(process.env.VITE_SSL_CERT),
         },
-    },
+    }
 });

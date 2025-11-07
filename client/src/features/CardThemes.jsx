@@ -1,25 +1,16 @@
 /**
- * Renders the full theme selector interface.
- *
- * Includes:
- * - Grid of theme previews (with selection and sound on click)
- * - Color pickers for primary and pattern hues
- * - Buttons for quitting or saving theme changes
+ * @fileoverview CardThemes Component
+ * <br><br>
+ * This component provides various card background themes using SVG patterns. <br>
+ * It includes functions to generate different card themes based on provided colors and theme IDs.
+ * <br><br>
+ * The component exports two main functions: `GetCardTheme` and `GetCardThemeURL`. <br>
+ * `GetCardTheme` returns a JSX element with the selected card theme as a background image. <br>
+ * `GetCardThemeURL` returns the URL string of the selected card theme background image.
  */
 
-// React
-import React from 'react';
-
 /**
- * DefaultCard, BricksCard, HexagonCard, ShinglesCard, SquareCard, LeafsCard
- *
- * Pattern generator functions for themed card backgrounds.
- * Each returns a base64-encoded data URL of an SVG with pattern elements
- * dynamically colored via the provided `color1` and `color2` props.
- *
- * @param {string} color1 - Primary background or shape color.
- * @param {string} color2 - Secondary or pattern color.
- * @returns {string} Base64-encoded SVG data URL string.
+ * Default card theme using a diagonal checkerboard pattern.
  */
 const DefaultCard = ({ color1, color2 }) => {
     return `data:image/svg+xml,${encodeURIComponent(`
@@ -37,15 +28,7 @@ const DefaultCard = ({ color1, color2 }) => {
 };
 
 /**
- * DefaultCard, BricksCard, HexagonCard, ShinglesCard, SquareCard, LeafsCard
- *
- * Pattern generator functions for themed card backgrounds.
- * Each returns a base64-encoded data URL of an SVG with pattern elements
- * dynamically colored via the provided `color1` and `color2` props.
- *
- * @param {string} color1 - Primary background or shape color.
- * @param {string} color2 - Secondary or pattern color.
- * @returns {string} Base64-encoded SVG data URL string.
+ * Bricks card theme using a brick-like pattern.
  */
 const BricksCard = ({ color1, color2 }) => {
     return `data:image/svg+xml,${encodeURIComponent(`
@@ -63,15 +46,7 @@ const BricksCard = ({ color1, color2 }) => {
 };
 
 /**
- * DefaultCard, BricksCard, HexagonCard, ShinglesCard, SquareCard, LeafsCard
- *
- * Pattern generator functions for themed card backgrounds.
- * Each returns a base64-encoded data URL of an SVG with pattern elements
- * dynamically colored via the provided `color1` and `color2` props.
- *
- * @param {string} color1 - Primary background or shape color.
- * @param {string} color2 - Secondary or pattern color.
- * @returns {string} Base64-encoded SVG data URL string.
+ * Hexagon card theme using a hexagonal pattern.
  */
 const HexagonCard = ({ color1, color2 }) => {
     return `data:image/svg+xml,${encodeURIComponent(`
@@ -88,15 +63,7 @@ const HexagonCard = ({ color1, color2 }) => {
 };
 
 /**
- * DefaultCard, BricksCard, HexagonCard, ShinglesCard, SquareCard, LeafsCard
- *
- * Pattern generator functions for themed card backgrounds.
- * Each returns a base64-encoded data URL of an SVG with pattern elements
- * dynamically colored via the provided `color1` and `color2` props.
- *
- * @param {string} color1 - Primary background or shape color.
- * @param {string} color2 - Secondary or pattern color.
- * @returns {string} Base64-encoded SVG data URL string.
+ * Shingles card theme using a shingle-like pattern.
  */
 const ShinglesCard = ({ color1, color2 }) => {
     return `data:image/svg+xml,${encodeURIComponent(`
@@ -114,15 +81,7 @@ const ShinglesCard = ({ color1, color2 }) => {
 };
 
 /**
- * DefaultCard, BricksCard, HexagonCard, ShinglesCard, SquareCard, LeafsCard
- *
- * Pattern generator functions for themed card backgrounds.
- * Each returns a base64-encoded data URL of an SVG with pattern elements
- * dynamically colored via the provided `color1` and `color2` props.
- *
- * @param {string} color1 - Primary background or shape color.
- * @param {string} color2 - Secondary or pattern color.
- * @returns {string} Base64-encoded SVG data URL string.
+ * Square card theme using a square grid pattern.
  */
 const SquareCard = ({ color1, color2 }) => {
     return `data:image/svg+xml,${encodeURIComponent(`
@@ -139,15 +98,7 @@ const SquareCard = ({ color1, color2 }) => {
 };
 
 /**
- * DefaultCard, BricksCard, HexagonCard, ShinglesCard, SquareCard, LeafsCard
- *
- * Pattern generator functions for themed card backgrounds.
- * Each returns a base64-encoded data URL of an SVG with pattern elements
- * dynamically colored via the provided `color1` and `color2` props.
- *
- * @param {string} color1 - Primary background or shape color.
- * @param {string} color2 - Secondary or pattern color.
- * @returns {string} Base64-encoded SVG data URL string.
+ * Leafs card theme using a leafy pattern.
  */
 const LeafsCard = ({ color1, color2 }) => {
     return `data:image/svg+xml,${encodeURIComponent(`
@@ -164,17 +115,15 @@ const LeafsCard = ({ color1, color2 }) => {
 };
 
 /**
- * GetCardTheme component.
- *
- * Renders a styled div with a background image generated from the selected theme.
- * Accepts a theme identifier and color values to produce the final card appearance.
- *
+ * Function to get the card theme component based on the provided ID and colors.
+ * <br><br>
+ * This function returns a div with the appropriate background image based on the selected theme ID.
+ * <br><br>
  * @function GetCardTheme
- * @param {Object} props - Component properties.
- * @param {string} props.color1 - Primary color for the card pattern.
- * @param {string} props.color2 - Secondary/pattern color.
- * @param {string} props.id - Theme identifier (e.g., "default", "bricks").
- * @returns {JSX.Element} A styled <div> with the theme applied as background.
+ * @param {string} color1 - The first color for the card theme.
+ * @param {string} color2 - The second color for the card theme.
+ * @param {string} id - The ID of the card theme to retrieve.
+ * @returns {JSX.Element} The card theme component with the specified background image.
  */
 export const GetCardTheme = ({
     color1 = '#ffffff',
@@ -208,30 +157,24 @@ export const GetCardTheme = ({
 
     return (
         <div
+            className="w-full h-full bg-cover bg-center shadow-[2px_2px_10px_rgba(0,0,0,0.2)]"
             style={{
-                width: '100%',
-                height: '100%',
                 backgroundImage,
-                backgroundSize: 'cover',
-                borderRadius: '10px',
-                boxShadow: '2px 2px 10px rgba(0,0,0,0.2)',
             }}
         ></div>
     );
 };
 
 /**
- * GetCardThemeURL utility function.
- *
- * Returns a background image URL string generated from the specified theme and colors.
- * Useful for setting inline styles or storing theme previews.
- *
+ * Function to get the card theme URL based on the provided ID and colors.
+ * <br><br>
+ * This function returns the background image URL string based on the selected theme ID.
+ * <br><br>
  * @function GetCardThemeURL
- * @param {Object} props - Parameters for theme generation.
- * @param {string} props.color1 - Primary color for the theme.
- * @param {string} props.color2 - Secondary color for the pattern.
- * @param {string} props.id - Theme identifier string.
- * @returns {string} A CSS-ready `url("...")` string for use in backgrounds.
+ * @param {string} color1 - The first color for the card theme.
+ * @param {string} color2 - The second color for the card theme.
+ * @param {string} id - The ID of the card theme to retrieve.
+ * @returns {string} The background image URL string for the specified card theme.
  */
 export const GetCardThemeURL = ({
     color1 = '#ffffff',

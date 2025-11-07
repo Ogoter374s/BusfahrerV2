@@ -1,20 +1,40 @@
+/**
+ * @fileoverview Custom hook to manage Busfahrer state and actions.
+ * <br><br>
+ * This hook provides state variables and functions to fetch and manage the Busfahrer (driver) status in a game.
+ */
+
 // Utilities
 import BASE_URL from "../utils/config";
 
 // React
 import { useState } from 'react';
-import { useParams } from "react-router-dom";
 
-const useBusfahrer = () => {
-    const { gameId } = useParams();
-
+/**
+ * A custom React hook to manage Busfahrer state and actions.
+ * <br><br>
+ * This hook provides state variables and functions to fetch and manage the Busfahrer (driver) status in a game.
+ * <br><br>
+ * <strong>fetchBusfahrer:</strong> <br>
+ * This asynchronous function fetches the current Busfahrer status and name from the server for the given game ID. <br>
+ * It updates the state variable `busfahrerName` based on the server response.
+ * <br><br>
+ * 
+ * @function useBusfahrer
+ * @param {string} gameId - The unique identifier for the game.
+ * @returns {Object} An object containing state variables and functions related to the Busfahrer.
+ */
+const useBusfahrer = (gameId) => {
     const [busfahrerName, setBusfahrerName] = useState('');
-    const [isBusfahrer, setIsBusfahrer] = useState(false);
 
+    /**
+     * Fetches the current Busfahrer status and name from the server for the given game ID.
+     * It updates the state variable `busfahrerName` based on the server response.
+     */
     const fetchBusfahrer = async () => {
         try {
             const response = await fetch(
-                `${BASE_URL}get-busfahrer?gameId=${gameId}`,
+                `${BASE_URL}get-busfahrer/${gameId}`,
                 {
                     method: 'GET',
                     headers: { 'Content-Type': 'application/json' },
@@ -22,13 +42,9 @@ const useBusfahrer = () => {
                 },
             );
 
-            if (!response.ok) {
-                throw new Error('Failed to fetch busfahrer details');
-            }
+            const data = await response.json();
 
-            const busfahrer = await response.json();
-            setIsBusfahrer(busfahrer.isBusfahrer);
-            setBusfahrerName(busfahrer.busfahrerName);
+            setBusfahrerName(data.busfahrerName);
         } catch (error) {
             console.error('Error fetching busfahrer:', error);
         }
@@ -37,9 +53,8 @@ const useBusfahrer = () => {
     return {
         busfahrerName,
         setBusfahrerName,
-        isBusfahrer,
-        setIsBusfahrer,
-        fetchBusfahrer,       
+
+        fetchBusfahrer,
     }
 };
 

@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: utils/constants.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: utils/constants.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @fileoverview This module defines constants used across the application,
+ * including card themes and statistic labels.
+ * &lt;br>&lt;br>
+ * &lt;strong>drinkQuotes:&lt;/strong> &lt;br>
+ * An array of humorous drink-related quotes used for branding.
+ * &lt;br>&lt;br>
+ * &lt;strong>cardThemes:&lt;/strong> &lt;br>
+ * An array of available card themes, each with a name and path.
+ * &lt;br>&lt;br>
+ * &lt;strong>statLabels:&lt;/strong> &lt;br>
+ * An array of statistic labels used for displaying user statistics.
+ * &lt;br>&lt;br>
+ * &lt;strong>achievLabels:&lt;/strong> &lt;br>
+ * An object mapping statistic keys to human-readable labels.
+ * &lt;br>&lt;br>
+ * &lt;strong>shuffleStyles:&lt;/strong> &lt;br>
+ * An array of available shuffle styles for card shuffling.
+ * &lt;br>&lt;br>
+ * &lt;strong>cardMatchStyles:&lt;/strong> &lt;br>
+ * An array of available card match styles for gameplay.
+ * &lt;br>&lt;br>
+ * &lt;strong>turnModes:&lt;/strong> &lt;br>
+ * An array of available turn modes for gameplay.
+ * &lt;br>&lt;br>
+ * &lt;strong>busfahrerSelectionMode:&lt;/strong> &lt;br>
+ * An array of available Busfahrer selection modes for gameplay.
+ * &lt;br>&lt;br>
+ * &lt;strong>schluckGiveMode:&lt;/strong> &lt;br>
+ * An array of available Schluck give modes for gameplay.
+ * &lt;br>&lt;br>
+ * &lt;strong>PLAYER_GENDER:&lt;/strong> &lt;br>
+ * An object defining player gender constants used across the application. &lt;br>
+ * These constants are used to standardize player gender representation across the application.
+ * If you change these, make sure to change them in server/constants/defaultKeys.js as well
+ * &lt;br>&lt;br>
+ * &lt;strong>playerActionFeatures:&lt;/strong> &lt;br>
+ * A function that generates an array of player action feature configurations
+ * based on the game manager state and lobby ID.
+ */
+
+// Features
+import NewGameButton from "../features/NewGameButton";
+import NextPhaseButton from "../features/NextPhaseButton";
+import NextPlayerButton from "../features/NextPlayerButton";
+import RetryButton from "../features/RetryButton";
+
+/**
+ * Predefined list of drink-related quotes. &lt;br>
+ * These quotes are humorous and related to coding and drinking culture,
+ * adding a fun element to the game's branding.
+ */
+export const drinkQuotes = [
+    "Don't drink and code 🍺",
+    'Ctrl + Brew 🍻',
+    'Debug responsibly!',
+    'Commit, push, exen 🍷',
+    'Drunk on features!',
+    'Refactoring with rum!',
+    'Ship it and sip it!',
+    'Code hard, drink harder 🍹',
+    'Escape() to the pub',
+    'Raise a glass, not exceptions!',
+    "Import beer from 'fridge' 🍺",
+    "console.beer('Cheers!')",
+    'While(alive) { drink(); } 🍻',
+    'Docs and Draughts 📖🍺',
+    'Your build is buzzed 🛠️🍷',
+    'Async, await... another round 🍻',
+    '404: Beer Not Found 🚫🍺',
+    'Happy hour = merge conflicts 🍹',
+    'Git pull, then pour 🍾',
+    'Deploy, then decant 🍷',
+    'Ping me at the pub 🍻',
+    'TypeError: Too sober to function 🥴',
+    'sudo apt-get install beer 🍺',
+    'brew install chill 🍺',
+    'Add shot; commit; blame 🥃',
+];
+
+/**
+ * Predefined list of card themes. &lt;br>
+ * Each object in the array contains a `name` for display purposes and a `path` for referencing the theme. &lt;br>
+ * This list is used to allow users to select different visual themes for cards in the application.
+ */
+export const cardThemes = [
+    { name: 'Classic', path: 'default' },
+    { name: 'Bricks', path: 'bricks' },
+    { name: 'Hexagon', path: 'hexagon' },
+    { name: 'Shingles', path: 'shingles' },
+    { name: 'Square', path: 'square' },
+    { name: 'Leafs', path: 'leafs' },
+];
+
+/**
+ * Predefined list of statistic labels. &lt;br>
+ * Each object in the array contains a `key` corresponding to a statistic and a `label` for display purposes. &lt;br>
+ * This list is used to render user statistics in the UI.
+ */
+export const statLabels = [
+    { key: 'gamesPlayed', label: 'Games Played' },
+    { key: 'gamesBusfahrer', label: 'Games Busfahrer' },
+    { key: 'drinksGiven', label: 'Schlucke Given' },
+    { key: 'drinksSelf', label: 'Schlucke Self' },
+    { key: 'numberEx', label: 'Number Exen' },
+    { key: 'maxDrinksGiven', label: 'Max. Schlucke Given' },
+    { key: 'maxDrinksSelf', label: 'Max. Schlucke Self' },
+    { key: 'maxCardsSelf', label: 'Max. Cards Number' },
+    { key: 'layedCards', label: 'Layed Cards' },
+    { key: 'gamesJoined', label: 'Games Joined' },
+    { key: 'dailyLoginStreak', label: 'Daily Login Streak' },
+    { key: 'gamesHosted', label: 'Games Hosted' },
+    { key: 'rowsFlipped', label: 'Rows Flipped' },
+    { key: 'topDrinker', label: 'Top Drinker' },
+    { key: 'topDrinks', label: 'Top Drinks' },
+    { key: 'gamesWon', label: 'Games Won' },
+    { key: 'cardsPlayedPhase1', label: 'Cards Played Phase 1' },
+    { key: 'cardsLeft', label: 'Cards Left' },
+    { key: 'phase3Failed', label: 'Phase 3 Failed' },
+    { key: 'maxRounds', label: 'Max. Rounds' },
+    { key: 'changedTheme', label: 'Changed Theme' },
+    { key: 'changedSound', label: 'Changed Sound' },
+    { key: 'uploadedAvatar', label: 'Uploaded Avatar' },
+    { key: 'gotKicked', label: 'Got Kicked' },
+    { key: 'playersKicked', label: 'Players Kicked' },
+    { key: 'drinksReceived', label: 'Drinks Received' },
+    { key: 'maxDrinksReceived', label: 'Max. Drinks Received' },
+    { key: 'friends', label: 'Friends' },
+    { key: 'friendsAdded', label: 'Friends Added' },
+    { key: 'friendsRemoved', label: 'Friends Removed' },
+    { key: 'friendsMessagesReceived', label: 'Messages Received' },
+    { key: 'friendsMessagesSent', label: 'Messages Sent' },
+    { key: 'friendsRequestsReceived', label: 'Requests Received' },
+    { key: 'friendsRequestsSent', label: 'Requests Sent' },
+];
+
+/**
+ * Mapping of statistic keys to human-readable labels. &lt;br>
+ * This object is used to convert statistic keys into more user-friendly labels when displaying statistics in the UI.
+ */
+export const achievLabels = {
+    gamesJoined: 'Joined Games',
+    gamesPlayed: 'Games Played',
+    drinksGiven: 'Drinks Given',
+    drinksSelf: 'Drinks Self',
+    numberEx: 'Number of Ex',
+    maxDrinksGiven: 'Max Drinks Given',
+    maxDrinksSelf: 'Max Drinks Self',
+    maxCardsSelf: 'Max Cards Held',
+    layedCards: 'Cards Laid',
+    dailyLoginStreak: 'Daily Login Streak',
+    gamesHosted: 'Games Hosted',
+    topDrinker: 'Top Drinker',
+    rowsFlipped: 'Rows Flipped',
+    cardsPlayedPhase1: 'Cards Played Phase 1',
+    cardsLeft: 'Cards Left',
+    phase3Failed: 'Failed Phase 3',
+    gamesWon: 'Games Won',
+    maxRounds: 'Phase 3 Rounds',
+    changedTheme: 'Changed the Theme',
+    changedSound: 'Changed the Sound',
+    uploadedAvatar: 'Uploaded an Avatar',
+};
+
+/**
+ * Predefined list of shuffle styles. &lt;br>
+ * Each object in the array contains a `name` for display purposes and a `type` for referencing the shuffle style. &lt;br>
+ * This list is used to allow users to select different shuffle styles for card shuffling.
+ */
+export const shuffleStyles = [
+    { name: "Normal", type: "Fisher-Yates" },
+    { name: "Chaotic", type: "Chaotic" },
+    { name: "Riffle", type: "Riffle" },
+];
+
+/**
+ * Predefined list of card match styles. &lt;br>
+ * Each object in the array contains a `name` for display purposes and a `type` for referencing the card match style. &lt;br>
+ * This list is used to allow users to select different card match styles for gameplay.
+ */
+export const cardMatchStyles = [
+    { name: "Number-only", type: "Number-only" },
+    { name: "Type-only", type: "Type-only" },
+    { name: "Exact", type: "Exact" },
+];
+
+/**
+ * Predefined list of turn modes. &lt;br>
+ * Each object in the array contains a `name` for display purposes and a `type` for referencing the turn mode. &lt;br>
+ * This list is used to allow users to select different turn modes for gameplay.
+ */
+export const turnModes = [
+    { name: "Default", type: "Default" },
+    { name: "Reverse", type: "Reverse" },
+    { name: "Random", type: "Random" },
+];
+
+/**
+ * Predefined list of Busfahrer selection modes. &lt;br>
+ * Each object in the array contains a `name` for display purposes and a `type` for referencing the selection mode. &lt;br>
+ * This list is used to allow users to select different Busfahrer selection modes for gameplay.
+ */
+export const busfahrerSelectionMode = [
+    { name: "Default", type: "Default" },
+    { name: "Reversed", type: "Reverse" },
+    { name: "Random", type: "Random" },
+];
+
+/**
+ * Predefined list of Schluck give modes. &lt;br>
+ * Each object in the array contains a `name` for display purposes and a `type` for referencing the give mode. &lt;br>
+ * This list is used to allow users to select different Schluck give modes for gameplay.
+ */
+export const schluckGiveMode = [
+    { name: "Default", type: "Default" },
+    { name: "Per Avatar", type: "Avatar" },
+];
+
+/**
+ * Predefined player gender constants. &lt;br>
+ * These constants are used to standardize player gender representation across the application.
+ * If you change these, make sure to change them in server/constants/defaultKeys.js as well
+*/
+export const PLAYER_GENDER = {
+    MALE: 'male',
+    FEMALE: 'female',
+    OTHER: 'other',
+};
+
+/**
+ * Generates an array of player action feature configurations based on the game manager state and lobby ID. &lt;br>
+ * Each feature configuration includes a key, component, visibility condition, and props. &lt;br>
+ * This function is used to dynamically create the set of player action features available in the game UI.
+ */
+export const playerActionFeatures = (manager, lobbyId) => [
+    {
+        key: 'nextPlayer',
+        component: NextPlayerButton,
+        visible: manager?.phase !== 3 &amp;&amp; !manager?.nextPhaseEnabled,
+        props: {
+            lobbyId,
+            canClick: manager?.nextPlayerEnabled
+        }
+    },
+    {
+        key: 'nextPhase',
+        component: NextPhaseButton,
+        visible: manager?.phase !== 3 &amp;&amp; manager?.nextPhaseEnabled,
+        props: {
+            lobbyId,
+            canClick: manager?.nextPhaseEnabled,
+        }
+    },
+    {
+        key: 'retry',
+        component: RetryButton,
+        visible: manager?.phase === 3 &amp;&amp; !manager?.gameOver,
+        props: {
+            lobbyId,
+            canClick: manager?.tryOver,
+        }
+    }, 
+    {
+        key: 'newGame',
+        component: NewGameButton,
+        visible: manager?.phase === 3 &amp;&amp; manager?.gameOver,
+        props: {
+            lobbyId,
+            canClick: manager?.gameOver &amp;&amp; manager?.isGameMaster,
+        }
+    }
+];</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#Access">Access</a></li><li><a href="global.html#Account">Account</a></li><li><a href="global.html#Achievements">Achievements</a></li><li><a href="global.html#Avatar">Avatar</a></li><li><a href="global.html#AvatarInfo">AvatarInfo</a></li><li><a href="global.html#AvatarUploader">AvatarUploader</a></li><li><a href="global.html#BackButton">BackButton</a></li><li><a href="global.html#BricksCard">BricksCard</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#ChatMessages">ChatMessages</a></li><li><a href="global.html#ChatSidebar">ChatSidebar</a></li><li><a href="global.html#ChatTabs">ChatTabs</a></li><li><a href="global.html#ChatToggleButton">ChatToggleButton</a></li><li><a href="global.html#Create">Create</a></li><li><a href="global.html#DefaultCard">DefaultCard</a></li><li><a href="global.html#FriendCode">FriendCode</a></li><li><a href="global.html#FriendInput">FriendInput</a></li><li><a href="global.html#FriendList">FriendList</a></li><li><a href="global.html#FriendMessages">FriendMessages</a></li><li><a href="global.html#FriendRequestList">FriendRequestList</a></li><li><a href="global.html#Game">Game</a></li><li><a href="global.html#GameLogo">GameLogo</a></li><li><a href="global.html#GetCardTheme">GetCardTheme</a></li><li><a href="global.html#GetCardThemeURL">GetCardThemeURL</a></li><li><a href="global.html#HexagonCard">HexagonCard</a></li><li><a href="global.html#Home">Home</a></li><li><a href="global.html#Join">Join</a></li><li><a href="global.html#LeafsCard">LeafsCard</a></li><li><a href="global.html#LeaveButton">LeaveButton</a></li><li><a href="global.html#Lobbies">Lobbies</a></li><li><a href="global.html#Lobby">Lobby</a></li><li><a href="global.html#LobbyInvitation">LobbyInvitation</a></li><li><a href="global.html#LobbyList">LobbyList</a></li><li><a href="global.html#MenuButton">MenuButton</a></li><li><a href="global.html#MenuCheckBox">MenuCheckBox</a></li><li><a href="global.html#MenuInput">MenuInput</a></li><li><a href="global.html#MenuSelect">MenuSelect</a></li><li><a href="global.html#MessageInput">MessageInput</a></li><li><a href="global.html#NewGameButton">NewGameButton</a></li><li><a href="global.html#NextPhaseButton">NextPhaseButton</a></li><li><a href="global.html#NextPlayerButton">NextPlayerButton</a></li><li><a href="global.html#PLAYER_GENDER">PLAYER_GENDER</a></li><li><a href="global.html#Phase1">Phase1</a></li><li><a href="global.html#Phase1Layout">Phase1Layout</a></li><li><a href="global.html#Phase2">Phase2</a></li><li><a href="global.html#Phase2Layout">Phase2Layout</a></li><li><a href="global.html#Phase3">Phase3</a></li><li><a href="global.html#Phase3Layout">Phase3Layout</a></li><li><a href="global.html#PlayerActionButton">PlayerActionButton</a></li><li><a href="global.html#PlayerCards">PlayerCards</a></li><li><a href="global.html#PlayerListItem">PlayerListItem</a></li><li><a href="global.html#PopupModal">PopupModal</a></li><li><a href="global.html#PopupOptions">PopupOptions</a></li><li><a href="global.html#RetryButton">RetryButton</a></li><li><a href="global.html#SettingsButton">SettingsButton</a></li><li><a href="global.html#ShinglesCard">ShinglesCard</a></li><li><a href="global.html#SoundManager">SoundManager</a></li><li><a href="global.html#SquareCard">SquareCard</a></li><li><a href="global.html#StatisticBox">StatisticBox</a></li><li><a href="global.html#ThemeSelector">ThemeSelector</a></li><li><a href="global.html#TurnInfo">TurnInfo</a></li><li><a href="global.html#achievLabels">achievLabels</a></li><li><a href="global.html#busfahrerSelectionMode">busfahrerSelectionMode</a></li><li><a href="global.html#cardMatchStyles">cardMatchStyles</a></li><li><a href="global.html#cardThemes">cardThemes</a></li><li><a href="global.html#drinkQuotes">drinkQuotes</a></li><li><a href="global.html#playSound">playSound</a></li><li><a href="global.html#playerActionFeatures">playerActionFeatures</a></li><li><a href="global.html#schluckGiveMode">schluckGiveMode</a></li><li><a href="global.html#shuffleStyles">shuffleStyles</a></li><li><a href="global.html#statLabels">statLabels</a></li><li><a href="global.html#turnModes">turnModes</a></li><li><a href="global.html#useAuthGuard">useAuthGuard</a></li><li><a href="global.html#useAvatarInfo">useAvatarInfo</a></li><li><a href="global.html#useAvatarUpload">useAvatarUpload</a></li><li><a href="global.html#useBusfahrer">useBusfahrer</a></li><li><a href="global.html#useCardTheme">useCardTheme</a></li><li><a href="global.html#useChatManager">useChatManager</a></li><li><a href="global.html#useFriendChatManager">useFriendChatManager</a></li><li><a href="global.html#useGameCards">useGameCards</a></li><li><a href="global.html#useGameGuard">useGameGuard</a></li><li><a href="global.html#useGameInfo">useGameInfo</a></li><li><a href="global.html#useGameManager">useGameManager</a></li><li><a href="global.html#useLobbiesManager">useLobbiesManager</a></li><li><a href="global.html#useLobbyGuard">useLobbyGuard</a></li><li><a href="global.html#useLobbyManager">useLobbyManager</a></li><li><a href="global.html#usePlayerCards">usePlayerCards</a></li><li><a href="global.html#useSpectatorManager">useSpectatorManager</a></li><li><a href="global.html#useStatistics">useStatistics</a></li><li><a href="global.html#useTitles">useTitles</a></li><li><a href="global.html#useWebSocketConnector">useWebSocketConnector</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Fri Nov 07 2025 20:48:43 GMT+0100 (Central European Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

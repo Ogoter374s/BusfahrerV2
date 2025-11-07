@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: pages/Lobby.jsx</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: pages/Lobby.jsx</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @fileoverview Lobby page where users wait before starting the game.
+ * &lt;br>&lt;br>
+ * This page displays the lobby information, including the list of players and spectators. &lt;br>
+ * It allows the game master to start the game and kick players if necessary. &lt;br>
+ * It also includes a chat sidebar and a leave button for exiting the lobby.
+ */
+
+// Components
+import ChatSidebar from '../components/ChatSidebar';
+import LeaveButton from '../components/LeaveButton';
+import MenuButton from '../components/MenuButton';
+import PlayerListItem from '../components/PlayerListItem';
+import PopupModal from '../components/PopUpModal';
+
+// Hooks
+import { useAuthGuard } from '../hooks/useAuthGuard';
+import { useLobbyGuard } from '../hooks/useLobbyGuard';
+import useLobbyManager from '../hooks/useLobbyManager';
+
+// Utilities
+import { PopupManager } from '../utils/popupManager';
+
+// React
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+/**
+ * Lobby Page Component
+ * &lt;br>&lt;br>
+ * This component renders the Lobby page where users wait before starting the game. &lt;br>
+ * It displays the lobby information, including the list of players and spectators, and allows the game master to start the game and kick players if necessary. &lt;br>
+ * It also includes a chat sidebar and a leave button for exiting the lobby.
+ * &lt;br>&lt;br>
+ * &lt;strong>useLobbyManager()&lt;/strong>: &lt;br>
+ * Custom hook that manages the state and actions related to the lobby, including fetching lobby info, 
+ * managing players and spectators, starting the game, and leaving the lobby.
+ * &lt;br>&lt;br>
+ * &lt;strong>useEffect&lt;/strong>: &lt;br>
+ * Hook that runs side effects in the component. &lt;br>
+ * In this case, it initializes the PopupManager when the component is mounted and the user is authenticated and authorized to access the lobby.
+ * &lt;br>&lt;br>
+ * 
+ * @function Lobby
+ * @returns {JSX.Element} The Lobby page component.
+ */
+function Lobby() {
+    const init = useRef(false);
+    const isAuthenticated = useAuthGuard();
+    const isLobbyAuthenticated = useLobbyGuard();
+
+    const navigate = useNavigate();
+    const [popup, setPopup] = useState(PopupManager.defaultPopup);
+    
+    /**
+     * Lobby manager hook that provides state and actions for managing the lobby.
+     * It includes information about the lobby, players, spectators, and functions to start the game, kick players, and leave the lobby.
+     */
+    const {
+        isGameMaster,
+        startGame,
+        kickPlayer,
+        players,
+        spectators,
+        lobbyInfo,
+        leaveLobby,
+    } = useLobbyManager();
+
+    /**
+     * Initializes the PopupManager when the component is mounted and the user is authenticated and authorized to access the lobby.
+     * This effect runs only once due to the `init` ref.
+     */
+    useEffect(() => {
+        if(!isAuthenticated) return;
+        if(!isLobbyAuthenticated) return;
+        
+        if (init.current) return;
+        init.current = true;
+
+        PopupManager.initPopupManager(setPopup,navigate);
+    }, [isAuthenticated, isLobbyAuthenticated]);
+
+    return (
+        &lt;div className="@container/lobby flex flex-col items-center justify-center h-screen">
+            
+            {/* Background overlay image */}
+            &lt;div className="lobby-wrapper">
+
+                {/* Main game menu container */}
+                &lt;div className="lobby-home">
+
+                    {/* Game title with a highlighted effect */}
+                    &lt;h1 className="lobby-title">
+                        {lobbyInfo?.name}:
+                        &lt;span className="highlight select-all">{lobbyInfo?.code}&lt;/span>
+                    &lt;/h1>
+
+                    {/* User list */}
+                    &lt;div className="lobby-user-list-wrapper">
+
+                        {/* Player list */}
+                        &lt;div className="lobby-user-list-part">
+                            &lt;h2 className="lobby-user-list-title">
+                                Players
+                            &lt;/h2>
+
+                            {players.map((player, index) => (
+                                &lt;PlayerListItem 
+                                    key={player.id}
+                                    player={player}
+                                    index = {index}
+                                    isGameMaster={isGameMaster}
+                                    onKick={kickPlayer}
+                                />
+                            ))}
+                        &lt;/div>
+
+                        {/* Spectator list */}
+                        {spectators.length > 0 &amp;&amp; (
+                            &lt;div className="lobby-user-list-part">
+                                &lt;h2 className="lobby-user-list-title">
+                                    Spectators
+                                &lt;/h2>
+
+                                {spectators.map((spectator, index) => (
+                                    &lt;PlayerListItem 
+                                        key={spectator.id}
+                                        player={spectator}
+                                        index = {index}
+                                        isGameMaster={isGameMaster}
+                                        onKick={kickPlayer}
+                                        isSpectator={true}
+                                    />
+                                ))}
+                            &lt;/div>
+                        )}
+                    &lt;/div>
+
+                    {/* Start Game button (only enabled for game master) */}
+                    &lt;MenuButton 
+                        wrapper={true}
+                        wrapperClass="mt-6 sm:mt-3 lg:mt-6 xl:mt-6 2xl:mt-6"
+                        buttonClass={"lobby-btn"}
+                        textClass="btn-txt"
+                        icon={isGameMaster ? 'button' : 'button_disabled'}
+                        alt="Start Button"
+                        text="Start Game"
+                        disabled={!isGameMaster}
+                        onClick={startGame}
+                    />
+                &lt;/div>
+            &lt;/div>
+
+            {/* Leave game button, navigates player back */}
+            &lt;LeaveButton 
+                handleClick={leaveLobby}
+            />
+
+            {/* Sidebar Toggle */}
+            &lt;ChatSidebar showChatTab={true}/>
+
+            {/* Popup modal for displaying messages */}
+            &lt;PopupModal
+                isOpen={popup.show}
+                title={popup.title}
+                message={popup.message}
+                icon={popup.icon}
+                onOk={PopupManager.okPopup}
+                onCancel={PopupManager.cancelPopup}
+                useCancel={popup.useCancel}
+            />
+        &lt;/div>
+    );
+}
+
+export default Lobby;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#Access">Access</a></li><li><a href="global.html#Account">Account</a></li><li><a href="global.html#Achievements">Achievements</a></li><li><a href="global.html#Avatar">Avatar</a></li><li><a href="global.html#AvatarInfo">AvatarInfo</a></li><li><a href="global.html#AvatarUploader">AvatarUploader</a></li><li><a href="global.html#BackButton">BackButton</a></li><li><a href="global.html#BricksCard">BricksCard</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#ChatMessages">ChatMessages</a></li><li><a href="global.html#ChatSidebar">ChatSidebar</a></li><li><a href="global.html#ChatTabs">ChatTabs</a></li><li><a href="global.html#ChatToggleButton">ChatToggleButton</a></li><li><a href="global.html#Create">Create</a></li><li><a href="global.html#DefaultCard">DefaultCard</a></li><li><a href="global.html#FriendCode">FriendCode</a></li><li><a href="global.html#FriendInput">FriendInput</a></li><li><a href="global.html#FriendList">FriendList</a></li><li><a href="global.html#FriendMessages">FriendMessages</a></li><li><a href="global.html#FriendRequestList">FriendRequestList</a></li><li><a href="global.html#Game">Game</a></li><li><a href="global.html#GameLogo">GameLogo</a></li><li><a href="global.html#GetCardTheme">GetCardTheme</a></li><li><a href="global.html#GetCardThemeURL">GetCardThemeURL</a></li><li><a href="global.html#HexagonCard">HexagonCard</a></li><li><a href="global.html#Home">Home</a></li><li><a href="global.html#Join">Join</a></li><li><a href="global.html#LeafsCard">LeafsCard</a></li><li><a href="global.html#LeaveButton">LeaveButton</a></li><li><a href="global.html#Lobbies">Lobbies</a></li><li><a href="global.html#Lobby">Lobby</a></li><li><a href="global.html#LobbyInvitation">LobbyInvitation</a></li><li><a href="global.html#LobbyList">LobbyList</a></li><li><a href="global.html#MenuButton">MenuButton</a></li><li><a href="global.html#MenuCheckBox">MenuCheckBox</a></li><li><a href="global.html#MenuInput">MenuInput</a></li><li><a href="global.html#MenuSelect">MenuSelect</a></li><li><a href="global.html#MessageInput">MessageInput</a></li><li><a href="global.html#NewGameButton">NewGameButton</a></li><li><a href="global.html#NextPhaseButton">NextPhaseButton</a></li><li><a href="global.html#NextPlayerButton">NextPlayerButton</a></li><li><a href="global.html#PLAYER_GENDER">PLAYER_GENDER</a></li><li><a href="global.html#Phase1">Phase1</a></li><li><a href="global.html#Phase1Layout">Phase1Layout</a></li><li><a href="global.html#Phase2">Phase2</a></li><li><a href="global.html#Phase2Layout">Phase2Layout</a></li><li><a href="global.html#Phase3">Phase3</a></li><li><a href="global.html#Phase3Layout">Phase3Layout</a></li><li><a href="global.html#PlayerActionButton">PlayerActionButton</a></li><li><a href="global.html#PlayerCards">PlayerCards</a></li><li><a href="global.html#PlayerListItem">PlayerListItem</a></li><li><a href="global.html#PopupModal">PopupModal</a></li><li><a href="global.html#PopupOptions">PopupOptions</a></li><li><a href="global.html#RetryButton">RetryButton</a></li><li><a href="global.html#SettingsButton">SettingsButton</a></li><li><a href="global.html#ShinglesCard">ShinglesCard</a></li><li><a href="global.html#SoundManager">SoundManager</a></li><li><a href="global.html#SquareCard">SquareCard</a></li><li><a href="global.html#StatisticBox">StatisticBox</a></li><li><a href="global.html#ThemeSelector">ThemeSelector</a></li><li><a href="global.html#TurnInfo">TurnInfo</a></li><li><a href="global.html#achievLabels">achievLabels</a></li><li><a href="global.html#busfahrerSelectionMode">busfahrerSelectionMode</a></li><li><a href="global.html#cardMatchStyles">cardMatchStyles</a></li><li><a href="global.html#cardThemes">cardThemes</a></li><li><a href="global.html#drinkQuotes">drinkQuotes</a></li><li><a href="global.html#playSound">playSound</a></li><li><a href="global.html#playerActionFeatures">playerActionFeatures</a></li><li><a href="global.html#schluckGiveMode">schluckGiveMode</a></li><li><a href="global.html#shuffleStyles">shuffleStyles</a></li><li><a href="global.html#statLabels">statLabels</a></li><li><a href="global.html#turnModes">turnModes</a></li><li><a href="global.html#useAuthGuard">useAuthGuard</a></li><li><a href="global.html#useAvatarInfo">useAvatarInfo</a></li><li><a href="global.html#useAvatarUpload">useAvatarUpload</a></li><li><a href="global.html#useBusfahrer">useBusfahrer</a></li><li><a href="global.html#useCardTheme">useCardTheme</a></li><li><a href="global.html#useChatManager">useChatManager</a></li><li><a href="global.html#useFriendChatManager">useFriendChatManager</a></li><li><a href="global.html#useGameCards">useGameCards</a></li><li><a href="global.html#useGameGuard">useGameGuard</a></li><li><a href="global.html#useGameInfo">useGameInfo</a></li><li><a href="global.html#useGameManager">useGameManager</a></li><li><a href="global.html#useLobbiesManager">useLobbiesManager</a></li><li><a href="global.html#useLobbyGuard">useLobbyGuard</a></li><li><a href="global.html#useLobbyManager">useLobbyManager</a></li><li><a href="global.html#usePlayerCards">usePlayerCards</a></li><li><a href="global.html#useSpectatorManager">useSpectatorManager</a></li><li><a href="global.html#useStatistics">useStatistics</a></li><li><a href="global.html#useTitles">useTitles</a></li><li><a href="global.html#useWebSocketConnector">useWebSocketConnector</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Fri Nov 07 2025 20:48:43 GMT+0100 (Central European Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

@@ -1,59 +1,58 @@
 /**
- * useAvatarUpload.js — Custom hook for handling avatar image upload and cropping logic.
- *
- * Provides all necessary state and functions to support selecting, previewing,
- * cropping, and uploading user avatars in a React application.
+ * @fileoverview Custom hook for handling avatar uploads and preset avatar selection.
+ * <br><br>
+ * This hook manages the state and logic for uploading a custom avatar image, including cropping functionality, as well as selecting from preset avatars. <br>
+ * It handles file input changes, image cropping, and server communication. <br>
+ * It also provides feedback to the user through popup messages in case of errors or success.
  */
 
 // Utilities
+import { PopupManager } from "../utils/popupManager";
 import { SoundManager } from '../utils/soundManager';
 
 // React
 import { useState } from 'react';
 
-let PopupManager = null;
-
 /**
- * useAvatarUpload hook function.
- *
- * Manages state for avatar cropping, preview generation, and upload handling.
- * Integrates file reading, Cropper.js cropping, and backend upload requests.
- *
+ * A custom React hook for handling avatar uploads and preset avatar selection.
+ * <br><br>
+ * This hook manages the state and logic for uploading a custom avatar image, including cropping functionality, as well as selecting from preset avatars. <br>
+ * It handles file input changes, image cropping, and server communication. <br>
+ * It also provides feedback to the user through popup messages in case of errors or success.
+ * <br><br>
+ * <strong>handleAvatarChange:</strong> <br>
+ * This function is called when the user selects a new avatar image file. <br>
+ * It updates the state with the selected file and generates a preview URL for cropping.
+ * <br><br>
+ * <strong>getCroppedImage:</strong> <br>
+ * This function creates a cropped version of the selected avatar image based on the cropping area defined by the user. <br>
+ * It returns a Promise that resolves to a Blob of the cropped image.
+ * <br><br>
+ * <strong>uploadAvatar:</strong> <br>
+ * This asynchronous function uploads the cropped avatar image to the server. <br>
+ * It handles server responses and displays appropriate popup messages for success or failure.
+ * <br><br>
+ * <strong>selectPresetAvatar:</strong> <br>
+ * This asynchronous function allows the user to select a preset avatar. <br>
+ * It sends the selected avatar identifier to the server and handles responses with popup messages.
+ * <br><br>
  * @function useAvatarUpload
- * @returns {Object} An object containing:
- *   {boolean} isUploading - Whether an upload is currently in progress.
- *   {string} uploadedAvatar - Filename or path of the uploaded avatar.
- *   {string} avatarPreview - Image preview source for cropping.
- *   {boolean} showCropper - Whether the cropping UI is visible.
- *   {Object} crop - Position state for cropping.
- *   {number} zoom - Zoom level for the cropper.
- *   {Function} setCrop - Setter for crop position.
- *   {Function} setZoom - Setter for zoom level.
- *   {Function} setShowCropper - Setter to toggle cropper visibility.
- *   {Function} setCroppedAreaPixels - Stores calculated crop area dimensions.
- *   {Function} handleAvatarChange - Handles image file input and creates preview.
- *   {Function} onAvatarUpload - Uploads the cropped avatar image to the server.
+ * @param {string} BASE_URL - The base URL for the server API.
+ * @param {function} onUploadSuccess - Callback function to call when the avatar upload is successful.
+ * @returns {Object} An object containing state variables and functions for managing avatar uploads and selections.
  */
 const useAvatarUpload = ({ BASE_URL, onUploadSuccess }) => {
     const [avatarFile, setAvatarFile] = useState(null);
     const [avatarPreview, setAvatarPreview] = useState(null);
+
     const [showCropper, setShowCropper] = useState(false);
     const [crop, setCrop] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
     const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
 
-    const setPopupManager = (pm) => {
-        PopupManager = pm;
-    };
-
     /**
-     * handleAvatarChange — Handles avatar image file selection.
-     *
-     * Reads the selected file from the input element, creates a preview URL,
-     * stores the file in state, and activates the cropping interface.
-     *
-     * @function handleAvatarChange
-     * @param {React.ChangeEvent<HTMLInputElement>} e - File input change event.
+     * Handles the change event when a new avatar image file is selected.
+     * This function updates the state with the selected file and generates a preview URL for cropping
      */
     const handleAvatarChange = (e) => {
         const file = e.target.files[0];
@@ -65,13 +64,8 @@ const useAvatarUpload = ({ BASE_URL, onUploadSuccess }) => {
     };
 
     /**
-     * getCroppedImage — Generates a cropped image blob from the preview and crop data.
-     *
-     * Draws the cropped portion of the avatar preview onto a canvas,
-     * then converts the result to a JPEG Blob for uploading.
-     *
-     * @function getCroppedImage
-     * @returns {Promise<Blob>} A Promise that resolves to a cropped image blob.
+     * Generates a cropped version of the selected avatar image.
+     * This function creates a canvas element to draw the cropped area and returns a Blob of the cropped image.
      */
     const getCroppedImage = () => {
         return new Promise((resolve) => {
@@ -105,20 +99,15 @@ const useAvatarUpload = ({ BASE_URL, onUploadSuccess }) => {
 
                 canvas.toBlob((blob) => {
                     resolve(blob);
-                }, 'image/jpeg');
+                }, avatarFile.type);
             };
         });
     };
 
     /**
-     * uploadAvatar — Uploads the cropped avatar image to the backend.
-     *
-     * Converts the preview to a cropped image blob and submits it via a FormData POST request.
-     * On success, resets the cropper and notifies the parent component with the new avatar URL.
-     * Plays a click sound and displays alerts if upload fails or no file is selected.
-     *
-     * @function uploadAvatar
-     * @returns {Promise<void>}
+     * Uploads the cropped avatar image to the server.
+     * This asynchronous function handles server responses and displays appropriate popup messages for success or failure.
+     * If no file is selected, it prompts the user to select an image.
      */
     const uploadAvatar = async () => {
         SoundManager.playClickSound();
@@ -129,12 +118,21 @@ const useAvatarUpload = ({ BASE_URL, onUploadSuccess }) => {
                 message: 'Please select an image.',
                 icon: '🚫',
             });
-            return;
         }
 
-        const croppedBlob = await getCroppedImage();
+        // Prepare form data for upload
         const formData = new FormData();
-        formData.append('avatar', croppedBlob, 'cropped-avatar.jpg');
+        if (avatarFile.type === 'image/gif') {
+            formData.append('avatar', avatarFile, avatarFile.name);
+            if (croppedAreaPixels) {
+                formData.append('cropData', JSON.stringify(croppedAreaPixels));
+            }
+        } else {
+            const croppedBlob = await getCroppedImage();
+            const ext = avatarFile.name.split('.').pop().toLowerCase();
+            const fileName = `cropped-avatar.${ext}`;
+            formData.append('avatar', croppedBlob, fileName);
+        }
 
         try {
             const response = await fetch(`${BASE_URL}upload-avatar`, {
@@ -143,15 +141,16 @@ const useAvatarUpload = ({ BASE_URL, onUploadSuccess }) => {
                 credentials: 'include',
             });
 
-            if (response.ok) {
-                const data = await response.json();
+            const data = await response.json();
+
+            if (data.success) {
                 setAvatarFile(null);
                 setShowCropper(false);
                 onUploadSuccess(`${BASE_URL}avatars/${data.avatarUrl}`);
             } else {
                 PopupManager.showPopup({
-                    title: 'Avatar Upload',
-                    message: 'Avatar upload failed.',
+                    title: data.title,
+                    message: data.error,
                     icon: '❌',
                 });
             }
@@ -166,14 +165,8 @@ const useAvatarUpload = ({ BASE_URL, onUploadSuccess }) => {
     };
 
     /**
-     * selectPresetAvatar — Sets a predefined avatar image for the user.
-     *
-     * Sends a POST request with the selected avatar name to the backend.
-     * If successful, updates the avatar preview through the parent callback.
-     * Plays a click sound and logs any errors.
-     *
-     * @function selectPresetAvatar
-     * @param {string} avatar - Filename of the selected preset avatar.
+     * Selects a preset avatar by sending the selected avatar identifier to the server.
+     * This asynchronous function handles server responses and displays appropriate popup messages for success or failure.
      */
     const selectPresetAvatar = async (avatar) => {
         SoundManager.playClickSound();
@@ -188,54 +181,45 @@ const useAvatarUpload = ({ BASE_URL, onUploadSuccess }) => {
                 body: JSON.stringify({ avatar }),
             });
 
-            if (response.ok) {
+            const data = await response.json();
+
+            if (data.success) {
                 onUploadSuccess(`${BASE_URL}/avatars/${avatar}`);
             } else {
                 PopupManager.showPopup({
-                    title: 'Avatar Selection',
-                    message: 'Failed to set avatar.',
+                    title: data.title,
+                    message: data.error,
                     icon: '❌',
                 });
             }
         } catch (error) {
+            PopupManager.showPopup({
+                title: 'Error',
+                message: 'An unexpected error occurred. Please try again later.',
+                icon: '❌',
+            });
             console.error('Error setting avatar:', error);
         }
     };
 
-    /**
-     * Returns the avatar upload hook state and handlers.
-     *
-     * Provides preview data, crop and zoom configuration,
-     * cropper control, and avatar selection/upload functions.
-     *
-     * @returns {Object} The avatar upload controller object:
-     *   {string} avatarPreview - Preview image source for cropping.
-     *   {boolean} showCropper - Whether the cropper UI is active.
-     *   {Object} crop - Current crop position.
-     *   {number} zoom - Zoom level for the cropper.
-     *   {Function} setCrop - Updates crop position.
-     *   {Function} setZoom - Updates zoom level.
-     *   {Object} croppedAreaPixels - Cropped area pixel dimensions.
-     *   {Function} setCroppedAreaPixels - Setter for cropped area data.
-     *   {Function} handleAvatarChange - Handles image file selection and shows preview.
-     *   {Function} uploadAvatar - Uploads the cropped avatar image to the server.
-     *   {Function} setShowCropper - Toggles the cropping interface.
-     *   {Function} selectPresetAvatar - Selects a built-in avatar and submits it to the server.
-     */
     return {
-        setPopupManager,
         avatarPreview,
+        setAvatarPreview,
+
         showCropper,
+        setShowCropper,
+
         crop,
-        zoom,
         setCrop,
+        zoom,
         setZoom,
+
         croppedAreaPixels,
         setCroppedAreaPixels,
-        handleAvatarChange,
+
         uploadAvatar,
-        setShowCropper,
         selectPresetAvatar,
+        handleAvatarChange,
     };
 };
 

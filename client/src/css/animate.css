@@ -1,0 +1,22 @@
+@keyframes pulsate {
+    0% { 
+        transform: scale(1) 
+    }
+    50% {
+        transform: scale(1.05) 
+    }
+    100% {
+        transform: scale(1) 
+    }
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(-10px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}

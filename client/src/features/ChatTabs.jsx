@@ -1,43 +1,48 @@
 /**
- * ChatTabs.jsx — Provides tabbed navigation for the chat sidebar.
- *
- * Allows users to switch between "Friends" and "Game" tabs within the chat interface.
- * Supports conditional rendering of the game tab based on props.
+ * @fileoverview ChatTabs component that renders the tabs for the chat interface.
+ * <br><br>
+ * This component allows users to switch between the Friends and Game tabs. <br>
+ * It handles the active tab state and applies styles based on the active tab.
  */
 
 /**
- * ChatTabs component function.
- *
- * Renders tab buttons for toggling between chat sections.
- * Applies an active state style to the currently selected tab.
- *
+ * Renders the chat tabs for Friends and Game.
+ * <br><br>
+ * This component allows users to switch between the Friends and Game tabs. <br>
+ * It handles the active tab state and applies styles based on the active tab.
+ * 
  * @function ChatTabs
- * @param {Object} props - Component properties.
- * @param {string} props.activeTab - The currently active tab key.
- * @param {Function} props.setActiveTab - Function to update the active tab state.
- * @param {boolean} props.showGameTab - Flag to conditionally show the "Game" tab.
- * @returns {JSX.Element} The rendered tab buttons container.
+ * @param {string} activeTab - The currently active tab ('friends' or 'game').
+ * @param {Function} setActiveTab - Function to set the active tab.
+ * @param {boolean} showGameTab - Flag to determine if the Game tab should be shown.
+ * @returns {JSX.Element} The rendered ChatTabs component.
  */
-const ChatTabs = ({ activeTab, setActiveTab, showGameTab }) => {
-    /**
-     * Renders the chat tab buttons.
-     *
-     * Includes a "Friends" tab by default and optionally a "Game" tab.
-     * Highlights the currently active tab and updates state on click.
-     */
+const ChatTabs = ({ activeTab, setActiveTab, showChatTab }) => {
     return (
-        <div className="chat-tabs">
+        //* Container for the chat tabs */
+        <div className="chatTab-wrapper">
+
+            {/* Button for Friends tab */}
             <button
-                className={`chat-tab-btn ${activeTab === 'friends' ? 'active' : ''}`}
                 onClick={() => setActiveTab('friends')}
+                className={`chatTab
+                    ${activeTab === 'friends' 
+                        ? 'bg-[#333] border-b-2 border-[#c1272d]' 
+                        : 'border-b-2 border-[#444]'}
+                `}
             >
                 Friends
             </button>
 
-            {showGameTab && (
+            {/* Conditional rendering of Game tab button */}
+            {showChatTab && (
                 <button
-                    className={`chat-tab-btn ${activeTab === 'game' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('game')}
+                    onClick={() => setActiveTab('chat')}    
+                    className={`chatTab
+                        ${activeTab === 'chat' 
+                            ? 'bg-[#333] border-b-2 border-[#c1272d]' 
+                            : 'border-b-2 border-[#444]'}
+                    `}   
                 >
                     Game
                 </button>

@@ -1,8 +1,9 @@
 /**
- * useAuthGuard.js — Custom hook for managing user authentication status.
- *
- * Retrieves and returns the current user's authentication state from the backend.
- * Designed for conditionally rendering components and routes based on login state.
+ * @fileoverview Custom hook for authentication guard in React applications.
+ * <br><br>
+ * This hook checks if the user is authenticated by making a request to the server.<br>
+ * If the user is not authenticated, it redirects them to the home page.<br>
+ * It uses the `useEffect` hook to perform the authentication check when the component mounts.
  */
 
 // Utilities
@@ -13,25 +14,35 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 /**
- * useAuthGuard hook function.
- *
- * Initializes local state to store the authentication result.
- * Automatically checks authentication status on component mount.
- *
+ * Custom hook that checks user authentication status and redirects if not authenticated.
+ * <br><br>
+ * This hook performs an API call to check if the user is authenticated. <br>
+ * If the user is not authenticated, it redirects them to the home page. <br>
+ * It uses the `useEffect` hook to run the authentication check when the component mounts.
+ * <br><br>
+ * <strong>useEffect:</strong> <br>
+ * The `useEffect` hook is used to call the `checkAuth` function when the component mounts. <br>
+ * This ensures that the authentication status is checked immediately after the component is rendered. <br>
+ * If the user is not authenticated, they are redirected to the home page using the `useNavigate` hook.
+ * <br><br>
+ * <strong>checkAuth:</strong> <br>
+ * The `checkAuth` function makes a GET request to the server to check the authentication status. <br>
+ * If the response indicates that the user is not authenticated, it sets the `isAuthenticated`
+ * state to `false` and redirects the user to the home page. <br>
+ * If the user is authenticated, it sets the `isAuthenticated` state to `true`.
+ * 
  * @function useAuthGuard
- * @returns {boolean} Whether the user is authenticated.
+ * @return {boolean} isAuthenticated - Indicates whether the user is authenticated or not.
  */
 export const useAuthGuard = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const navigate = useNavigate();
 
     /**
-     * checkAuth — Verifies the user's authentication status.
-     *
-     * Makes a request to the backend (e.g., /check-auth) using credentials.
-     * Updates the state to reflect whether the user is currently logged in.
-     *
-     * @function checkAuth
+     * Checks the authentication status of the user.
+     * This function makes a GET request to the server to verify if the user is authenticated.
+     * If the user is not authenticated, it redirects them to the home page.
+     * If the user is authenticated, it updates the `isAuthenticated` state.
      */
     const checkAuth = async () => {
         try {
@@ -55,10 +66,9 @@ export const useAuthGuard = () => {
     };
 
     /**
-     * useEffect — Runs once on component mount to validate authentication.
-     *
-     * Sends a fetch request to the backend to determine if the current user session is valid.
-     * Updates the local auth state based on the response.
+     * useEffect hook that runs the authentication check when the component mounts.
+     * This ensures that the authentication status is verified immediately after the component is rendered.
+     * If the user is not authenticated, they are redirected to the home page.
      */
     useEffect(() => {
         checkAuth();

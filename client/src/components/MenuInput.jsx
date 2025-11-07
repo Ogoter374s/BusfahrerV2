@@ -1,36 +1,33 @@
 /**
- * MenuInput.jsx — Reusable input component for authentication and menu forms.
- *
- * Provides a styled input field with dynamic type, value, placeholder, and change handling.
- * Used for user input such as username and password fields within the game's access system.
+ * @fileoverview MenuInput component for user input fields in the menu.
+ * <br><br>
+ * This component renders an input field with customizable properties such as type, placeholder, value, and onChange handler. <br>
+ * It also supports an image background and optional required validation.
  */
 
 /**
- * MenuInput component function.
- *
- * Renders a styled input element that handles user input events.
- * Passes the input's event data to a parent-defined callback for state updates.
- *
+ * A component that renders an input field with customizable properties such as type, placeholder, value, and onChange handler. <br>
+ * It supports an image background and optional required validation.
+ * 
  * @function MenuInput
- * @param {Object} props - Component properties.
- * @param {string} props.type - The input type (e.g., "text", "password").
- * @param {string} props.placeholder - Placeholder text for the input field.
- * @param {string} props.value - Current value of the input field.
- * @param {Function} props.onChange - Callback for handling input changes.
- * @param {string} props.cssName - CSS class name for styling the input field.
- * @param {boolean} [props.required=false] - Whether the input is required for submission.
- * @returns {JSX.Element} The rendered input field.
+ * @param {string} type - The type of the input field (e.g., "text", "password").
+ * @param {string} placeholder - The placeholder text for the input field.
+ * @param {string} value - The current value of the input field.
+ * @param {function} onChange - The function to call when the input value changes.
+ * @param {string} img - The name of the image to use as the background for the input field.
+ * @param {boolean} [required=false] - Whether the input field is required.
+ * @returns {JSX.Element} The rendered input field component.
  */
-function MenuInput({ type, placeholder, value, onChange, cssName, required = false }) {
-    /**
-     * Renders the input field element.
-     *
-     * Binds the provided value, placeholder, and change event.
-     * Applies a predefined rustic style class for consistent visual appearance.
-     */
+function MenuInput({ type, placeholder, value, onChange, img, required = false }) {
     return (
+        // Input field with customizable properties
         <input
-            className={cssName}
+            className="input-style"
+            style={{
+                backgroundImage: `url('/components/${img}.svg')`,
+                boxShadow: "inset 2px 2px 4px rgba(0, 0, 0, 0.6)",
+                textShadow: "1px 1px 2px rgba(0, 0, 0, 0.8)"
+            }}
             type={type}
             placeholder={placeholder}
             value={value}

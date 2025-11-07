@@ -1,8 +1,8 @@
 /**
- * AvatarUploader.jsx — Modal component for selecting, uploading, and cropping user avatars.
- *
- * Supports selecting a preset avatar, uploading a custom image, and cropping it using a visual cropper.
- * Plays a click sound on upload interaction and handles modal visibility.
+ * @fileoverview AvatarUploader Component
+ * <br><br>
+ * This component provides a modal interface for users to select or upload an avatar image. <br>
+ * It includes preset avatar options, file upload functionality, and image cropping capabilities.
  */
 
 // Utilities
@@ -13,65 +13,43 @@ import { SoundManager } from '../utils/soundManager';
 import Cropper from 'react-easy-crop';
 
 /**
- * AvatarUploader component function.
- *
- * Renders a modal dialog that provides:
- * - Preset avatar selection
- * - Custom image file upload
- * - Crop functionality using react-easy-crop
- * - Confirmation and close controls
- *
+ * A modal component that allows users to select a preset avatar or upload and crop their own image.
+ * <br><br>
+ * This component provides a modal interface for users to select or upload an avatar image. <br>
+ * It includes preset avatar options, file upload functionality, and image cropping capabilities.
+ * <br><br>
  * @function AvatarUploader
- * @param {Object} props - Component properties.
- * @param {boolean} props.isOpen - Whether the modal is visible.
- * @param {Function} props.onClose - Function to close the modal.
- * @param {string|null} props.uploadedAvatar - Previously uploaded avatar filename.
- * @param {string} props.selectedAvatar - Currently selected avatar.
- * @param {Function} props.onPresetSelect - Handler for selecting a preset avatar.
- * @param {Function} props.onAvatarUpload - Handler for confirming and uploading the cropped avatar.
- * @param {string} props.avatarPreview - URL or base64 preview of the selected avatar image.
- * @param {boolean} props.showCropper - Whether to show the cropping interface.
- * @param {Object} props.crop - Crop position state object.
- * @param {number} props.zoom - Current zoom level for the cropper.
- * @param {Function} props.setCrop - Setter for crop position.
- * @param {Function} props.setZoom - Setter for zoom level.
- * @param {Function} props.setCroppedAreaPixels - Stores pixel data of cropped area.
- * @param {Function} props.handleAvatarChange - Handler for file input changes.
- * @returns {JSX.Element|null} Rendered modal with avatar selection tools or null if closed.
+ * @param {boolean} isOpen - Whether the avatar uploader modal is currently open.
+ * @param {function} onClose - Callback function to close the modal.
+ * @param {string} uploadedAvatar - The URL of the currently uploaded avatar.
+ * @param {function} onPresetSelect - Callback function when a preset avatar is selected.
+ * @param {function} onAvatarUpload - Callback function to handle the avatar upload process.
+ * @param {string} avatarPreview - The preview URL of the selected avatar image.
+ * @param {boolean} showCropper - Whether to show the image cropper.
+ * @param {Object} crop - The current crop state for the image cropper.
+ * @param {number} zoom - The current zoom level for the image cropper.
+ * @param {function} setCrop - Function to update the crop state.
+ * @param {function} setZoom - Function to update the zoom level.
+ * @param {function} setCroppedAreaPixels - Function to set the cropped area pixels after cropping is complete.
+ * @param {function} handleAvatarChange - Function to handle changes in the file input for avatar upload.
+ * @returns {JSX.Element|null} The rendered AvatarUploader component or null if `isOpen` is false.
  */
 const AvatarUploader = ({
-    isOpen,
-    onClose,
-    uploadedAvatar,
-    selectedAvatar,
-    onPresetSelect,
-    onAvatarUpload,
-    avatarPreview,
-    showCropper,
-    crop,
-    zoom,
-    setCrop,
-    setZoom,
-    setCroppedAreaPixels,
-    handleAvatarChange,
+    isOpen, onClose, uploadedAvatar, onPresetSelect,
+    onAvatarUpload, avatarPreview, showCropper, crop,
+    zoom, setCrop, setZoom, setCroppedAreaPixels, handleAvatarChange,
 }) => {
     if (!isOpen) return null;
 
-    /**
-     * Renders avatar selection and upload modal layout.
-     *
-     * Includes:
-     * - Preset avatars and uploaded avatar options
-     * - File input with sound feedback
-     * - Conditional image cropper and upload confirmation
-     * - Modal close button
-     */
     return (
-        <div className="modal-backdrop">
-            <div className="avatar-modal">
-                <h2>Select Your Avatar</h2>
+        <div className="modal-style">
+            <div className="cropper-wrapper">
+                <h2 className="cropper-h2">
+                    Select Your Avatar
+                </h2>
 
-                <div className="avatar-selection">
+                {/* Preset Avatars & Upload Avatar */}
+                <div className="cropper-list">
                     {[
                         'default.svg',
                         uploadedAvatar && uploadedAvatar !== ''
@@ -86,33 +64,37 @@ const AvatarUploader = ({
                                 key={avatar}
                                 src={`${BASE_URL}/avatars/${avatar}`}
                                 alt={avatar}
-                                className="avatar-option"
                                 onClick={() => onPresetSelect(avatar)}
+                                className="cropper-item"
                             />
                         ))}
                 </div>
 
-                <h3>Or Upload Your Own</h3>
-                <div className="file-upload-container">
+                <h3 className="cropper-h3">
+                    Or Upload Your Own
+                </h3>
+
+                <div className="flex flex-col items-center select-none mb-1">
                     <input
                         type="file"
                         id="avatar-upload"
                         accept="image/*"
                         onChange={handleAvatarChange}
-                        className="hidden-file-input"
+                        className="hidden"
                     />
                     <label
                         htmlFor="avatar-upload"
-                        className="custom-file-upload"
                         onClick={() => SoundManager.playClickSound()}
+                        className="cropper-upload"
                     >
                         Choose Image
                     </label>
                 </div>
 
+                {/* Cropper for uploaded avatar */}
                 {showCropper && (
-                    <div className="cropper-wrapper">
-                        <div className="crop-container">
+                    <div>
+                        <div className="upload-wrapper">
                             <Cropper
                                 image={avatarPreview}
                                 crop={crop}
@@ -125,13 +107,21 @@ const AvatarUploader = ({
                                 }
                             />
                         </div>
-                        <div className="crop-actions">
-                            <button onClick={onAvatarUpload}>Upload</button>
+                        <div className="upload-actions">
+                            <button
+                                onClick={onAvatarUpload}
+                                className="modal-btn"
+                            >
+                                Upload
+                            </button>
                         </div>
                     </div>
                 )}
 
-                <button className="modal-btn" onClick={onClose}>
+                <button
+                    onClick={onClose}
+                    className="modal-btn"
+                >
                     Close
                 </button>
             </div>

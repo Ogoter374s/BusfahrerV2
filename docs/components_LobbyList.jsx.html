@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: components/LobbyList.jsx</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: components/LobbyList.jsx</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @fileoverview Lobby List Component
+ * &lt;br>&lt;br>
+ * This component displays a list of available public lobbies. &lt;br>
+ * Each lobby item shows player avatars, lobby name, player count, and allows expansion for more details.
+ */
+
+// Utilities
+import BASE_URL from '../utils/config';
+import { SoundManager } from '../utils/soundManager';
+
+// React
+import { useState } from 'react';
+
+/**
+ * A component that displays a list of available public lobbies. &lt;br>
+ * Each lobby item shows player avatars, lobby name, player count, and allows expansion for more details.
+ * &lt;br>&lt;br>
+ * &lt;strong>toggleExpand:&lt;/strong> &lt;br>
+ * This function toggles the expanded state of a lobby item when clicked. &lt;br>
+ * It plays a click sound and updates the expanded index state.
+ * &lt;br>&lt;br>
+ * 
+ * @function LobbyList
+ * @param {Array} lobbies - An array of lobby objects to display.
+ * @param {function} onJoin - A function to call when the join button is clicked, with the lobby code as parameter.
+ * @returns {JSX.Element} The rendered lobby list component.
+ */
+function LobbyList({ lobbies, onJoin }) {
+    const [expandedIndex, setExpandedIndex] = useState(null);
+
+    /**
+     * Toggles the expanded state of a lobby item when clicked.
+     * It plays a click sound and updates the expanded index state.
+     */
+    const toggleExpand = (index) => {
+        SoundManager.playClickSound();
+        setExpandedIndex(expandedIndex === index ? null : index);
+    };
+
+    return (
+        &lt;div className="lobby-list-wrapper">
+
+            {/* List of available public lobbies */}
+            {lobbies.map((lobby, index) => (
+                &lt;div
+                    key={index}
+                    className="lobby-list-item"
+                    onClick={() => toggleExpand(index)}
+                >
+                    &lt;div className="flex justify-between items-center">
+                        &lt;div className="flex items-center gap-3 sm:gap-1 lg:gap-1 xl:gap-2 2xl:gap-2">
+
+                            {/* Player Avatars */}
+                            &lt;div className="flex pointer-events-none gap-1 sm:gap-0.5 lg:gap-1 xl:gap-1.5 2xl:gap-1.5">
+                                {lobby.avatars.slice(0, 3).map((player, idx) => (
+                                    &lt;img
+                                        key={idx}
+                                        src={`${BASE_URL}avatars/${player.avatar}`}
+                                        alt={`Player ${idx + 1}`}
+                                        className="lobby-list-avatar"
+                                    />
+                                ))}
+
+                                {lobby.playerCount > 3 &amp;&amp; (
+                                    &lt;span className="lobby-list-more">
+                                        ...
+                                    &lt;/span>
+                                )}
+                            &lt;/div>
+
+                            &lt;span className="lobby-list-title">
+                                {lobby.name}
+                            &lt;/span>
+                        &lt;/div>
+
+                        {/* Lobby Info */}
+                        &lt;div className="lobby-list-info">
+
+                            {/* Spectator Icon if there are spectators */}
+                            {lobby.spectators.length !== 0 &amp;&amp; (
+                                &lt;div className="flex items-center">
+                                    &lt;img
+                                        src={"/icons/spectator.svg"}
+                                        alt={"Spectator"}
+                                        className="lobby-list-spectator"
+                                    />
+                                &lt;/div>
+                            )}
+
+                            {/* Player Count and player limit */}
+                            &lt;span>
+                                {lobby.playerCount} / {lobby.settings.playerLimit}
+                            &lt;/span>
+
+                            {/* Join Button */}
+                            &lt;button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onJoin({ lobbyCode: lobby.code });
+                                }}
+                                className="lobby-list-join"
+                            />
+                        &lt;/div>
+                    &lt;/div>
+
+                    {/* Expanded section with player list and creation date */}
+                    {expandedIndex === index &amp;&amp; (
+                        &lt;div className="lobby-list-extended">
+
+                            {/* Left side: Player list */}
+                            &lt;ul>
+
+                                {/* List of players with avatars and names */}
+                                {lobby.avatars.map((player, idx) => (
+                                    &lt;li key={idx}>
+                                        &lt;div className="lobby-list-player-wrapper">
+                                            &lt;img
+                                                key={idx}
+                                                src={`${BASE_URL}avatars/${player.avatar}`}
+                                                alt={`Player ${idx + 1}`}
+                                                className="lobby-list-player-icon"
+                                            />
+
+                                            {player.name}
+                                        &lt;/div>
+                                    &lt;/li>
+                                ))}
+
+                                {/* List of spectators with icon and names */}
+                                {lobby.spectators.map((player, idx) => (
+                                    &lt;li key={idx}>
+                                        &lt;div className="lobby-list-spectator-wrapper">
+                                            &lt;img
+                                                src={"/icons/spectator.svg"}
+                                                alt={"Spectator"}
+                                                className="lobby-list-spectator-icon"
+                                            />
+
+                                            {player.name}
+                                        &lt;/div>
+                                    &lt;/li>
+                                ))}
+                            &lt;/ul>
+
+                            {/* Right side: Creation date */}
+                            &lt;div className="lobby-list-date">
+                                {new Date(lobby.createdAt).toLocaleDateString("de-DE", {
+                                    year: "numeric",
+                                    month: "2-digit",
+                                    day: "2-digit",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                })}
+                            &lt;/div>
+                        &lt;/div>
+                    )}
+                &lt;/div>
+            ))}
+        &lt;/div>
+    );
+}
+
+export default LobbyList;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#Access">Access</a></li><li><a href="global.html#Account">Account</a></li><li><a href="global.html#Achievements">Achievements</a></li><li><a href="global.html#Avatar">Avatar</a></li><li><a href="global.html#AvatarInfo">AvatarInfo</a></li><li><a href="global.html#AvatarUploader">AvatarUploader</a></li><li><a href="global.html#BackButton">BackButton</a></li><li><a href="global.html#BricksCard">BricksCard</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#ChatMessages">ChatMessages</a></li><li><a href="global.html#ChatSidebar">ChatSidebar</a></li><li><a href="global.html#ChatTabs">ChatTabs</a></li><li><a href="global.html#ChatToggleButton">ChatToggleButton</a></li><li><a href="global.html#Create">Create</a></li><li><a href="global.html#DefaultCard">DefaultCard</a></li><li><a href="global.html#FriendCode">FriendCode</a></li><li><a href="global.html#FriendInput">FriendInput</a></li><li><a href="global.html#FriendList">FriendList</a></li><li><a href="global.html#FriendMessages">FriendMessages</a></li><li><a href="global.html#FriendRequestList">FriendRequestList</a></li><li><a href="global.html#Game">Game</a></li><li><a href="global.html#GameLogo">GameLogo</a></li><li><a href="global.html#GetCardTheme">GetCardTheme</a></li><li><a href="global.html#GetCardThemeURL">GetCardThemeURL</a></li><li><a href="global.html#HexagonCard">HexagonCard</a></li><li><a href="global.html#Home">Home</a></li><li><a href="global.html#Join">Join</a></li><li><a href="global.html#LeafsCard">LeafsCard</a></li><li><a href="global.html#LeaveButton">LeaveButton</a></li><li><a href="global.html#Lobbies">Lobbies</a></li><li><a href="global.html#Lobby">Lobby</a></li><li><a href="global.html#LobbyInvitation">LobbyInvitation</a></li><li><a href="global.html#LobbyList">LobbyList</a></li><li><a href="global.html#MenuButton">MenuButton</a></li><li><a href="global.html#MenuCheckBox">MenuCheckBox</a></li><li><a href="global.html#MenuInput">MenuInput</a></li><li><a href="global.html#MenuSelect">MenuSelect</a></li><li><a href="global.html#MessageInput">MessageInput</a></li><li><a href="global.html#NewGameButton">NewGameButton</a></li><li><a href="global.html#NextPhaseButton">NextPhaseButton</a></li><li><a href="global.html#NextPlayerButton">NextPlayerButton</a></li><li><a href="global.html#PLAYER_GENDER">PLAYER_GENDER</a></li><li><a href="global.html#Phase1">Phase1</a></li><li><a href="global.html#Phase1Layout">Phase1Layout</a></li><li><a href="global.html#Phase2">Phase2</a></li><li><a href="global.html#Phase2Layout">Phase2Layout</a></li><li><a href="global.html#Phase3">Phase3</a></li><li><a href="global.html#Phase3Layout">Phase3Layout</a></li><li><a href="global.html#PlayerActionButton">PlayerActionButton</a></li><li><a href="global.html#PlayerCards">PlayerCards</a></li><li><a href="global.html#PlayerListItem">PlayerListItem</a></li><li><a href="global.html#PopupModal">PopupModal</a></li><li><a href="global.html#PopupOptions">PopupOptions</a></li><li><a href="global.html#RetryButton">RetryButton</a></li><li><a href="global.html#SettingsButton">SettingsButton</a></li><li><a href="global.html#ShinglesCard">ShinglesCard</a></li><li><a href="global.html#SoundManager">SoundManager</a></li><li><a href="global.html#SquareCard">SquareCard</a></li><li><a href="global.html#StatisticBox">StatisticBox</a></li><li><a href="global.html#ThemeSelector">ThemeSelector</a></li><li><a href="global.html#TurnInfo">TurnInfo</a></li><li><a href="global.html#achievLabels">achievLabels</a></li><li><a href="global.html#busfahrerSelectionMode">busfahrerSelectionMode</a></li><li><a href="global.html#cardMatchStyles">cardMatchStyles</a></li><li><a href="global.html#cardThemes">cardThemes</a></li><li><a href="global.html#drinkQuotes">drinkQuotes</a></li><li><a href="global.html#playSound">playSound</a></li><li><a href="global.html#playerActionFeatures">playerActionFeatures</a></li><li><a href="global.html#schluckGiveMode">schluckGiveMode</a></li><li><a href="global.html#shuffleStyles">shuffleStyles</a></li><li><a href="global.html#statLabels">statLabels</a></li><li><a href="global.html#turnModes">turnModes</a></li><li><a href="global.html#useAuthGuard">useAuthGuard</a></li><li><a href="global.html#useAvatarInfo">useAvatarInfo</a></li><li><a href="global.html#useAvatarUpload">useAvatarUpload</a></li><li><a href="global.html#useBusfahrer">useBusfahrer</a></li><li><a href="global.html#useCardTheme">useCardTheme</a></li><li><a href="global.html#useChatManager">useChatManager</a></li><li><a href="global.html#useFriendChatManager">useFriendChatManager</a></li><li><a href="global.html#useGameCards">useGameCards</a></li><li><a href="global.html#useGameGuard">useGameGuard</a></li><li><a href="global.html#useGameInfo">useGameInfo</a></li><li><a href="global.html#useGameManager">useGameManager</a></li><li><a href="global.html#useLobbiesManager">useLobbiesManager</a></li><li><a href="global.html#useLobbyGuard">useLobbyGuard</a></li><li><a href="global.html#useLobbyManager">useLobbyManager</a></li><li><a href="global.html#usePlayerCards">usePlayerCards</a></li><li><a href="global.html#useSpectatorManager">useSpectatorManager</a></li><li><a href="global.html#useStatistics">useStatistics</a></li><li><a href="global.html#useTitles">useTitles</a></li><li><a href="global.html#useWebSocketConnector">useWebSocketConnector</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Fri Nov 07 2025 20:48:43 GMT+0100 (Central European Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

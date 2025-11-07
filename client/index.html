@@ -1,20 +1,30 @@
 <!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <link rel="icon" type="image/png" href="/icon.png" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>BusfahrerV2</title>
 
-        <!-- Preload Important Images -->
-        <link rel="preload" as="image" href="/overlay.svg" as="image" />
-        <link rel="preload" as="image" href="/overlay_phase.svg" as="image" />
-        <link rel="preload" as="image" href="/overlay_account.svg" as="image" />
-        <link rel="preload" as="image" href="/logo.svg" as="image" />
-        <link rel="preload" as="image" href="/back.svg" as="image" />
-    </head>
-    <body>
-        <div id="root"></div>
-        <script type="module" src="/src/main.jsx"></script>
-    </body>
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/icons/icon.png" />
+
+    <!-- Preload for early fetching -->
+    <link rel="preload" as="image" href="/backgrounds/overlay.webp" />
+    <link rel="preload" as="image" href="/backgrounds/overlay_account.webp" />
+    <link rel="preload" as="image" href="/backgrounds/overlay_phase.webp" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BusfahrerV2</title>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <!-- Hidden images to force caching -->
+    <div style="display:none">
+        <img src="/backgrounds/overlay.webp" alt="" />
+        <img src="/backgrounds/overlay_account.webp" alt="" />
+        <img src="/backgrounds/overlay_phase.webp" alt="" />
+    </div>
+
+    <script type="module" src="/src/main.jsx"></script>
+</body>
+
 </html>

@@ -1,8 +1,10 @@
 /**
- * Home.jsx — Main entry screen for authenticated users in the Busfahrer Extreme game.
- *
- * Provides access to game creation, game joining, user settings, and chat features.
- * UI and interaction availability are dynamically rendered based on the user's authentication status.
+ * @fileoverview Renders the Home screen of the game.
+ * <br><br>
+ * This module displays the main menu interface, including buttons to create or join a game,
+ * a settings button, and an optional chat sidebar.<br> It uses authentication to determine
+ * what UI elements are enabled or visible.<br> On mount, it loads user-specific sounds
+ * if the user is authenticated.
  */
 
 // Components
@@ -21,24 +23,33 @@ import { SoundManager } from '../utils/soundManager';
 import { useEffect } from 'react';
 
 /**
- * Home component function.
- *
- * Determines if the user is authenticated using a custom auth guard hook.
- * Loads the user's sound preference when authentication state changes.
- * Renders the main UI including background, game title, play/join buttons, settings,
- * and the chat sidebar if the user is authenticated.
- *
+ * Home component serves as the main entry point for the game.
+ * <br><br>
+ * Renders the homepage UI with navigation buttons, a settings button,
+ * and a chat sidebar if the user is authenticated.
+ * <br>
+ * When the component mounts, it loads user-specific sounds using a `useEffect` hook,
+ * but only if the user is authenticated.
+ * <br><br>
+ * <strong>useEffect: </strong> <br>
+ * Load user-specific sound settings when the component mounts or when authentication status changes.<br> 
+ * This ensures that sound settings are applied only if the user is authenticated
+ * and prevents unnecessary sound loading for unauthenticated users. <br>
+ * This is important for performance and user experience. <br>
+ * The SoundManager utility is responsible for managing sound effects and music in the game.
+ * 
  * @function Home
- * @returns {JSX.Element} The rendered homepage layout.
+ * @returns {JSX.Element} The rendered Home interface.
  */
 function Home() {
     const isAuthenticated = useAuthGuard();
 
     /**
-     * Loads the authenticated user's sound preferences when authentication state changes.
-     *
-     * Invokes the SoundManager to retrieve and apply the user's selected sound if authenticated.
-     * Runs every time the `isAuthenticated` dependency value changes.
+     * Load user-specific sound settings when the component mounts or when authentication status changes 
+     * This ensures that sound settings are applied only if the user is authenticated
+     * and prevents unnecessary sound loading for unauthenticated users.
+     * This is important for performance and user experience.
+     * The SoundManager utility is responsible for managing sound effects and music in the game.
      */
     useEffect(() => {
         if (isAuthenticated) {
@@ -46,54 +57,49 @@ function Home() {
         }
     }, [isAuthenticated]);
 
-    /**
-     * Renders the main homepage layout of the game.
-     *
-     * Displays the background overlay, game logo, and title.
-     * Shows "Play Game" and "Join Game" buttons which are only enabled for authenticated users.
-     * Includes a settings button that navigates to either login/register or account settings.
-     * If the user is authenticated, also displays the chat sidebar component.
-     */
     return (
-        <div className="overlay-cont">
-            {/* Background overlay image */}
-            <img src="overlay.svg" alt="Overlay" className="overlay-img" />
+        <div className="@container/main flex flex-col items-center justify-center h-screen">
 
-            {/* Main menu container */}
-            <div className="main-menu">
+            {/* Background overlay image */}
+            <div className="home-wrapper">
+                
                 {/* Game logo displayed prominently on the homepage */}
                 <QuoteLogo />
 
-                {/* Main game title with highlighted sub-title */}
-                <h1 className="home-title">
+                {/* Main menu buttons */}
+                <h1 className="home-menu">
                     Busfahrer
-                    <span className="highlight">Extreme</span>
+                    <span className="txt-highlight">
+                        Extreme
+                    </span>
                 </h1>
 
-                {/* Button to create a new game; disabled if user is not authenticated */}
-                <MenuButton
-                    wrapperClass="play-cont"
-                    buttonClass={isAuthenticated ? 'btn-play' : 'btn-play-disabled'}
-                    icon={isAuthenticated ? 'home.svg' : 'button_disabled.svg'}
-                    alt="Create Game"
-                    text="Create Game"
-                    disabled={!isAuthenticated}
-                    to="/create"
-                />
-
-                {/* Button to join an existing game lobby; disabled if user is not authenticated */}
-                <MenuButton
-                    wrapperClass="lobby-cont"
-                    buttonClass={isAuthenticated ? 'btn-lobby' : 'btn-lobby-disabled'}
-                    icon={isAuthenticated ? 'home.svg' : 'button_disabled.svg'}
-                    alt="Join Game"
-                    text="Join Game"
-                    disabled={!isAuthenticated}
-                    to="/lobbys"
-                />
+                <div className="flex flex-col gap-2 sm:gap-0.5 lg:gap-1 xl:gap-2 2xl:gap-3">
+                    {/* Button to create a new game; disabled if user is not authenticated */}
+                    <MenuButton
+                        wrapper={true}
+                        buttonClass="home-btn"
+                        textClass="btn-txt"
+                        icon={isAuthenticated ? 'home' : 'button_disabled'}
+                        text="Play Game"
+                        disabled={!isAuthenticated}
+                        to="/create"
+                    />
+                    
+                    {/* Button to join an existing game lobby; disabled if user is not authenticated */}
+                    <MenuButton
+                        wrapper={true}
+                        buttonClass="home-btn"
+                        textClass="btn-txt"
+                        icon={isAuthenticated ? 'home' : 'button_disabled'}
+                        text="Join Game"
+                        disabled={!isAuthenticated}
+                        to="/lobbies"
+                    />
+                </div>
             </div>
 
-            {/* Settings button redirects to login/register page or account settings based on authentication status */}
+            {/* Settings button redirects to login/register page or account settings based on authentication status <SettingsButton isAuthenticated={isAuthenticated} />*/}
             <SettingsButton isAuthenticated={isAuthenticated} />
 
             {/* Sidebar Toggle (Only if Authenticated) */}

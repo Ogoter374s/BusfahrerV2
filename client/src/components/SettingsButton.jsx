@@ -1,8 +1,8 @@
 /**
- * SettingsButton.jsx — Renders a settings or login button based on user authentication.
- *
- * Displays a button that redirects users to the account page if authenticated,
- * or to the login/register access screen otherwise. Plays a click sound on interaction.
+ * @fileoverview SettingsButton component for managing user settings.
+ * <br><br>
+ * This component renders a button that navigates to the account settings or login page
+ * based on the user's authentication status. It plays a click sound when clicked.
  */
 
 // Utilities
@@ -12,46 +12,38 @@ import { SoundManager } from '../utils/soundManager';
 import { useNavigate } from 'react-router-dom';
 
 /**
- * SettingsButton component function.
- *
- * Handles redirection based on the user's authentication status.
- * Plays a click sound using the global sound manager when clicked.
- *
+ * SettingsButton component renders a button that navigates to the account settings or login page based on the user's authentication status. <br>
+ * It plays a click sound when clicked.
+ * <br><br>
+ * <strong>handleClick:</strong> <br>
+ * This function is called when the button is clicked. <br>
+ * It plays a click sound using the SoundManager utility. <br>
+ * It navigates to the account settings page if the user is authenticated, or to the login page if not.
+ * 
  * @function SettingsButton
- * @param {Object} props - Component properties.
- * @param {boolean} props.isAuthenticated - Indicates if the user is logged in.
- * @returns {JSX.Element} The rendered settings/login button.
+ * @param {boolean} isAuthenticated - Indicates whether the user is authenticated.
+ * @returns {JSX.Element} The rendered SettingsButton component.
  */
 function SettingsButton({ isAuthenticated }) {
     const navigate = useNavigate();
 
     /**
      * Handles the button click event.
-     *
-     * Plays a UI click sound and navigates the user to either
-     * the account settings page (if authenticated) or the access screen.
+     * Plays a click sound and navigates to the account settings or login page based on authentication status.
      */
     const handleClick = () => {
         SoundManager.playClickSound();
         navigate(isAuthenticated ? '/account' : '/access');
     };
 
-    /**
-     * Renders the settings button container.
-     *
-     * Displays an icon representing either settings or login,
-     * based on the authentication state.
-     */
+    const img = isAuthenticated ? "settings" : "login";
+
     return (
-        <div className="settings-button">
-            <button className="btn" onClick={handleClick}>
-                <img
-                    src={isAuthenticated ? 'settings.svg' : 'login.svg'}
-                    alt="Settings"
-                    className="settings-icon"
-                />
-            </button>
-        </div>
+        // Settings Button
+        <button className={"settings-btn"}
+            style={{ backgroundImage: `url('/icons/${img}.svg')` }}
+            onClick={handleClick}
+        />
     );
 }
 

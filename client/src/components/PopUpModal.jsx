@@ -1,56 +1,110 @@
 /**
- * PopUpModal.jsx — Reusable modal component for displaying alerts or informational popups.
- *
- * Shows a message with a title, optional icon, and confirmation button.
- * Only renders when the `isOpen` prop is true.
+ * @fileoverview PopupModal Component
+ * <br><br>
+ * This component displays a modal popup with a title, message, and optional icon. <br>
+ * It provides buttons for confirming or canceling the action, with sound effects for user interactions.
  */
 
 // Utilities
 import { SoundManager } from '../utils/soundManager';
 
 /**
- * PopupModal component function.
- *
- * Renders a styled popup overlay containing a header, message body, and "OK" button.
- * Designed to be used for user notifications, confirmations, or alerts.
- *
+ * A modal popup component that displays a message with an optional icon and provides "OK" and "Cancel" buttons.
+ * <br><br>
+ * This component displays a modal popup with a title, message, and optional icon. <br>
+ * It provides buttons for confirming or canceling the action, with sound effects for user interactions.
+ * <br><br>
+ * <strong>handleClose:</strong> <br>
+ * This function is called when the user clicks the "OK" button. <br>
+ * It plays a click sound and calls the `onOk` callback function.
+ * <br><br>
+ * <strong>handleCancel:</strong> <br>
+ * This function is called when the user clicks the "Cancel" button. <br>
+ * It plays a click sound and calls the `onCancel` callback function.
+ * 
  * @function PopupModal
- * @param {Object} props - Component properties.
- * @param {boolean} props.isOpen - Whether the modal is visible.
- * @param {string} props.title - Title text to display in the modal header.
- * @param {string} props.message - Message content displayed in the modal body.
- * @param {JSX.Element|string} [props.icon] - Optional icon or visual element for the header.
- * @param {Function} props.onClose - Callback function triggered when the "OK" button is clicked.
- * @returns {JSX.Element|null} The rendered modal or null if not open.
+ * @param {boolean} isOpen - Whether the popup is currently open.
+ * @param {string} title - The title of the popup.
+ * @param {string} message - The message to display in the popup.
+ * @param {JSX.Element} [icon] - An optional icon to display in the popup.
+ * @param {function} onOk - Callback function to call when the "OK" button is clicked.
+ * @param {function} onCancel - Callback function to call when the "Cancel" button is clicked.
+ * @param {boolean} [useCancel=false] - Whether to show a "Cancel" button in the popup.
+ * @returns {JSX.Element|null} The rendered PopupModal component or null if `isOpen` is false.
  */
-function PopupModal({ isOpen, title, message, icon, onClose }) {
+function PopupModal({ isOpen, title, message, icon, onOk, onCancel, useCancel = false }) {
     if (!isOpen) return null;
 
     /**
-     * Handles the OK button click: plays sound and closes the modal.
+     * Handles the "OK" button click event.
+     * This function plays a click sound and calls the `onOk` callback function.
      */
     const handleClose = () => {
         SoundManager.playClickSound();
-        onClose();
+        onOk();
     };
 
     /**
-     * Renders the modal layout conditionally.
-     *
-     * If `isOpen` is false, nothing is rendered.
-     * When open, displays a centered overlay with structured content and dismiss interaction.
+     * Handles the "Cancel" button click event.
+     * This function plays a click sound and calls the `onCancel` callback function.
      */
+    const handleCancel = () => {
+        SoundManager.playClickSound();
+        onCancel();
+    };
+
     return (
-        <div className="popup-overlay">
-            <div className="popup-box">
+        // Popup background
+        <div className="fixed inset-0 bg-black/65 flex items-center justify-center z-[9999]">
+
+            {/* Popup Wrapper */}
+            <div className="popup-wrapper">
+
+                {/* Title and Icon */}
                 <div className="popup-header">
-                    {icon && <span className="popup-icon">{icon}</span>}
-                    <h2>{title}</h2>
+                    {icon && <span className="
+                        text-[1.6rem] sm:text-[1rem] lg:text-[2rem] 2xl:text-[2.5rem]
+                    ">
+                        {icon}
+                    </span>}
+                    <h2 className="
+                        font-semibold
+                        text-[1.6rem] sm:text-[1rem] lg:text-[2rem] 2xl:text-[2.5rem]
+                    ">
+                        {title}
+                    </h2>
                 </div>
-                <p className="popup-message">{message}</p>
-                <button className="popup-button" onClick={handleClose}>
-                    OK
-                </button>
+
+                {/* Message */}
+                <p className="
+                    text-[1.2rem] sm:text-[0.7rem] lg:text-[1.35rem] 2xl:text-[1.75rem]
+                ">
+                    {message}
+                </p>
+
+                {/* Action Buttons */}
+                <div className="
+                    flex items-center justify-center gap-4"
+                >
+
+                    {/* "OK" Button */}
+                    <button 
+                        className="popup-btn bg-[#00c4ff]" 
+                        onClick={handleClose}
+                    >
+                        OK
+                    </button>
+
+                    {/* "Cancel" Button (optional) */}
+                    {useCancel && (
+                        <button 
+                            className="popup-btn bg-[#c0392b]" 
+                            onClick={handleCancel}
+                        >
+                            Cancel
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
     );

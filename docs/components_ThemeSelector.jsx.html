@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: components/ThemeSelector.jsx</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: components/ThemeSelector.jsx</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @fileoverview Component to select and customize card themes.
+ * &lt;br>&lt;br>
+ * This component renders a modal that allows users to select a card theme and customize its colors.&lt;br>
+ * It receives the current theme, available themes, and color options as props and provides callbacks for saving or closing the modal.
+ */
+
+// Utilities
+import { SoundManager } from '../utils/soundManager';
+
+// Features
+import { GetCardTheme } from '../features/CardThemes';
+
+// React
+import { useState, useEffect } from 'react';
+
+/**
+ * A component that allows users to select and customize card themes. &lt;br>
+ * It receives the current theme, available themes, and color options as props and provides callbacks for saving or closing the modal.
+ * &lt;br>&lt;br>
+ * The component is styled using Tailwind CSS classes for a consistent look and feel. &lt;br>
+ * It includes a title, a list of available themes, color pickers for customization, and buttons to save or quit.
+ * &lt;br>&lt;br>
+ * &lt;strong>useEffect:&lt;/strong> &lt;br>
+ * This hook updates the temporary theme and colors whenever the modal is opened or the selected theme/colors change.
+ * &lt;br>&lt;br>
+ * @function ThemeSelector
+ * @param {boolean} isOpen - A boolean indicating whether the modal is open.
+ * @param {function} onClose - A callback function to close the modal.
+ * @param {function} onSave - A callback function to save the selected theme and colors.
+ * @param {Array} themes - An array of available themes, each containing a path and name.
+ * @param {string} selectedTheme - The currently selected theme path.
+ * @param {string} color1 - The primary color for the theme.
+ * @param {string} color2 - The pattern color for the theme.
+ * @returns {JSX.Element|null} The rendered theme selector modal component or null if the modal is closed.
+ */
+const ThemeSelector = ({
+    isOpen,
+    onClose,
+    onSave,
+    themes,
+    selectedTheme,
+    color1,
+    color2
+}) => {
+    const [tempTheme, setTempTheme] = useState(selectedTheme);
+    const [tempColor1, setTempColor1] = useState(color1);
+    const [tempColor2, setTempColor2] = useState(color2);
+
+    /**
+     * Updates the temporary theme and colors whenever the modal is opened or the selected theme/colors change.
+     * This ensures that the user sees the current selections when they open the modal.
+     */
+    useEffect(() => {
+        if (isOpen) {
+            setTempTheme(selectedTheme);
+            setTempColor1(color1);
+            setTempColor2(color2);
+        }
+    }, [isOpen, selectedTheme, color1, color2]);
+
+    if (!isOpen) return null;
+
+    return (
+        &lt;div className="modal-style">
+            &lt;div className="theme-wrapper">
+                &lt;h2 className="theme-title">
+                    Select Card Theme
+                &lt;/h2>
+
+                {/* Selection of Theme Styles */}
+                &lt;div className="theme-styles">
+                    {themes.map((theme) => (
+                        &lt;div
+                            key={theme.path}
+                            onClick={() => {
+                                SoundManager.playClickSound();
+                                setTempTheme(theme.path);
+                            }}
+                            className="flex flex-col items-center cursor-pointer"
+                        >
+                            &lt;div className={`
+                                theme-item
+                                ${tempTheme === theme.path ? 'border-[#15c42c]' : 'border-[#a65e2e]'}
+                                hover:${tempTheme == theme.path ? 'border-[#15c42c]' : 'border-[#e33e3e]'}
+                            `}>
+                                &lt;GetCardTheme
+                                    id={theme.path}
+                                    color1={tempColor1}
+                                    color2={tempColor2}
+                                    draggable="false"
+                                />
+                            &lt;/div>
+                            &lt;p className="
+                                text-[2rem] sm:text-[0.75rem] lg:text-[1.5rem] xl:text-[1.75rem]
+                            ">
+                                {theme.name}
+                            &lt;/p>
+                        &lt;/div>
+                    ))}
+                &lt;/div>
+
+                {/* Color Pickers Section */}
+                &lt;div className="picker-wrapper">
+                    &lt;label className="picker-text">
+                        Primary Color:
+                    &lt;/label>
+
+                    &lt;input
+                        type="color"
+                        value={tempColor1}
+                        onChange={(e) => setTempColor1(e.target.value)}
+                        className="picker-color rounded-color-fix"
+                    />
+
+                    &lt;label className="picker-text">
+                        Pattern Color:
+                    &lt;/label>
+                    &lt;input
+                        type="color"
+                        value={tempColor2}
+                        onChange={(e) => setTempColor2(e.target.value)}
+                        className="picker-color rounded-color-fix"
+                    />
+                &lt;/div>
+                
+                {/* Action Buttons */}
+                &lt;div className="theme-btns">
+                    &lt;button
+                        onClick={() => {
+                            SoundManager.playClickSound();
+                            onClose();
+                        }}
+                        className="modal-btn"
+                    >
+                        Quit
+                    &lt;/button>
+                    &lt;button
+                        onClick={async () => {
+                            SoundManager.playClickSound();
+                            const success = await onSave(tempTheme, tempColor1, tempColor2);
+                            if (success) onClose();
+                        }}
+                        className="modal-btn"
+                    >
+                        Save
+                    &lt;/button>
+                &lt;/div>
+            &lt;/div>
+        &lt;/div>
+    );
+};
+
+export default ThemeSelector;</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#Access">Access</a></li><li><a href="global.html#Account">Account</a></li><li><a href="global.html#Achievements">Achievements</a></li><li><a href="global.html#Avatar">Avatar</a></li><li><a href="global.html#AvatarInfo">AvatarInfo</a></li><li><a href="global.html#AvatarUploader">AvatarUploader</a></li><li><a href="global.html#BackButton">BackButton</a></li><li><a href="global.html#BricksCard">BricksCard</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#ChatMessages">ChatMessages</a></li><li><a href="global.html#ChatSidebar">ChatSidebar</a></li><li><a href="global.html#ChatTabs">ChatTabs</a></li><li><a href="global.html#ChatToggleButton">ChatToggleButton</a></li><li><a href="global.html#Create">Create</a></li><li><a href="global.html#DefaultCard">DefaultCard</a></li><li><a href="global.html#FriendCode">FriendCode</a></li><li><a href="global.html#FriendInput">FriendInput</a></li><li><a href="global.html#FriendList">FriendList</a></li><li><a href="global.html#FriendMessages">FriendMessages</a></li><li><a href="global.html#FriendRequestList">FriendRequestList</a></li><li><a href="global.html#Game">Game</a></li><li><a href="global.html#GameLogo">GameLogo</a></li><li><a href="global.html#GetCardTheme">GetCardTheme</a></li><li><a href="global.html#GetCardThemeURL">GetCardThemeURL</a></li><li><a href="global.html#HexagonCard">HexagonCard</a></li><li><a href="global.html#Home">Home</a></li><li><a href="global.html#Join">Join</a></li><li><a href="global.html#LeafsCard">LeafsCard</a></li><li><a href="global.html#LeaveButton">LeaveButton</a></li><li><a href="global.html#Lobbies">Lobbies</a></li><li><a href="global.html#Lobby">Lobby</a></li><li><a href="global.html#LobbyInvitation">LobbyInvitation</a></li><li><a href="global.html#LobbyList">LobbyList</a></li><li><a href="global.html#MenuButton">MenuButton</a></li><li><a href="global.html#MenuCheckBox">MenuCheckBox</a></li><li><a href="global.html#MenuInput">MenuInput</a></li><li><a href="global.html#MenuSelect">MenuSelect</a></li><li><a href="global.html#MessageInput">MessageInput</a></li><li><a href="global.html#NewGameButton">NewGameButton</a></li><li><a href="global.html#NextPhaseButton">NextPhaseButton</a></li><li><a href="global.html#NextPlayerButton">NextPlayerButton</a></li><li><a href="global.html#PLAYER_GENDER">PLAYER_GENDER</a></li><li><a href="global.html#Phase1">Phase1</a></li><li><a href="global.html#Phase1Layout">Phase1Layout</a></li><li><a href="global.html#Phase2">Phase2</a></li><li><a href="global.html#Phase2Layout">Phase2Layout</a></li><li><a href="global.html#Phase3">Phase3</a></li><li><a href="global.html#Phase3Layout">Phase3Layout</a></li><li><a href="global.html#PlayerActionButton">PlayerActionButton</a></li><li><a href="global.html#PlayerCards">PlayerCards</a></li><li><a href="global.html#PlayerListItem">PlayerListItem</a></li><li><a href="global.html#PopupModal">PopupModal</a></li><li><a href="global.html#PopupOptions">PopupOptions</a></li><li><a href="global.html#RetryButton">RetryButton</a></li><li><a href="global.html#SettingsButton">SettingsButton</a></li><li><a href="global.html#ShinglesCard">ShinglesCard</a></li><li><a href="global.html#SoundManager">SoundManager</a></li><li><a href="global.html#SquareCard">SquareCard</a></li><li><a href="global.html#StatisticBox">StatisticBox</a></li><li><a href="global.html#ThemeSelector">ThemeSelector</a></li><li><a href="global.html#TurnInfo">TurnInfo</a></li><li><a href="global.html#achievLabels">achievLabels</a></li><li><a href="global.html#busfahrerSelectionMode">busfahrerSelectionMode</a></li><li><a href="global.html#cardMatchStyles">cardMatchStyles</a></li><li><a href="global.html#cardThemes">cardThemes</a></li><li><a href="global.html#drinkQuotes">drinkQuotes</a></li><li><a href="global.html#playSound">playSound</a></li><li><a href="global.html#playerActionFeatures">playerActionFeatures</a></li><li><a href="global.html#schluckGiveMode">schluckGiveMode</a></li><li><a href="global.html#shuffleStyles">shuffleStyles</a></li><li><a href="global.html#statLabels">statLabels</a></li><li><a href="global.html#turnModes">turnModes</a></li><li><a href="global.html#useAuthGuard">useAuthGuard</a></li><li><a href="global.html#useAvatarInfo">useAvatarInfo</a></li><li><a href="global.html#useAvatarUpload">useAvatarUpload</a></li><li><a href="global.html#useBusfahrer">useBusfahrer</a></li><li><a href="global.html#useCardTheme">useCardTheme</a></li><li><a href="global.html#useChatManager">useChatManager</a></li><li><a href="global.html#useFriendChatManager">useFriendChatManager</a></li><li><a href="global.html#useGameCards">useGameCards</a></li><li><a href="global.html#useGameGuard">useGameGuard</a></li><li><a href="global.html#useGameInfo">useGameInfo</a></li><li><a href="global.html#useGameManager">useGameManager</a></li><li><a href="global.html#useLobbiesManager">useLobbiesManager</a></li><li><a href="global.html#useLobbyGuard">useLobbyGuard</a></li><li><a href="global.html#useLobbyManager">useLobbyManager</a></li><li><a href="global.html#usePlayerCards">usePlayerCards</a></li><li><a href="global.html#useSpectatorManager">useSpectatorManager</a></li><li><a href="global.html#useStatistics">useStatistics</a></li><li><a href="global.html#useTitles">useTitles</a></li><li><a href="global.html#useWebSocketConnector">useWebSocketConnector</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Fri Nov 07 2025 20:48:43 GMT+0100 (Central European Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

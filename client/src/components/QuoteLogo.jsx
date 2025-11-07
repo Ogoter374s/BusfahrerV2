@@ -1,72 +1,60 @@
 /**
- * QuoteLogo.jsx — Displays the game logo along with a random drink-related quote.
- *
- * Enhances the visual identity of the game with humorous, themed quotes shown above the logo.
- * Quotes are randomly selected upon component mount and do not change afterward.
+ * @fileoverview Displays a random drink-related quote alongside the game logo.
+ * <br><br>
+ * This component randomly selects a quote from a predefined list of drink-related quotes and displays it above the game logo.<br> 
+ * The quotes are humorous and related to coding and drinking culture, adding a fun element to the game's branding.
  */
+
+// Utilities
+import { drinkQuotes } from '../utils/constants';
 
 // React
 import { useState } from 'react';
 
-const drinkQuotes = [
-    "Don't drink and code 🍺",
-    'Ctrl + Brew 🍻',
-    'Debug responsibly!',
-    'Commit, push, exen 🍷',
-    'Drunk on features!',
-    'Refactoring with rum!',
-    'Ship it and sip it!',
-    'Code hard, drink harder 🍹',
-    'Escape() to the pub',
-    'Raise a glass, not exceptions!',
-    "Import beer from 'fridge' 🍺",
-    "console.beer('Cheers!')",
-    'While(alive) { drink(); } 🍻',
-    'Docs and Draughts 📖🍺',
-    'Your build is buzzed 🛠️🍷',
-    'Async, await... another round 🍻',
-    '404: Beer Not Found 🚫🍺',
-    'Happy hour = merge conflicts 🍹',
-    'Git pull, then pour 🍾',
-    'Deploy, then decant 🍷',
-    'Ping me at the pub 🍻',
-    'TypeError: Too sober to function 🥴',
-    'sudo apt-get install beer 🍺',
-    'brew install chill 🍺',
-    'Add shot; commit; blame 🥃',
-];
-
 /**
- * GameLogo component function.
- *
- * Initializes with a randomly selected quote from a predefined list.
- * Renders the selected quote along with the main logo image in a styled container.
- *
+ * GameLogo component displays the game logo with a random drink-related quote.
+ * <br><br>
+ * It randomly selects a quote from the `drinkQuotes` array and displays it above the logo. <br>
+ * The logo is styled to be responsive and visually appealing, with the quote having a pulsating animation.
+ * <br><br>
+ * <strong>useState:</strong>
+ * State hook to manage the quote displayed with the game logo. <br>
+ * Initializes with a random quote from the `drinkQuotes` array. <br>
+ * This ensures that each time the component is rendered, a different quote is displayed. <br>
+ * The quote is selected using a random index based on the length of the `drinkQuotes` array. <br>
+ * This approach provides a fun and dynamic element to the game logo, enhancing user engagement.
+ * 
  * @function GameLogo
- * @returns {JSX.Element} The rendered logo and drink quote.
+ * @returns {JSX.Element} The rendered GameLogo component with a random drink-related quote and the game logo.
  */
 function GameLogo() {
     /**
-     * Selects a random quote on initial render.
-     *
-     * Uses a `useState` initializer function to compute a single quote
-     * from the `drinkQuotes` array. This quote persists for the component's lifecycle.
+     * State hook to manage the quote displayed with the game logo.
+     * Initializes with a random quote from the `drinkQuotes` array.
+     * This ensures that each time the component is rendered, a different quote is displayed.
+     * The quote is selected using a random index based on the length of the `drinkQuotes` array.
+     * This approach provides a fun and dynamic element to the game logo, enhancing user engagement.
      */
     const [quote] = useState(() => {
         const random = Math.floor(Math.random() * drinkQuotes.length);
         return drinkQuotes[random];
     });
 
-    /**
-     * Renders the logo and quote layout.
-     *
-     * Displays the random quote in a paragraph element above the logo image,
-     * both wrapped in a container for styling consistency.
-     */
     return (
-        <div className="game-logo-wrapper">
-            <p className="drink-quote">{quote}</p>
-            <img src="logo.svg" alt="Game Logo" className="home-logo" />
+        // Main wrapper for the logo and quote
+        <div className="quote-wrapper">
+
+            {/* Quote text displayed above the logo */}
+            <p className="quote-txt">
+                {quote}
+            </p>
+
+            {/* Game logo image */}
+            <img 
+                src="/logos/logo.svg" 
+                alt="Game Logo"
+                className="pointer-events-none select-none mx-auto block w-full h-auto"
+            />
         </div>
     );
 }

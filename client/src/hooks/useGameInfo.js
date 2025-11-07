@@ -1,189 +1,176 @@
+/**
+ * @fileoverview Custom hook to manage and fetch game information.
+ * <br><br>
+ * This hook provides state variables and functions to fetch and update game-related data such as player rows, drink rows, game phases, and player roles.
+ */
+
+// Hooks
+import useBusfahrer from './useBusfahrer';
+
 // Utilities
 import BASE_URL from "../utils/config";
 
 // React
 import { useState } from 'react';
-import { useParams } from "react-router-dom";
 
-const useGameInfo = (phase) => {
-    const { gameId } = useParams();
-
-    const [currentName, setCurrentName] = useState('');
-    const [isCurrentPlayer, setIsCurrentPlayer] = useState(false);
-    const [drinkCount, setDrinkCount] = useState(0);
-    const [isNextPhase, setIsNextPhase] = useState(false);
+/**
+ * Custom hook that manages and fetches game information.
+ * <br><br>
+ * This hook provides state variables and functions to fetch and update game-related data such as player rows, drink rows, game phases, and player roles.
+ * <br><br>
+ * <strong>useBusfahrer:</strong> <br>
+ * This hook utilizes the `useBusfahrer` hook to manage the Busfahrer (Game Master) related state and functions. <br>
+ * It provides access to the Busfahrer name and a function to fetch the Busfahrer information from the server.
+ * <br><br>
+ * <strong>fetchPlayerInfo:</strong> <br>
+ * This function fetches player information such as game master status and current player status from the server. <br>
+ * It updates the corresponding state variables based on the response.
+ * <br><br>
+ * <strong>fetchTurnInfo:</strong> <br>
+ * This function fetches turn-related information such as player rows, drink rows, game phases, and action enablement from the server. <br>
+ * It updates the corresponding state variables with the fetched data.
+ * <br><br>
+ * <strong>fetchGameInfo:</strong> <br>
+ * This function fetches the latest game information from the server, including player rows, drink rows, game phases, and player roles. <br>
+ * It updates the corresponding state variables with the fetched data.
+ * <br><br>
+ * 
+ * 
+ */
+const useGameInfo = (gameId) => {
+    const [playerRow, setPlayerRow] = useState({ name: "", info: "" });
+    const [drinkRow, setDrinkRow] = useState({ name: "", info: "" });
     const [drinksReceived, setDrinksReceived] = useState(0);
-    const [drinksGiven, setDrinksGiven] = useState(false);
 
-    const [currentRound, setCurrentRound] = useState(1);
-    const [allCardsPlayed, setAllCardsPlayed] = useState(false);
-    const [hasToEx, setHasToEx] = useState(false);
+    const [isGameMaster, setIsGameMaster] = useState(false);
+    const [isCurrentPlayer, setIsCurrentPlayer] = useState(false);
 
-    const fetchRound = async () => {
+    const [nextPlayerEnabled, setNextPlayerEnabled] = useState(false);
+    const [nextPhaseEnabled, setNextPhaseEnabled] = useState(false);
+
+    const [currentRow, setCurrentRow] = useState(-1);
+    const [tryOver, setTryOver] = useState(false);
+    const [gameOver, setGameOver] = useState(false);
+
+    const [phase, setPhase] = useState(-1);
+
+    // Busfahrer (Game Master) related state and functions
+    const {
+        busfahrerName,
+        setBusfahrerName,
+        fetchBusfahrer,
+    } = useBusfahrer(gameId);
+
+    /**
+     * Fetches player information such as game master status and current player status.
+     * This function makes a GET request to the server to retrieve player-related data.
+     * It updates the `isGameMaster`, `isCurrentPlayer`, and `drinksReceived` state variables based on the response.
+     */
+    const fetchPlayerInfo = async () => {
         try {
             const response = await fetch(
-                `${BASE_URL}get-round?gameId=${gameId}`,
+                `${BASE_URL}get-player-info/${gameId}`,
                 {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
                 },
             );
 
-            const round = await response.json();
+            const data = await response.json();
 
-            setCurrentRound(round);
+            setIsGameMaster(data.isGameMaster);
+            setIsCurrentPlayer(data.isCurrentPlayer);
+            if (data.drinksReceived !== undefined) setDrinksReceived(data.drinksReceived);
+        } catch (error) {
+            console.error('Error checking game master status:', error);
+        }
+    };
 
-            if( phase === 1) {
-                setIsNextPhase(round === 6);
-            } else if (phase === 2) {
-                setIsNextPhase(round === 4);
+    /**
+     * Fetches turn-related information such as player rows, drink rows, game phases, and action enablement.
+     * This function makes a GET request to the server to retrieve turn-related data.
+     * It updates the corresponding state variables with the fetched data.
+     */
+    const fetchTurnInfo = async () => {
+        try {
+            const response = await fetch(
+                `${BASE_URL}get-game-info/${gameId}`,
+                {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                },
+            );
+
+            const data = await response.json();
+
+            setPlayerRow(data.playerRow);
+            setDrinkRow(data.drinkRow);
+            setPhase(data.phase);
+
+            if (data.nextPlayerEnabled !== undefined) setNextPlayerEnabled(data.nextPlayerEnabled);
+            if (data.nextPhaseEnabled !== undefined) setNextPhaseEnabled(data.nextPhaseEnabled);
+
+            if (data.currentRow !== undefined) setCurrentRow(data.currentRow);
+            if (data.tryOver !== undefined) setTryOver(data.tryOver);
+            if (data.gameOver !== undefined) setGameOver(data.gameOver);
+
+            if (data.phase > 1) {
+                fetchBusfahrer();
             }
         } catch (error) {
-            console.error('Error fetching round data:', error);
+            console.error('Error fetching turn info:', error);
         }
     };
 
-    const fetchCurrentPlayer = async () => {
-        try {
-            const response = await fetch(
-                `${BASE_URL}get-current-player?gameId=${gameId}`,
-                {
-                    method: 'GET',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                },
-            );
-
-            const player = await response.json();
-            
-            setCurrentName(player.playerName);
-            setIsCurrentPlayer(player.isCurrent);
-        } catch (error) {
-            console.error('Error fetching current player:', error);
-        }
-    };
-
-    const fetchDrinkCount = async () => {
-        try {
-            const response = await fetch(
-                `${BASE_URL}get-drink-count?gameId=${gameId}`,
-                {
-                    method: 'GET',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                },
-            );
-
-            const drinks = await response.json();
-            setDrinkCount(drinks);
-        } catch (error) {
-            console.error('Error fetching drink count:', error);
-        }
-    };
-
-    const fetchDrinksReceived = async () => {
-        try {
-            const response = await fetch(
-                `${BASE_URL}get-drinks-received?gameId=${gameId}`,
-                {
-                    method: 'GET',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                },
-            );
-
-            const drinks = await response.json();
-            setDrinksReceived(drinks);
-        } catch (error) {
-            console.error('Error fetching drinks received:', error);
-        }
-    };
-
-    const fetchDrinksGiven = async () => {
-        try {
-            const response = await fetch(
-                `${BASE_URL}drinks-given?gameId=${gameId}`,
-                {
-                    method: 'GET',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                },
-            );
-
-            const given = await response.json();
-            setDrinksGiven(given);
-        } catch (error) {
-            console.error('Error fetching drinks given status:', error);
-        }
-    };
-
-    const fetchAllCardsPlayed = async () => {
-        try {
-            const response = await fetch(
-                `${BASE_URL}all-cards-played?gameId=${gameId}`,
-                {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    credentials: 'include',
-                },
-            );
-
-            if (!response.ok) {
-                throw new Error('Failed to fetch played cards data');
-            }
-
-            const allPlayed = await response.json();
-            setAllCardsPlayed(allPlayed);
-        } catch (error) {
-            console.error('Error fetching played cards:', error);
-        }
-    };
-    
-    const fetchHasToEx = async () => {
-        try {
-            const response = await fetch(
-                `${BASE_URL}get-has-to-ex?gameId=${gameId}`,
-                {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    credentials: 'include',
-                },
-            );
-
-            if (!response.ok) {
-                throw new Error('Failed to fetch has-to-ex data');
-            }
-
-            const exen = await response.json();
-            setHasToEx(exen);
-        } catch (error) {
-            console.error('Error fetching has-to-ex data:', error);
-        }
+    /**
+     * Fetches the latest game information including player rows, drink rows, game phases, and player roles.
+     * This function calls `fetchPlayerInfo` and `fetchTurnInfo` to update the corresponding state variables with the latest data.
+     */
+    const fetchGameInfo = async () => {
+        await fetchPlayerInfo();
+        await fetchTurnInfo();
     };
 
     return {
-        currentName,
-        isCurrentPlayer,
-        fetchCurrentPlayer,
-        drinkCount,
-        setDrinkCount,
-        fetchDrinkCount,
-        isNextPhase,
-        currentRound,
-        setCurrentRound,
-        setIsNextPhase,
-        fetchRound,
+        playerRow,
+        setPlayerRow,
+
+        drinkRow,
+        setDrinkRow,
+
         drinksReceived,
-        fetchDrinksReceived,
-        drinksGiven,
-        fetchDrinksGiven,
-        allCardsPlayed,
-        fetchAllCardsPlayed,
-        hasToEx,
-        fetchHasToEx,
+        setDrinksReceived,
+
+        isGameMaster,
+        setIsGameMaster,
+
+        isCurrentPlayer,
+        setIsCurrentPlayer,
+
+        nextPlayerEnabled,
+        setNextPlayerEnabled,
+
+        nextPhaseEnabled,
+        setNextPhaseEnabled,
+
+        phase,
+        setPhase,
+
+        busfahrerName,
+        setBusfahrerName,
+
+        currentRow,
+        setCurrentRow,
+
+        tryOver,
+        setTryOver,
+
+        gameOver,
+        setGameOver,
+
+        fetchGameInfo,
     }
 };
 

@@ -1,23 +1,28 @@
 /**
- * Renders the list of friend request items.
- *
- * Displays the requester's username and action buttons for each request in the list.
+ * @fileoverview MessageInput component for sending messages in a chat application.
+ * <br><br>
+ * This component includes an input field for typing messages and handles sending messages on pressing the Enter key.
  */
 
 /**
- * MessageInput component function.
- *
- * Renders an input field bound to the current message value and provides interaction handlers.
- * Sends the message via the provided callback when the Enter key is pressed.
- *
+ * A component that provides an input field for sending messages in a chat application.
+ * <br> <br>
+ * <strong>handleKeyDown:</strong> <br>
+ * - A function that listens for the Enter key press to send the message and clear the input field.
+ * 
  * @function MessageInput
- * @param {Object} props - Component properties.
- * @param {string} props.value - Current value of the input field.
- * @param {Function} props.setValue - State updater for the input value.
- * @param {Function} props.onSend - Callback function to send the message.
- * @returns {JSX.Element} The rendered message input field.
+ * @param {string} value - The current value of the input field.
+ * @param {Function} setValue - Function to update the input field value.
+ * @param {Function} onSend - Function to call when the message is sent.
+ * @returns {JSX.Element} The rendered MessageInput component.
  */
 const MessageInput = ({ value, setValue, onSend }) => {
+
+    /**
+     * Function to handle key down events in the input field.
+     * It checks if the Enter key is pressed, and if so, calls the onSend function
+     * and clears the input field.
+     */
     const handleKeyDown = (e) => {
         if (e.key === 'Enter') {
             onSend();
@@ -25,19 +30,15 @@ const MessageInput = ({ value, setValue, onSend }) => {
         }
     };
 
-    /**
-     * Renders the chat input field.
-     *
-     * Allows users to type a message, update state, and trigger sending on key press.
-     */
     return (
+        // Input field for sending messages
         <input
             type="text"
-            className="message-input"
             placeholder="Type a message..."
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={handleKeyDown}
+            className="message-input"
         />
     );
 };

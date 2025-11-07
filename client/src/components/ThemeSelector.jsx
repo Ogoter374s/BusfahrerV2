@@ -1,8 +1,8 @@
 /**
- * ThemeSelector.jsx — Modal interface for customizing and selecting card themes.
- *
- * Allows players to visually select a card theme, adjust primary and pattern colors,
- * preview the result, and save their preferences. Includes sound feedback for interaction.
+ * @fileoverview Component to select and customize card themes.
+ * <br><br>
+ * This component renders a modal that allows users to select a card theme and customize its colors.<br>
+ * It receives the current theme, available themes, and color options as props and provides callbacks for saving or closing the modal.
  */
 
 // Utilities
@@ -12,27 +12,27 @@ import { SoundManager } from '../utils/soundManager';
 import { GetCardTheme } from '../features/CardThemes';
 
 // React
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 /**
- * ThemeSelector component function.
- *
- * Renders a modal with selectable card theme previews and color pickers.
- * Temporarily stores selections and updates the persistent values on save.
- *
+ * A component that allows users to select and customize card themes. <br>
+ * It receives the current theme, available themes, and color options as props and provides callbacks for saving or closing the modal.
+ * <br><br>
+ * The component is styled using Tailwind CSS classes for a consistent look and feel. <br>
+ * It includes a title, a list of available themes, color pickers for customization, and buttons to save or quit.
+ * <br><br>
+ * <strong>useEffect:</strong> <br>
+ * This hook updates the temporary theme and colors whenever the modal is opened or the selected theme/colors change.
+ * <br><br>
  * @function ThemeSelector
- * @param {Object} props - Component properties.
- * @param {boolean} props.isOpen - Whether the modal is currently visible.
- * @param {Function} props.onClose - Function to close the modal.
- * @param {Function} props.onSave - Function to save the selected theme and colors.
- * @param {Array<Object>} props.themes - Available card theme definitions to choose from.
- * @param {string} props.selectedTheme - Currently applied theme path.
- * @param {string} props.color1 - Current primary color setting.
- * @param {string} props.color2 - Current pattern color setting.
- * @param {Function} props.setSelectedTheme - Setter for applied theme.
- * @param {Function} props.setColor1 - Setter for primary color.
- * @param {Function} props.setColor2 - Setter for pattern color.
- * @returns {JSX.Element|null} The rendered theme customization modal or null if closed.
+ * @param {boolean} isOpen - A boolean indicating whether the modal is open.
+ * @param {function} onClose - A callback function to close the modal.
+ * @param {function} onSave - A callback function to save the selected theme and colors.
+ * @param {Array} themes - An array of available themes, each containing a path and name.
+ * @param {string} selectedTheme - The currently selected theme path.
+ * @param {string} color1 - The primary color for the theme.
+ * @param {string} color2 - The pattern color for the theme.
+ * @returns {JSX.Element|null} The rendered theme selector modal component or null if the modal is closed.
  */
 const ThemeSelector = ({
     isOpen,
@@ -41,21 +41,15 @@ const ThemeSelector = ({
     themes,
     selectedTheme,
     color1,
-    color2,
-    setSelectedTheme,
-    setColor1,
-    setColor2,
+    color2
 }) => {
     const [tempTheme, setTempTheme] = useState(selectedTheme);
     const [tempColor1, setTempColor1] = useState(color1);
     const [tempColor2, setTempColor2] = useState(color2);
 
     /**
-     * useEffect — Resets temporary theme and color values when modal opens.
-     *
-     * Ensures that the modal reflects current saved selections when reopened.
-     *
-     * @function useEffect (sync on open)
+     * Updates the temporary theme and colors whenever the modal is opened or the selected theme/colors change.
+     * This ensures that the user sees the current selections when they open the modal.
      */
     useEffect(() => {
         if (isOpen) {
@@ -67,30 +61,29 @@ const ThemeSelector = ({
 
     if (!isOpen) return null;
 
-    /**
-     * Renders the full theme selector interface.
-     *
-     * Includes:
-     * - Grid of theme previews (with selection and sound on click)
-     * - Color pickers for primary and pattern hues
-     * - Buttons for quitting or saving theme changes
-     */
     return (
-        <div className="modal-backdrop">
-            <div className="theme-modal">
-                <h2>Select Card Theme</h2>
+        <div className="modal-style">
+            <div className="theme-wrapper">
+                <h2 className="theme-title">
+                    Select Card Theme
+                </h2>
 
-                <div className="theme-selection">
+                {/* Selection of Theme Styles */}
+                <div className="theme-styles">
                     {themes.map((theme) => (
                         <div
                             key={theme.path}
-                            className="card-theme-option"
                             onClick={() => {
                                 SoundManager.playClickSound();
                                 setTempTheme(theme.path);
                             }}
+                            className="flex flex-col items-center cursor-pointer"
                         >
-                            <div className={`card-container ${tempTheme === theme.path ? 'selected' : ''}`}>
+                            <div className={`
+                                theme-item
+                                ${tempTheme === theme.path ? 'border-[#15c42c]' : 'border-[#a65e2e]'}
+                                hover:${tempTheme == theme.path ? 'border-[#15c42c]' : 'border-[#e33e3e]'}
+                            `}>
                                 <GetCardTheme
                                     id={theme.path}
                                     color1={tempColor1}
@@ -98,44 +91,57 @@ const ThemeSelector = ({
                                     draggable="false"
                                 />
                             </div>
-                            <p>{theme.name}</p>
+                            <p className="
+                                text-[2rem] sm:text-[0.75rem] lg:text-[1.5rem] xl:text-[1.75rem]
+                            ">
+                                {theme.name}
+                            </p>
                         </div>
                     ))}
                 </div>
 
-                <div className="color-picker-container">
-                    <label>Primary Color:</label>
+                {/* Color Pickers Section */}
+                <div className="picker-wrapper">
+                    <label className="picker-text">
+                        Primary Color:
+                    </label>
+
                     <input
                         type="color"
                         value={tempColor1}
                         onChange={(e) => setTempColor1(e.target.value)}
+                        className="picker-color rounded-color-fix"
                     />
 
-                    <label>Pattern Color:</label>
+                    <label className="picker-text">
+                        Pattern Color:
+                    </label>
                     <input
                         type="color"
                         value={tempColor2}
                         onChange={(e) => setTempColor2(e.target.value)}
+                        className="picker-color rounded-color-fix"
                     />
                 </div>
-
-                <div className="modal-buttons">
-                    <button 
-                        className="modal-btn" 
+                
+                {/* Action Buttons */}
+                <div className="theme-btns">
+                    <button
                         onClick={() => {
                             SoundManager.playClickSound();
                             onClose();
                         }}
+                        className="modal-btn"
                     >
                         Quit
                     </button>
                     <button
-                        className="modal-btn"
                         onClick={async () => {
                             SoundManager.playClickSound();
                             const success = await onSave(tempTheme, tempColor1, tempColor2);
                             if (success) onClose();
                         }}
+                        className="modal-btn"
                     >
                         Save
                     </button>

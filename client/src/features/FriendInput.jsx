@@ -1,106 +1,46 @@
 /**
- * FriendInput.jsx — Provides an interface for sending friend requests via friend code.
- *
- * Allows users to input a code and send a request to another player.
- * Plays a sound effect upon submission and resets the input field on success.
+ * @fileoverview FriendInput component for sending friend requests.
+ * <br><br>
+ * This component includes an input field for entering a friend's code and a button to send the request. <br>
+ * It handles the submission of the friend request and displays a popup notification based on the response.
  */
-
-// Components
-import PopupModal from "../components/PopUpModal";
-
-// Utilities
-import BASE_URL from "../utils/config";
-import { SoundManager } from '../utils/soundManager';
-import { PopupManager } from "../utils/popupManager";
-
-// React
-import { useState, useEffect } from 'react';
 
 /**
- * FriendInput component function.
- *
- * Renders an input field and submission button to send a friend request.
- * Uses state to track and update the input value. Submits the code to the backend.
- *
+ * FriendInput component allows users to send friend requests by entering a friend's code.
+ * <br><br>
+ * It includes an input field for the friend code and a button to submit the request. <br>
+ * The component manages the state of the friend code input and handles the submission of the request. <br>
+ * It also utilizes the PopupManager to display notifications based on the success or failure of the request
+ * 
  * @function FriendInput
- * @param {Object} props - Component properties.
- * @param {string} props.friendCode - The current value of the friend code input.
- * @param {Function} props.setFriendCode - Function to update the friend code input.
- * @returns {JSX.Element} The rendered friend code input and add button.
+ * @param {string} friendCode - The current value of the friend code input.
+ * @param {Function} setFriendCode - Function to update the friend code state.
+ * @returns {JSX.Element} The rendered FriendInput component.
  */
-const FriendInput = ({ friendCode, setFriendCode }) => {
-    const [popup, setPopup] = useState(PopupManager.defaultPopup);
-
-    useEffect(() => {
-        PopupManager.initPopupManager(setPopup);
-    }, []);
-    
-    /**
-     * Plays a UI click sound for user feedback.
-     *
-     * Triggered before sending a friend request.
-     */
-    const playClickSound = () => SoundManager.playClickSound();
-
-    /**
-     * Sends a friend request using the entered code.
-     *
-     * Posts the friend code to the backend API.
-     * Clears the input on success and shows an alert for success or failure.
-     */
-    const sendFriendRequest = async () => {
-        if (!friendCode.trim()) return;
-        playClickSound();
-
-        const res = await fetch(`${BASE_URL}send-friend-request`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ friendCode }),
-        });
-
-        const data = await res.json();
-        if (res.ok) {
-            PopupManager.showPopup({
-                title: "Add Friend", 
-                message: "Friend request sent!", 
-                icon: '✅'
-            });
-        } else {
-            PopupManager.showPopup({
-                title: 'Add Friend',
-                message: data.error,
-                icon: '❌',
-            });
-        }
-    };
-
-    /**
-     * Renders the input and action layout.
-     *
-     * Includes a styled input field and a button to trigger the friend request.
-     */
+const FriendInput = ({ friendCode, setFriendCode, sendFriendRequest }) => {
     return (
         <>
-            <div className="add-friend-container">
+            {/* Add Friend Wrapper */}
+            <form
+                onSubmit={sendFriendRequest}
+                className="friendAdd-wrapper"
+            >
+
+                {/* Add Friend Code Input */}
                 <input
                     type="text"
-                    className="add-friend-input"
+                    className="friendAdd-input"
                     placeholder="Enter friend code..."
                     value={friendCode}
                     onChange={(e) => setFriendCode(e.target.value)}
                 />
-                <button onClick={sendFriendRequest}>Add Friend</button>
-            </div>
 
-            {/* Popup modal for displaying messages */}
-            <PopupModal
-                isOpen={popup.show}
-                title={popup.title}
-                message={popup.message}
-                icon={popup.icon}
-                onClose={PopupManager.closePopup}
-            />
+                {/* Add Friend Button */}
+                <button 
+                    className="friendAdd-btn">
+                    Add Friend
+                </button>
+            </form>
         </>
     );
 };

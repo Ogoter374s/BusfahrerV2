@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: components/Phase3Layout.jsx</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: components/Phase3Layout.jsx</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @fileoverview Phase 3 Layout Component
+ * &lt;br>&lt;br>
+ * This component arranges and displays the game cards for phase 3 of the game. &lt;br>
+ * It uses the Card feature component to render each card with the appropriate styling and theme. &lt;br>
+ * The layout is responsive and centers the cards with spacing.
+ */
+
+// Features
+import Card from '../features/Card';
+
+// Utilities
+import BASE_URL from '../utils/config';
+import { SoundManager } from '../utils/soundManager';
+import { PopupManager } from '../utils/popupManager';
+
+// React
+import { useState } from 'react';
+import { useParams } from 'react-router-dom';
+
+/**
+ * A layout component for displaying game cards in phase 3 of the game. &lt;br>
+ * It arranges the cards in rows with specific shifts for the first and last rows. &lt;br>
+ * Each card can display action buttons on hover, allowing players to interact with the cards.
+ * &lt;br>&lt;br>
+ * &lt;strong>handleClick:&lt;/strong> &lt;br>
+ * This function handles click events on the action buttons. &lt;br>
+ * It sends the selected action to the server and updates the game state accordingly. &lt;br>
+ * 
+ * @function Phase3Layout
+ * @param {Object[][]} gameCards - A 2D array of game card objects to be displayed in rows.
+ * @param {Object} gameInfo - An object containing the current game state information.
+ * @param {string} color1 - The first color used for styling the cards.
+ * @param {string} color2 - The second color used for styling the cards.
+ * @param {string} theme - The theme applied to the cards.
+ * @returns {JSX.Element} The rendered phase 3 layout component with game cards.
+ */
+function Phase3Layout({
+    gameCards,
+    gameInfo,
+    color1,
+    color2,
+    theme,
+}) {
+    const { lobbyId } = useParams();
+
+    const [hoverCard, setHoverCard] = useState(null);
+    const [firstAction, setFirstAction] = useState({});
+
+    /**
+     * Handles the click event on action buttons for a card. &lt;br>
+     * It sends the selected action to the server and updates the game state accordingly.
+     */
+    const handleClick = async (cardIdx, action, secondAction = null) => {
+        if (gameInfo.tryOver || gameInfo.gameOver) return;
+        try {
+            const response = await fetch(`${BASE_URL}card-action/${lobbyId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ cardIdx, action, secondAction }),
+            });
+
+            const data = await response.json();
+
+            if (!data.success) {
+                PopupManager.showPopup({
+                    title: data.title,
+                    message: data.message,
+                    icon: '❌',
+                });
+            }
+        } catch (error) {
+            PopupManager.showPopup({
+                title: "Error",
+                message: "An error occurred while processing your action.",
+                icon: '❌',
+            });
+            console.error('Error handling card action:', error);
+        }
+    }
+
+    return (
+        &lt;div className="phase3-cards-wrapper">
+            {/* Render each row of game cards */}
+            {gameCards.map((row, rowIdx) => {
+                const isFirst = rowIdx === 0;
+                const isLast = rowIdx === gameCards.length - 1;
+                const shiftY = isFirst ? "translateY(70px)" : isLast ? "translateY(-70px)" : "none";
+
+                return (
+                    // Render each row with appropriate shift
+                    &lt;div key={rowIdx} className="phase3-cards-row" style={{ transform: shiftY }}>
+                        {row.map((card, colIdx) => {
+                            const cardIdx = `${rowIdx}-${colIdx}`;
+                            const showButtons =
+                                hoverCard === cardIdx
+                                &amp;&amp; !card.flipped
+                                &amp;&amp; gameInfo.currentRow === rowIdx
+                                &amp;&amp; !gameInfo.tryOver
+                                &amp;&amp; !gameInfo.gameOver
+                                &amp;&amp; gameInfo.isCurrentPlayer;
+
+                            let buttons = [];
+
+                            if (isFirst) {
+                                buttons = [
+                                    { label: '=', action: 'equal' },
+                                    { label: '≠', action: 'unequal' },
+                                ];
+                            } else if (isLast) {
+                                const selected = firstAction[cardIdx];
+                                if (!selected) {
+                                    buttons = [
+                                        { label: '∧', action: 'higher' },
+                                        { label: '=', action: 'same' },
+                                        { label: '∨', action: 'lower' },
+                                    ];
+                                } else {
+                                    buttons = [
+                                        { label: '=', action: 'equal', second: selected },
+                                        { label: '≠', action: 'unequal', second: selected },
+                                    ];
+                                }
+                            } else {
+                                buttons = [
+                                    { label: '∧', action: 'higher' },
+                                    { label: '=', action: 'same' },
+                                    { label: '∨', action: 'lower' },
+                                ];
+                            }
+
+                            const hoverButtons = (
+                                &lt;div className={`card-action-btn-wrapper
+                                        ${showButtons ? 'opacity-100' : 'opacity-0'}
+                                    `}
+                                >
+                                    {/* Render action buttons */}
+                                    {buttons.map(({ label, action, second }) => (
+                                        &lt;button
+                                            key={action}
+                                            className="card-action-btn"
+                                            onClick={() => {
+                                                SoundManager.playClickSound();
+
+                                                if (isLast &amp;&amp; !second &amp;&amp; !firstAction[cardIdx]) {
+                                                    setFirstAction(prev => ({ ...prev, [cardIdx]: action }));
+                                                } else if (isLast &amp;&amp; second) {
+                                                    handleClick(cardIdx, second, action);
+                                                } else {
+                                                    handleClick(cardIdx, action);
+                                                }
+                                            }}
+                                            disabled={!showButtons}
+                                        >
+                                            {label}
+                                        &lt;/button>
+                                    ))}
+                                &lt;/div>
+                            );
+
+                            return (
+                                &lt;Card
+                                    key={cardIdx}
+                                    index={cardIdx}
+                                    card={card}
+                                    theme={theme}
+                                    color1={color1}
+                                    color2={color2}
+                                    backHover={false}
+                                    hoverButtons={hoverButtons}
+                                    onMouseEnter={() => setHoverCard(cardIdx)}
+                                    onMouseLeave={() => setHoverCard(null)}
+                                />
+                            );
+                        })}
+                    &lt;/div>
+                );
+            }
+            )}
+        &lt;/div>
+    );
+};
+
+export default Phase3Layout;</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#Access">Access</a></li><li><a href="global.html#Account">Account</a></li><li><a href="global.html#Achievements">Achievements</a></li><li><a href="global.html#Avatar">Avatar</a></li><li><a href="global.html#AvatarInfo">AvatarInfo</a></li><li><a href="global.html#AvatarUploader">AvatarUploader</a></li><li><a href="global.html#BackButton">BackButton</a></li><li><a href="global.html#BricksCard">BricksCard</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#ChatMessages">ChatMessages</a></li><li><a href="global.html#ChatSidebar">ChatSidebar</a></li><li><a href="global.html#ChatTabs">ChatTabs</a></li><li><a href="global.html#ChatToggleButton">ChatToggleButton</a></li><li><a href="global.html#Create">Create</a></li><li><a href="global.html#DefaultCard">DefaultCard</a></li><li><a href="global.html#FriendCode">FriendCode</a></li><li><a href="global.html#FriendInput">FriendInput</a></li><li><a href="global.html#FriendList">FriendList</a></li><li><a href="global.html#FriendMessages">FriendMessages</a></li><li><a href="global.html#FriendRequestList">FriendRequestList</a></li><li><a href="global.html#Game">Game</a></li><li><a href="global.html#GameLogo">GameLogo</a></li><li><a href="global.html#GetCardTheme">GetCardTheme</a></li><li><a href="global.html#GetCardThemeURL">GetCardThemeURL</a></li><li><a href="global.html#HexagonCard">HexagonCard</a></li><li><a href="global.html#Home">Home</a></li><li><a href="global.html#Join">Join</a></li><li><a href="global.html#LeafsCard">LeafsCard</a></li><li><a href="global.html#LeaveButton">LeaveButton</a></li><li><a href="global.html#Lobbies">Lobbies</a></li><li><a href="global.html#Lobby">Lobby</a></li><li><a href="global.html#LobbyInvitation">LobbyInvitation</a></li><li><a href="global.html#LobbyList">LobbyList</a></li><li><a href="global.html#MenuButton">MenuButton</a></li><li><a href="global.html#MenuCheckBox">MenuCheckBox</a></li><li><a href="global.html#MenuInput">MenuInput</a></li><li><a href="global.html#MenuSelect">MenuSelect</a></li><li><a href="global.html#MessageInput">MessageInput</a></li><li><a href="global.html#NewGameButton">NewGameButton</a></li><li><a href="global.html#NextPhaseButton">NextPhaseButton</a></li><li><a href="global.html#NextPlayerButton">NextPlayerButton</a></li><li><a href="global.html#PLAYER_GENDER">PLAYER_GENDER</a></li><li><a href="global.html#Phase1">Phase1</a></li><li><a href="global.html#Phase1Layout">Phase1Layout</a></li><li><a href="global.html#Phase2">Phase2</a></li><li><a href="global.html#Phase2Layout">Phase2Layout</a></li><li><a href="global.html#Phase3">Phase3</a></li><li><a href="global.html#Phase3Layout">Phase3Layout</a></li><li><a href="global.html#PlayerActionButton">PlayerActionButton</a></li><li><a href="global.html#PlayerCards">PlayerCards</a></li><li><a href="global.html#PlayerListItem">PlayerListItem</a></li><li><a href="global.html#PopupModal">PopupModal</a></li><li><a href="global.html#PopupOptions">PopupOptions</a></li><li><a href="global.html#RetryButton">RetryButton</a></li><li><a href="global.html#SettingsButton">SettingsButton</a></li><li><a href="global.html#ShinglesCard">ShinglesCard</a></li><li><a href="global.html#SoundManager">SoundManager</a></li><li><a href="global.html#SquareCard">SquareCard</a></li><li><a href="global.html#StatisticBox">StatisticBox</a></li><li><a href="global.html#ThemeSelector">ThemeSelector</a></li><li><a href="global.html#TurnInfo">TurnInfo</a></li><li><a href="global.html#achievLabels">achievLabels</a></li><li><a href="global.html#busfahrerSelectionMode">busfahrerSelectionMode</a></li><li><a href="global.html#cardMatchStyles">cardMatchStyles</a></li><li><a href="global.html#cardThemes">cardThemes</a></li><li><a href="global.html#drinkQuotes">drinkQuotes</a></li><li><a href="global.html#playSound">playSound</a></li><li><a href="global.html#playerActionFeatures">playerActionFeatures</a></li><li><a href="global.html#schluckGiveMode">schluckGiveMode</a></li><li><a href="global.html#shuffleStyles">shuffleStyles</a></li><li><a href="global.html#statLabels">statLabels</a></li><li><a href="global.html#turnModes">turnModes</a></li><li><a href="global.html#useAuthGuard">useAuthGuard</a></li><li><a href="global.html#useAvatarInfo">useAvatarInfo</a></li><li><a href="global.html#useAvatarUpload">useAvatarUpload</a></li><li><a href="global.html#useBusfahrer">useBusfahrer</a></li><li><a href="global.html#useCardTheme">useCardTheme</a></li><li><a href="global.html#useChatManager">useChatManager</a></li><li><a href="global.html#useFriendChatManager">useFriendChatManager</a></li><li><a href="global.html#useGameCards">useGameCards</a></li><li><a href="global.html#useGameGuard">useGameGuard</a></li><li><a href="global.html#useGameInfo">useGameInfo</a></li><li><a href="global.html#useGameManager">useGameManager</a></li><li><a href="global.html#useLobbiesManager">useLobbiesManager</a></li><li><a href="global.html#useLobbyGuard">useLobbyGuard</a></li><li><a href="global.html#useLobbyManager">useLobbyManager</a></li><li><a href="global.html#usePlayerCards">usePlayerCards</a></li><li><a href="global.html#useSpectatorManager">useSpectatorManager</a></li><li><a href="global.html#useStatistics">useStatistics</a></li><li><a href="global.html#useTitles">useTitles</a></li><li><a href="global.html#useWebSocketConnector">useWebSocketConnector</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Fri Nov 07 2025 20:48:43 GMT+0100 (Central European Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

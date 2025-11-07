@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: pages/Account.jsx</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: pages/Account.jsx</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @fileoverview Account page for managing user settings, avatar, sound, and themes.
+ * &lt;br>&lt;br>
+ * This component allows users to customize their account settings, including avatar upload, sound selection, card themes, and titles. &lt;br>
+ * It also displays user statistics and provides options to navigate to achievements or logout.
+ * &lt;br>&lt;br>
+ * The component uses various hooks to manage state and effects, including avatar upload,
+ * card theme selection, title management, and statistics retrieval. &lt;br> 
+ * It also integrates with a WebSocket connector to receive real-time updates on account changes.
+ */
+
+// Components
+import MenuButton from '../components/MenuButton';
+import BackButton from '../components/BackButton';
+import ChatSidebar from '../components/ChatSidebar';
+import AvatarUploader from '../components/AvatarUploader';
+import AvatarIcon from '../components/AvatarIcon';
+import MenuSelect from '../components/MenuSelect';
+import ThemeSelector from '../components/ThemeSelector';
+import StatisticBox from '../components/StatisticBox';
+import PopupModal from '../components/PopUpModal';
+
+// Hooks
+import useAvatarUpload from '../hooks/useAvatarUpload';
+import useCardTheme from '../hooks/useCardTheme';
+import useTitles from '../hooks/useTitles';
+import useStatistics from '../hooks/useStatistics';
+import useWebSocketConnector from '../hooks/useWebSocketConnector';
+import { useAuthGuard } from '../hooks/useAuthGuard';
+
+// Utilities
+import BASE_URL from '../utils/config';
+import { SoundManager } from '../utils/soundManager';
+import { PopupManager } from '../utils/popupManager';
+
+// React
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+/**
+ * Account component serves as the user account management interface.
+ * &lt;br>&lt;br>
+ * It allows users to customize their account settings, including avatar upload, sound selection,
+ * card themes, and titles. &lt;br>
+ * The component also displays user statistics and provides options to navigate to achievements or logout.
+ * &lt;br>&lt;br>
+ * &lt;strong>useEffect:&lt;/strong> &lt;br>
+ * Initializes the PopupManager to handle popup messages when the component mounts. &lt;br>
+ * This ensures that the popup system is ready to display messages for user actions.
+ * &lt;br>&lt;br>
+ * &lt;strong>fetchAccount:&lt;/strong> &lt;br>
+ * Fetches the user's account details from the server, including avatar, uploaded avatar, and statistics.
+ * It updates the state with the fetched data and loads titles from the account.
+ * &lt;br>&lt;br>
+ * &lt;strong>handleLogout:&lt;/strong> &lt;br>
+ * Handles the logout process by sending a POST request to the server and navigating to the access page
+ * upon successful logout. If an error occurs, it displays an error message in a popup modal.
+ * &lt;br>&lt;br>
+ * &lt;strong>useWebSocketConnector:&lt;/strong> &lt;br>
+ * A custom hook that connects to the WebSocket server to receive real-time updates on account changes
+ * and updates the component state accordingly.
+ * &lt;br>&lt;br>
+ * &lt;strong>useAvatarUpload&lt;/strong>
+ * A custom hook that manages the avatar upload functionality, including handling image cropping,
+ * zooming, and uploading the avatar to the server. It also provides a preview of the avatar before upload.
+ * &lt;br>&lt;br>
+ * &lt;strong>useCardTheme&lt;/strong>
+ * A custom hook that manages the card theme selection functionality, allowing users to select and save card themes.
+ * It provides the selected theme, colors, and a method to save the theme to the server.
+ * &lt;br>&lt;br>
+ * &lt;strong>useTitles&lt;/strong>
+ * A custom hook that manages the titles functionality, allowing users to select and change their titles.
+ * It provides the selected title, color, and methods to load titles from the account and handle title changes.
+ * &lt;br>&lt;br>
+ * &lt;strong>useStatistics&lt;/strong>
+ * A custom hook that manages the user statistics, providing methods to fetch and update statistics.
+ * It also provides the labels for the statistics to be displayed in the UI.
+ * &lt;br>&lt;br>
+ * &lt;strong>useAuthGuard&lt;/strong>
+ * A custom hook that checks if the user is authenticated and returns the authentication status.
+ * This is used to conditionally render the account page and ensure that only authenticated users can access it.
+ * 
+ * @function Account
+ * @returns {JSX.Element} The rendered Account interface. 
+ */
+function Account() {
+    const [username, setUsername] = useState('Player');
+
+    const [showAvatarModal, setShowAvatarModal] = useState(false);
+    const [showCardThemeModal, setShowCardThemeModal] = useState(false);
+
+    const [selectedSound, setSelectedSound] = useState('none.mp3');
+    const [selectedAvatar, setSelectedAvatar] = useState(`${BASE_URL}avatars/default.svg`,);
+    const [uploadedAvatar, setUploadedAvatar] = useState('');
+
+    const [popup, setPopup] = useState(PopupManager.defaultPopup);
+
+    const navigate = useNavigate();
+    const init = useRef(false);
+    const isAuthenticated = useAuthGuard();
+
+    /**
+     * A custom hook that manages the avatar upload functionality, including handling image cropping,
+     * zooming, and uploading the avatar to the server. It also provides a preview of the avatar before upload.
+     * It includes methods for handling avatar changes, uploading the avatar, and selecting preset avatars.
+     * The hook returns the necessary state and methods to manage the avatar upload process.
+     */
+    const {
+        avatarPreview,
+        setAvatarPreview,
+        showCropper,
+        crop,
+        zoom,
+        setCrop,
+        setZoom,
+        croppedAreaPixels,
+        setCroppedAreaPixels,
+        handleAvatarChange,
+        uploadAvatar,
+        setShowCropper,
+        selectPresetAvatar,
+    } = useAvatarUpload({
+        BASE_URL,
+        onUploadSuccess: (url) => { 
+            setSelectedAvatar(url);
+            setShowAvatarModal(false);
+        },
+    });
+
+    /**
+     * A custom hook that manages the card theme selection functionality, allowing users to select and save card themes.
+     * It provides the selected theme, colors, and a method to save the theme to the server.
+     * The hook returns the necessary state and methods to manage card themes, including the selected theme,
+     * colors, and a method to save the theme.
+     */
+    const {
+        selectedTheme,
+        setSelectedTheme,
+        color1,
+        setColor1,
+        color2,
+        setColor2,
+        saveTheme,
+        cardThemes,
+    } = useCardTheme();
+
+    /**
+     * A custom hook that manages the titles functionality, allowing users to select and change their titles.
+     * It provides the selected title, color, and methods to load titles from the account and handle title changes.
+     * The hook returns the necessary state and methods to manage titles, including the selected title,
+     * color, and methods to load titles from the account and handle title changes.
+     */
+    const {
+        titles,
+        selectedTitle,
+        selectedColor,
+        setTitles,
+        loadTitlesFromAccount,
+        updateSelectedTitle,
+        handleTitleChange,
+    } = useTitles();
+
+    /**
+     * A custom hook that manages the user statistics, providing methods to fetch and update statistics.
+     * It also provides the labels for the statistics to be displayed in the UI.
+     * The hook returns the necessary state and methods to manage user statistics, including the statistics data
+     * and the labels for the statistics.
+     */
+    const { statistics, setStatistics, statLabels } = useStatistics();
+
+    /**
+     * Fetches the user's account details from the server, including avatar, uploaded avatar, and statistics.
+     * It updates the state with the fetched data and loads titles from the account.
+     * This function is called when the component mounts or when the authentication status changes.
+     * It ensures that the account details are up-to-date and reflects any changes made by the user.
+     */
+    const fetchAccount = async () => {
+        const response = await fetch(`${BASE_URL}get-account`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+        });
+
+        if (!response.ok) throw new Error('Failed to fetch account');
+
+        const result = await response.json();
+
+        setUsername(result.username || 'Player');
+
+        setStatistics(result.statistics || {});
+
+        setSelectedAvatar(`${BASE_URL}avatars/${result.avatar}`);
+        setUploadedAvatar(`${BASE_URL}avatars/${result.uploadedAvatar}`);
+
+        loadTitlesFromAccount(result);
+    };
+
+    /**
+     * Initializes the component by setting up the PopupManager and loading user-specific sounds.
+     * This effect runs once when the component mounts or when the authentication status changes.
+     * It ensures that the PopupManager is ready to handle popups and that user-specific sounds
+     * are loaded only if the user is authenticated.
+     * It also fetches the account details and sets the initial state for the component.
+     * This is important for performance and user experience, as it prevents unnecessary sound loading
+     * for unauthenticated users and ensures that the account details are available when the component is rendered.
+     */
+    useEffect(() => {
+        if (!isAuthenticated) return;
+
+        if (init.current) return;
+        init.current = true;
+
+        PopupManager.initPopupManager(setPopup);
+
+        SoundManager.loadUserSound(true).then(() => {
+            setSelectedSound(SoundManager.getCurrentSound());
+        });
+
+        fetchAccount();
+    }, [isAuthenticated]);
+
+    /**
+     * A custom hook that connects to the WebSocket server to receive real-time updates on account changes
+     * and updates the component state accordingly. It listens for messages related to account updates
+     * and updates the statistics, avatar, and titles based on the received data.
+     * This ensures that the component reflects the latest account information without requiring a full page reload.
+     * It also handles the case where the user changes their avatar or titles, ensuring that the UI is always in sync with the server state.
+     */
+    useWebSocketConnector("account", {}, init.current, (message) => {
+        if (message.type === 'accountUpdate') {
+            if (message.data.statistics) {
+                setStatistics(message.data.statistics);
+            }
+
+            if(message.data.titles) {
+                setTitles(message.data.titles);
+            }
+
+            if(message.data.avatar) {
+                setUploadedAvatar(`${BASE_URL}avatars/${message.data.avatar}`);
+            }
+        }
+    });
+
+    /**
+     * Handles the logout process by sending a POST request to the server and navigating to the access page
+     * upon successful logout. If an error occurs, it displays an error message in a popup modal.
+     * This function is called when the user clicks the logout button in the account menu.
+     * It ensures that the user is logged out properly and that any necessary cleanup is performed.
+     * It also provides feedback to the user in case of an error during the logout process.
+     * This is important for maintaining a good user experience and ensuring that the user is aware of
+     * the logout status.
+     */
+    const handleLogout = async () => {
+        try {
+            const response = await fetch(`${BASE_URL}logout`, {
+                method: 'POST',
+                credentials: 'include',
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                navigate('/access');
+            } else {
+                PopupManager.showPopup({
+                    title: data.title, 
+                    message: data.error, 
+                    icon: '🚫'
+                });
+            }
+        } catch (error) {
+            PopupManager.showPopup({
+                title: 'Error',
+                message: 'Logout failed. Please try again.',
+                icon: '⌛',
+            });
+            console.error('Error during logout:', error);
+        }
+    };
+
+    return (
+        &lt;div className="@container/account flex flex-col items-center justify-center h-screen">
+
+            {/* Background overlay image */}
+            &lt;div className="account-wrapper">
+
+                {/* Title for the account section */}
+                &lt;h1 className="account-home">
+                    {username}
+                &lt;/h1>
+
+                {/* Container for displaying user options */}
+                &lt;div className="account-menu">
+
+                    {/* Container for displaying user customization */}
+                    &lt;div className="options-wrapper">
+
+                        &lt;h2 className="options-title">
+                            Options
+                        &lt;/h2>
+
+                        {/* Avatar selection and upload */}
+                        &lt;AvatarIcon 
+                            src={selectedAvatar}
+                            isLocal
+                            onClick={() => setShowAvatarModal(true)}
+                        />
+
+                        {/* Sound selection dropdown */}
+                        &lt;MenuSelect
+                            label="Select Click Sound:"
+                            id="optionsSelect"
+                            value={selectedSound}
+                            onChange={(e) => {
+                                const selectedOption = e.target.selectedOptions[0];
+                                const soundPath = selectedOption.getAttribute('data-path');
+                                const soundName = selectedOption.getAttribute('data-name');
+
+                                setSelectedSound(soundPath);
+                                SoundManager.userSoundChange(soundPath, soundName);
+                            }}
+                            options={SoundManager.getClickSounds()}
+                        />
+
+                        {/* Card Theme selection dropdown */}
+                        &lt;div className="select-wrapper">
+                            &lt;label 
+                                htmlFor="optionsSelect"
+                                className="select-label">
+                                Select Card Theme:
+                            &lt;/label>
+                            &lt;div
+                                className="options-theme"
+                                onClick={() => {
+                                    SoundManager.playClickSound();
+                                    setShowCardThemeModal(true);
+                                }}
+                            >
+                                {cardThemes.find((theme) => theme.path === selectedTheme)?.name || 'Classic'}
+                            &lt;/div>
+                        &lt;/div>
+
+                        {/* Title selection dropdown */}
+                        &lt;MenuSelect
+                            label="Select Title:"
+                            id="optionsSelect"
+                            value={selectedTitle}
+                            onChange={handleTitleChange}
+                            selectStyle={{ color: selectedColor }}
+                            options={titles.map((title) => ({
+                                name: title.name,
+                                value: title.name,
+                                color: title.color,
+                            }))}
+                        />
+                    &lt;/div>
+
+                    {/* Container for displaying user statistics */}
+                    &lt;StatisticBox statistics={statistics} statLabels={statLabels} />
+                &lt;/div>
+
+                {/* Buttons for navigating to achievements and logging out */}
+                &lt;div className="flex mt-4 sm:mt-1 lg:mt-2 xl:mt-2 2xl:mt-0">
+
+                    { /* Button to view achievements */ }
+                    &lt;MenuButton
+                        wrapper={true}
+                        buttonClass="account-btn"
+                        textClass="btn-txt"
+                        icon="button"
+                        text="Achievements"
+                        to="/achievements"
+                    />
+
+                    {/* Button to logout */}
+                    &lt;MenuButton
+                        wrapper={true}
+                        buttonClass="account-btn"
+                        textClass="btn-txt"
+                        icon="button"
+                        text="Logout"
+                        onClick={handleLogout}
+                    />
+                &lt;/div>
+            &lt;/div>
+
+            &lt;BackButton />
+
+            &lt;AvatarUploader
+                isOpen={showAvatarModal}
+                onClose={() => {
+                    SoundManager.playClickSound();
+                    setAvatarPreview(null);
+                    setShowAvatarModal(false);
+                    setShowCropper(false);
+                }}
+                uploadedAvatar={uploadedAvatar}
+                onPresetSelect={selectPresetAvatar}
+                onAvatarUpload={uploadAvatar}
+                avatarPreview={avatarPreview}
+                showCropper={showCropper}
+                crop={crop}
+                zoom={zoom}
+                setCrop={setCrop}
+                setZoom={setZoom}
+                setCroppedAreaPixels={setCroppedAreaPixels}
+                handleAvatarChange={handleAvatarChange}
+            />
+
+            &lt;ThemeSelector
+                isOpen={showCardThemeModal}
+                onClose={() => setShowCardThemeModal(false)}
+                onSave={async (theme, c1, c2) => {
+                    setSelectedTheme(theme);
+                    setColor1(c1);
+                    setColor2(c2);
+                    return await saveTheme(theme, c1, c2);
+                }}
+                themes={cardThemes}
+                selectedTheme={selectedTheme}
+                color1={color1}
+                color2={color2}
+            />
+
+            &lt;ChatSidebar />
+
+            &lt;PopupModal
+                isOpen={popup.show}
+                title={popup.title}
+                message={popup.message}
+                icon={popup.icon}
+                onOk={PopupManager.okPopup}
+                onCancel={PopupManager.cancelPopup}
+                useCancel={popup.useCancel}
+            />
+        &lt;/div>
+    );
+}
+
+export default Account;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#Access">Access</a></li><li><a href="global.html#Account">Account</a></li><li><a href="global.html#Achievements">Achievements</a></li><li><a href="global.html#Avatar">Avatar</a></li><li><a href="global.html#AvatarInfo">AvatarInfo</a></li><li><a href="global.html#AvatarUploader">AvatarUploader</a></li><li><a href="global.html#BackButton">BackButton</a></li><li><a href="global.html#BricksCard">BricksCard</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#ChatMessages">ChatMessages</a></li><li><a href="global.html#ChatSidebar">ChatSidebar</a></li><li><a href="global.html#ChatTabs">ChatTabs</a></li><li><a href="global.html#ChatToggleButton">ChatToggleButton</a></li><li><a href="global.html#Create">Create</a></li><li><a href="global.html#DefaultCard">DefaultCard</a></li><li><a href="global.html#FriendCode">FriendCode</a></li><li><a href="global.html#FriendInput">FriendInput</a></li><li><a href="global.html#FriendList">FriendList</a></li><li><a href="global.html#FriendMessages">FriendMessages</a></li><li><a href="global.html#FriendRequestList">FriendRequestList</a></li><li><a href="global.html#Game">Game</a></li><li><a href="global.html#GameLogo">GameLogo</a></li><li><a href="global.html#GetCardTheme">GetCardTheme</a></li><li><a href="global.html#GetCardThemeURL">GetCardThemeURL</a></li><li><a href="global.html#HexagonCard">HexagonCard</a></li><li><a href="global.html#Home">Home</a></li><li><a href="global.html#Join">Join</a></li><li><a href="global.html#LeafsCard">LeafsCard</a></li><li><a href="global.html#LeaveButton">LeaveButton</a></li><li><a href="global.html#Lobbies">Lobbies</a></li><li><a href="global.html#Lobby">Lobby</a></li><li><a href="global.html#LobbyInvitation">LobbyInvitation</a></li><li><a href="global.html#LobbyList">LobbyList</a></li><li><a href="global.html#MenuButton">MenuButton</a></li><li><a href="global.html#MenuCheckBox">MenuCheckBox</a></li><li><a href="global.html#MenuInput">MenuInput</a></li><li><a href="global.html#MenuSelect">MenuSelect</a></li><li><a href="global.html#MessageInput">MessageInput</a></li><li><a href="global.html#NewGameButton">NewGameButton</a></li><li><a href="global.html#NextPhaseButton">NextPhaseButton</a></li><li><a href="global.html#NextPlayerButton">NextPlayerButton</a></li><li><a href="global.html#PLAYER_GENDER">PLAYER_GENDER</a></li><li><a href="global.html#Phase1">Phase1</a></li><li><a href="global.html#Phase1Layout">Phase1Layout</a></li><li><a href="global.html#Phase2">Phase2</a></li><li><a href="global.html#Phase2Layout">Phase2Layout</a></li><li><a href="global.html#Phase3">Phase3</a></li><li><a href="global.html#Phase3Layout">Phase3Layout</a></li><li><a href="global.html#PlayerActionButton">PlayerActionButton</a></li><li><a href="global.html#PlayerCards">PlayerCards</a></li><li><a href="global.html#PlayerListItem">PlayerListItem</a></li><li><a href="global.html#PopupModal">PopupModal</a></li><li><a href="global.html#PopupOptions">PopupOptions</a></li><li><a href="global.html#RetryButton">RetryButton</a></li><li><a href="global.html#SettingsButton">SettingsButton</a></li><li><a href="global.html#ShinglesCard">ShinglesCard</a></li><li><a href="global.html#SoundManager">SoundManager</a></li><li><a href="global.html#SquareCard">SquareCard</a></li><li><a href="global.html#StatisticBox">StatisticBox</a></li><li><a href="global.html#ThemeSelector">ThemeSelector</a></li><li><a href="global.html#TurnInfo">TurnInfo</a></li><li><a href="global.html#achievLabels">achievLabels</a></li><li><a href="global.html#busfahrerSelectionMode">busfahrerSelectionMode</a></li><li><a href="global.html#cardMatchStyles">cardMatchStyles</a></li><li><a href="global.html#cardThemes">cardThemes</a></li><li><a href="global.html#drinkQuotes">drinkQuotes</a></li><li><a href="global.html#playSound">playSound</a></li><li><a href="global.html#playerActionFeatures">playerActionFeatures</a></li><li><a href="global.html#schluckGiveMode">schluckGiveMode</a></li><li><a href="global.html#shuffleStyles">shuffleStyles</a></li><li><a href="global.html#statLabels">statLabels</a></li><li><a href="global.html#turnModes">turnModes</a></li><li><a href="global.html#useAuthGuard">useAuthGuard</a></li><li><a href="global.html#useAvatarInfo">useAvatarInfo</a></li><li><a href="global.html#useAvatarUpload">useAvatarUpload</a></li><li><a href="global.html#useBusfahrer">useBusfahrer</a></li><li><a href="global.html#useCardTheme">useCardTheme</a></li><li><a href="global.html#useChatManager">useChatManager</a></li><li><a href="global.html#useFriendChatManager">useFriendChatManager</a></li><li><a href="global.html#useGameCards">useGameCards</a></li><li><a href="global.html#useGameGuard">useGameGuard</a></li><li><a href="global.html#useGameInfo">useGameInfo</a></li><li><a href="global.html#useGameManager">useGameManager</a></li><li><a href="global.html#useLobbiesManager">useLobbiesManager</a></li><li><a href="global.html#useLobbyGuard">useLobbyGuard</a></li><li><a href="global.html#useLobbyManager">useLobbyManager</a></li><li><a href="global.html#usePlayerCards">usePlayerCards</a></li><li><a href="global.html#useSpectatorManager">useSpectatorManager</a></li><li><a href="global.html#useStatistics">useStatistics</a></li><li><a href="global.html#useTitles">useTitles</a></li><li><a href="global.html#useWebSocketConnector">useWebSocketConnector</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Fri Nov 07 2025 20:48:43 GMT+0100 (Central European Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

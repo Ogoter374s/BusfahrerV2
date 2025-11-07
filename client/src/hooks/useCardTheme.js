@@ -1,53 +1,45 @@
 /**
- * useCardTheme.js — Custom hook for managing a player's card theme and color preferences.
- *
- * Loads the player's saved card design from the backend and applies it across the UI.
- * Also provides setters to update theme and color values in local state.
+ * @fileoverview Custom hook for managing card themes.
+ * <br><br>
+ * This hook provides functionality to load and save card themes, including colors and theme names. <br>
+ * It interacts with the backend to persist user preferences.
  */
 
 // Utilities
 import BASE_URL from "../utils/config";
+import { PopupManager } from "../utils/popupManager";
+import { cardThemes } from "../utils/constants";
 
 // React
 import { useEffect, useState } from 'react';
 
 /**
- * useCardTheme hook function.
- *
- * Fetches the current user's saved card theme and associated colors on mount.
- * Stores the theme and color values in local state for use across components.
- *
+ * A custom React hook for managing card themes. <br>
+ * This hook provides functionality to load and save card themes, including colors and theme names. <br>
+ * It interacts with the backend to persist user preferences.
+ * <br><br>
+ * <strong>loadTheme:</strong> <br>
+ * This function fetches the current card theme from the backend and updates the state variables accordingly.
+ * <br><br>
+ * <strong>saveTheme:</strong> <br>
+ * This function saves the current card theme to the backend. <br>
+ * It accepts optional parameters to override the current state values.
+ * <br><br>
+ * <strong>useEffect:</strong> <br>
+ * This effect runs once when the component mounts to load the current theme.
+ * <br><br>
  * @function useCardTheme
- * @returns {Object} An object containing:
- *   {string} selectedTheme - The ID of the current card theme.
- *   {string} color1 - The primary color for the theme.
- *   {string} color2 - The secondary/pattern color for the theme.
- *   {Function} setSelectedTheme - Setter for theme ID.
- *   {Function} setColor1 - Setter for primary color.
- *   {Function} setColor2 - Setter for pattern color.
+ * @returns {Object} An object containing the current theme, colors, and functions to load and save themes.
  */
 const useCardTheme = () => {
     const [selectedTheme, setSelectedTheme] = useState('default');
     const [color1, setColor1] = useState('#ffffff');
     const [color2, setColor2] = useState('#ff4538');
 
-    const cardThemes = [
-        { name: 'Classic', path: 'default' },
-        { name: 'Bricks', path: 'bricks' },
-        { name: 'Hexagon', path: 'hexagon' },
-        { name: 'Shingles', path: 'shingles' },
-        { name: 'Square', path: 'square' },
-        { name: 'Leafs', path: 'leafs' },
-    ];
-
     /**
-     * loadTheme — Fetches the saved card theme and color preferences from the backend.
-     *
-     * Sends a GET request to retrieve the user's current theme, primary color, and pattern color.
-     * Updates local state with the retrieved values. Logs errors if the request fails.
-     *
-     * @function loadTheme
-     * @returns {Promise<void>}
+     * Loads the current card theme from the backend and updates state variables.
+     * This function fetches the theme data and sets the `selectedTheme`, `color1`, and `color2` state variables.
+     * If the fetch fails, it logs an error to the console.
      */
     const loadTheme = async () => {
         try {
@@ -58,6 +50,7 @@ const useCardTheme = () => {
             if (!response.ok) throw new Error('Failed to fetch theme');
 
             const data = await response.json();
+
             setSelectedTheme(data.theme);
             setColor1(data.color1);
             setColor2(data.color2);
@@ -67,17 +60,10 @@ const useCardTheme = () => {
     };
 
     /**
-     * saveTheme — Persists the card theme and colors to the backend.
-     *
-     * Accepts optional overrides; falls back to current state if not provided.
-     * Sends a POST request with the selected theme and colors.
-     * Returns `true` if successful, or `false` if the save fails.
-     *
-     * @function saveTheme
-     * @param {string} [themeOverride] - Optional override for the theme ID.
-     * @param {string} [color1Override] - Optional override for the primary color.
-     * @param {string} [color2Override] - Optional override for the secondary/pattern color.
-     * @returns {Promise<boolean>} Whether the save operation was successful.
+     * Saves the current card theme to the backend.
+     * This function accepts optional parameters to override the current state values before saving.
+     * It sends a POST request to the backend with the theme data. 
+     * If the save fails, it logs an error to the console.
      */
     const saveTheme = async (themeOverride, color1Override, color2Override) => {
         const themeToSave = themeOverride || selectedTheme;
@@ -92,53 +78,49 @@ const useCardTheme = () => {
                 body: JSON.stringify({ theme: themeToSave, color1: c1, color2: c2 }),
             });
 
-            if (!response.ok) throw new Error('Save failed');
+            const data = await response.json();
+
+            if (!data.success) {
+                PopupManager.showPopup({
+                    title: data.title,
+                    message: data.error,
+                    icon: '❌',
+                });
+            }
+
             return true;
         } catch (err) {
+            PopupManager.showPopup({
+                title: 'Error',
+                message: 'An unexpected error occurred. Please try again later.',
+                icon: '❌',
+            });
             console.error('Error saving card theme:', err);
             return false;
         }
     };
 
     /**
-     * useEffect — Fetches saved card theme preferences on hook initialization.
-     *
-     * Makes a backend request (e.g. /get-card-theme) to retrieve the player's
-     * previously selected theme and colors, then stores them in local state.
-     *
-     * @function useEffect (initial fetch)
+     * Effect hook to load the theme when the component mounts.
+     * This effect runs once on component mount to fetch and set the current card theme.
      */
     useEffect(() => {
         loadTheme();
     }, []);
 
-    /**
-     * Returns the card theme hook state and utilities.
-     *
-     * Exposes the current theme and color values along with their setters,
-     * and provides functions for loading and saving preferences.
-     *
-     * @returns {Object} Card theme management object:
-     *   {string} selectedTheme - Currently selected theme ID.
-     *   {Function} setSelectedTheme - Updates the selected theme.
-     *   {string} color1 - Primary theme color.
-     *   {Function} setColor1 - Updates the primary color.
-     *   {string} color2 - Secondary pattern color.
-     *   {Function} setColor2 - Updates the secondary color.
-     *   {Function} saveTheme - Persists the selected theme and colors to the backend.
-     *   {Function} loadTheme - Loads saved theme and color settings from the backend.
-     *   {Array<Object>} cardThemes - Available theme definitions for selection and display.
-     */
     return {
+        cardThemes,
+
         selectedTheme,
         setSelectedTheme,
+
         color1,
         setColor1,
         color2,
         setColor2,
+
         saveTheme,
         loadTheme,
-        cardThemes,
     };
 };
 

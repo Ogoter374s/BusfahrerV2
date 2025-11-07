@@ -1,87 +1,160 @@
-
-// Hooks
-import useWebSocketConnector from '../hooks/useWebSocketConnector';
+/**
+ * @fileoverview Lobby List Component
+ * <br><br>
+ * This component displays a list of available public lobbies. <br>
+ * Each lobby item shows player avatars, lobby name, player count, and allows expansion for more details.
+ */
 
 // Utilities
 import BASE_URL from '../utils/config';
 import { SoundManager } from '../utils/soundManager';
 
 // React
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 
-function LobbyList({ onJoin }) {
-    const [games, setGames] = useState([]);
-    const init = useRef(false);
+/**
+ * A component that displays a list of available public lobbies. <br>
+ * Each lobby item shows player avatars, lobby name, player count, and allows expansion for more details.
+ * <br><br>
+ * <strong>toggleExpand:</strong> <br>
+ * This function toggles the expanded state of a lobby item when clicked. <br>
+ * It plays a click sound and updates the expanded index state.
+ * <br><br>
+ * 
+ * @function LobbyList
+ * @param {Array} lobbies - An array of lobby objects to display.
+ * @param {function} onJoin - A function to call when the join button is clicked, with the lobby code as parameter.
+ * @returns {JSX.Element} The rendered lobby list component.
+ */
+function LobbyList({ lobbies, onJoin }) {
+    const [expandedIndex, setExpandedIndex] = useState(null);
 
-    const fetchGames = async () => {
-        try {
-            const res = await fetch(`${BASE_URL}get-waiting-games`, {
-                credentials: 'include',
-            });
-            const data = await res.json();
-            setGames(data);
-        } catch (err) {
-            console.error('Failed to fetch games:', err);
-        }
+    /**
+     * Toggles the expanded state of a lobby item when clicked.
+     * It plays a click sound and updates the expanded index state.
+     */
+    const toggleExpand = (index) => {
+        SoundManager.playClickSound();
+        setExpandedIndex(expandedIndex === index ? null : index);
     };
 
-    const handleClick = (id) => {
-        SoundManager.playClickSound();
-        onJoin({gameId: id});
-    }
-
-    useEffect(() => {
-        if (init.current) return;
-        init.current = true;
-
-        fetchGames();
-    }, []);
-
-    useWebSocketConnector("lobby", {}, (message) => {
-        if (message.type === 'lobbysUpdate') {
-            setGames(message.data);
-        }
-    });
-
     return (
-        <div className="game-list">
-            {games.map((game) => (
-                <div key={game.id} className="game-item">
-                    <div className="game-info">
-                        <div className="game-avatars">
-                            {game.avatars.slice(0, 3).map((avatar, index) => (
-                                <img
-                                    key={index}
-                                    src={`${BASE_URL}avatars/${avatar}`}
-                                    alt={`Player ${index + 1}`}
-                                    className="avatar-preview"
-                                />
-                            ))}
-                            {game.playerCount > 3 && (
-                                <span className="more-players">...</span>
-                            )}
+        <div className="lobby-list-wrapper">
+
+            {/* List of available public lobbies */}
+            {lobbies.map((lobby, index) => (
+                <div
+                    key={index}
+                    className="lobby-list-item"
+                    onClick={() => toggleExpand(index)}
+                >
+                    <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-3 sm:gap-1 lg:gap-1 xl:gap-2 2xl:gap-2">
+
+                            {/* Player Avatars */}
+                            <div className="flex pointer-events-none gap-1 sm:gap-0.5 lg:gap-1 xl:gap-1.5 2xl:gap-1.5">
+                                {lobby.avatars.slice(0, 3).map((player, idx) => (
+                                    <img
+                                        key={idx}
+                                        src={`${BASE_URL}avatars/${player.avatar}`}
+                                        alt={`Player ${idx + 1}`}
+                                        className="lobby-list-avatar"
+                                    />
+                                ))}
+
+                                {lobby.playerCount > 3 && (
+                                    <span className="lobby-list-more">
+                                        ...
+                                    </span>
+                                )}
+                            </div>
+
+                            <span className="lobby-list-title">
+                                {lobby.name}
+                            </span>
                         </div>
-                        <span className="game-name">{game.name}</span>
+
+                        {/* Lobby Info */}
+                        <div className="lobby-list-info">
+
+                            {/* Spectator Icon if there are spectators */}
+                            {lobby.spectators.length !== 0 && (
+                                <div className="flex items-center">
+                                    <img
+                                        src={"/icons/spectator.svg"}
+                                        alt={"Spectator"}
+                                        className="lobby-list-spectator"
+                                    />
+                                </div>
+                            )}
+
+                            {/* Player Count and player limit */}
+                            <span>
+                                {lobby.playerCount} / {lobby.settings.playerLimit}
+                            </span>
+
+                            {/* Join Button */}
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onJoin({ lobbyCode: lobby.code });
+                                }}
+                                className="lobby-list-join"
+                            />
+                        </div>
                     </div>
 
-                    <div className="game-join">
-                        {game.spectator === 0 && (
-                            <div className="game-spectator">
-                                <span>
-                                    {game.spectator} 2
-                                </span>
-                                <img
-                                    src={"/spectator.svg"}
-                                    alt={"Spectator"}
-                                    className="spectator-icon"
-                                />
+                    {/* Expanded section with player list and creation date */}
+                    {expandedIndex === index && (
+                        <div className="lobby-list-extended">
+
+                            {/* Left side: Player list */}
+                            <ul>
+
+                                {/* List of players with avatars and names */}
+                                {lobby.avatars.map((player, idx) => (
+                                    <li key={idx}>
+                                        <div className="lobby-list-player-wrapper">
+                                            <img
+                                                key={idx}
+                                                src={`${BASE_URL}avatars/${player.avatar}`}
+                                                alt={`Player ${idx + 1}`}
+                                                className="lobby-list-player-icon"
+                                            />
+
+                                            {player.name}
+                                        </div>
+                                    </li>
+                                ))}
+
+                                {/* List of spectators with icon and names */}
+                                {lobby.spectators.map((player, idx) => (
+                                    <li key={idx}>
+                                        <div className="lobby-list-spectator-wrapper">
+                                            <img
+                                                src={"/icons/spectator.svg"}
+                                                alt={"Spectator"}
+                                                className="lobby-list-spectator-icon"
+                                            />
+
+                                            {player.name}
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+
+                            {/* Right side: Creation date */}
+                            <div className="lobby-list-date">
+                                {new Date(lobby.createdAt).toLocaleDateString("de-DE", {
+                                    year: "numeric",
+                                    month: "2-digit",
+                                    day: "2-digit",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                })}
                             </div>
-                        )}
-                        <span className="game-count">
-                            {game.playerCount} / {game.settings.playerLimit}
-                        </span>
-                        <button onClick={() => handleClick(game.id)} />
-                    </div>
+                        </div>
+                    )}
                 </div>
             ))}
         </div>

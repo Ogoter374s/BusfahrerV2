@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: pages/Achievements.jsx</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: pages/Achievements.jsx</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @fileoverview Achievements page for displaying user achievements.
+ * &lt;br>&lt;br>
+ * This page fetches and displays a list of user achievements with details such as name, description, icon, and conditions. &lt;br>
+ * Users can expand each achievement to view more information.
+ */
+
+// Components
+import ChatSidebar from '../components/ChatSidebar';
+import BackButton from '../components/BackButton';
+
+// Hooks
+import { useAuthGuard } from '../hooks/useAuthGuard';
+
+// Utilities
+import BASE_URL from '../utils/config';
+import { SoundManager } from '../utils/soundManager';
+import { achievLabels } from '../utils/constants';
+
+// React
+import { useState, useEffect, useRef } from 'react';
+
+/**
+ * Achievements Page Component
+ * &lt;br>&lt;br>
+ * This page fetches and displays a list of user achievements with details such as name, description, icon, and conditions. &lt;br>
+ * Users can expand each achievement to view more information.
+ * &lt;br>&lt;br>
+ * It uses the `useAuthGuard` hook to ensure that only authenticated users can access this page. &lt;br>
+ * The achievements data is fetched from the server when the component mounts. &lt;br>
+ * Each achievement can be expanded or collapsed to show or hide its details.
+ * &lt;br>&lt;br>
+ * &lt;strong>fetchAchievements:&lt;/strong> &lt;br>
+ * This asynchronous function fetches the user's achievements from the server. &lt;br>
+ * It sends a GET request to the `get-achievements` endpoint and updates the `achievements` state with the received data.
+ * &lt;br>&lt;br>
+ * &lt;strong>toggleExpand:&lt;/strong> &lt;br>
+ * This function toggles the expanded state of an achievement. &lt;br>
+ * It takes the index of the achievement as an argument and updates the `expandedIndex` state accordingly.
+ * &lt;strong>useEffect:&lt;/strong> &lt;br>
+ * This hook runs when the component mounts and when the `isAuthenticated` state changes. &lt;br>
+ * It ensures that the achievements are fetched only once when the user is authenticated.
+ * 
+ * @function Achievements
+ * @returns {JSX.Element} The rendered Achievements page component.
+ */
+function Achievements() {
+    const [achievements, setAchievements] = useState([]);
+    const [expandedIndex, setExpandedIndex] = useState(null);
+
+    const init = useRef(false);
+    const isAuthenticated = useAuthGuard();
+
+    /**
+     * Fetches the user's achievements from the server and updates the state.
+     * This function sends a GET request to the `get-achievements` endpoint and updates the `achievements` state with the received data.
+     */
+    const fetchAchievements = async () => {
+        const response = await fetch(`${BASE_URL}get-achievements`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+        });
+
+        const data = await response.json();
+
+        setAchievements(data);
+    };
+    
+    /**
+     * Effect hook to fetch achievements when the component mounts and when the user is authenticated.
+     * This hook ensures that the achievements are fetched only once when the user is authenticated.
+     * It uses a ref to track whether the initialization has already occurred to prevent multiple fetches.
+     */
+    useEffect(() => {
+        if (!isAuthenticated) return;
+
+        if (init.current) return;
+        init.current = true;
+
+        SoundManager.loadUserSound(true);
+
+        fetchAchievements();
+    }, [isAuthenticated]);
+
+    /**
+     * Toggles the expanded state of an achievement.
+     * This function takes the index of the achievement as an argument and updates the `expandedIndex` state accordingly.
+     * If the clicked achievement is already expanded, it collapses it; otherwise, it expands the clicked achievement.
+     */
+    const toggleExpand = (index) => {
+        SoundManager.playClickSound();
+        setExpandedIndex(expandedIndex === index ? null : index);
+    };
+
+    return (
+        &lt;div className="@container/achievements flex flex-col items-center justify-center h-screen">
+            
+            {/* Background overlay image */}
+            &lt;div className="achievements-wrapper">
+
+                {/* Account title */}
+                &lt;h1 className="achievements-title">
+                    Achievements
+                &lt;/h1>
+
+                &lt;div className="achievement-list">
+                    
+                    {/* Achievements List */}
+                    {achievements.map((ach, index) => (
+                        &lt;div 
+                            key={index} 
+                            className="achievement-wrapper"
+                        >
+
+                            {/* Achievement Header */}
+                            &lt;div
+                                className="flex items-center justify-between"
+                                onClick={() => toggleExpand(index)}
+                            >
+
+                                {/* Achievement Icon and Name */}
+                                &lt;div className="flex items-center flex-1 min-w-0">
+                                    &lt;img
+                                        src={`/achievements/${ach.icon}`}
+                                        alt="Icon"
+                                        className="achievement-icon"
+                                    />
+
+                                    &lt;span className="achievement-name">
+                                        {ach.name}
+                                    &lt;/span>
+                                &lt;/div>             
+
+                                {/* Achievement Title and Status */}
+                                &lt;div className="flex items-center shrink-0">
+                                    {ach.title &amp;&amp; (
+                                        &lt;div className="achievement-title">
+                                            &lt;span
+                                                style={{ color: ach.title.color }}
+                                            >
+                                                {ach.title.name}
+                                            &lt;/span>
+                                        &lt;/div>
+                                    )}
+                                    &lt;span className="achievement-status">
+                                        {ach.unlocked ? '🏆' : '❌'}
+                                    &lt;/span>
+                                &lt;/div>
+                            &lt;/div>
+
+                            {/* Achievement Details Dropdown */}
+                            {expandedIndex === index &amp;&amp; (
+                                &lt;div 
+                                    className="achievement-dropdown"
+                                    onClick={() => toggleExpand(index)}
+                                >
+                                    &lt;p className="dropdown-text">
+                                        {ach.description}
+                                    &lt;/p>
+
+                                    {/* Achievement Conditions List */}
+                                    &lt;ul className="dropdown-list">
+                                        {ach.conditions.map((cond, i) => {
+                                            const completed =
+                                                cond.current >=
+                                                cond.required;
+                                            return (
+                                                &lt;li key={i}>
+                                                    {achievLabels[cond.key] ||
+                                                        cond.key}
+                                                    : {cond.current} /{' '}
+                                                    {cond.required}{' '}
+                                                    {completed
+                                                        ? '✅'
+                                                        : '❌'}
+                                                &lt;/li>
+                                            );
+                                        })}
+                                    &lt;/ul>
+                                &lt;/div>
+                            )}
+                        &lt;/div>
+                    ))}
+                &lt;/div>
+            &lt;/div>
+
+            {/* Back button to navigate to the Account page */}
+            &lt;BackButton to="/account" />
+
+            {/* Sidebar Toggle */}
+            &lt;ChatSidebar />
+        &lt;/div>
+    );
+}
+
+export default Achievements;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#Access">Access</a></li><li><a href="global.html#Account">Account</a></li><li><a href="global.html#Achievements">Achievements</a></li><li><a href="global.html#Avatar">Avatar</a></li><li><a href="global.html#AvatarInfo">AvatarInfo</a></li><li><a href="global.html#AvatarUploader">AvatarUploader</a></li><li><a href="global.html#BackButton">BackButton</a></li><li><a href="global.html#BricksCard">BricksCard</a></li><li><a href="global.html#Card">Card</a></li><li><a href="global.html#ChatMessages">ChatMessages</a></li><li><a href="global.html#ChatSidebar">ChatSidebar</a></li><li><a href="global.html#ChatTabs">ChatTabs</a></li><li><a href="global.html#ChatToggleButton">ChatToggleButton</a></li><li><a href="global.html#Create">Create</a></li><li><a href="global.html#DefaultCard">DefaultCard</a></li><li><a href="global.html#FriendCode">FriendCode</a></li><li><a href="global.html#FriendInput">FriendInput</a></li><li><a href="global.html#FriendList">FriendList</a></li><li><a href="global.html#FriendMessages">FriendMessages</a></li><li><a href="global.html#FriendRequestList">FriendRequestList</a></li><li><a href="global.html#Game">Game</a></li><li><a href="global.html#GameLogo">GameLogo</a></li><li><a href="global.html#GetCardTheme">GetCardTheme</a></li><li><a href="global.html#GetCardThemeURL">GetCardThemeURL</a></li><li><a href="global.html#HexagonCard">HexagonCard</a></li><li><a href="global.html#Home">Home</a></li><li><a href="global.html#Join">Join</a></li><li><a href="global.html#LeafsCard">LeafsCard</a></li><li><a href="global.html#LeaveButton">LeaveButton</a></li><li><a href="global.html#Lobbies">Lobbies</a></li><li><a href="global.html#Lobby">Lobby</a></li><li><a href="global.html#LobbyInvitation">LobbyInvitation</a></li><li><a href="global.html#LobbyList">LobbyList</a></li><li><a href="global.html#MenuButton">MenuButton</a></li><li><a href="global.html#MenuCheckBox">MenuCheckBox</a></li><li><a href="global.html#MenuInput">MenuInput</a></li><li><a href="global.html#MenuSelect">MenuSelect</a></li><li><a href="global.html#MessageInput">MessageInput</a></li><li><a href="global.html#NewGameButton">NewGameButton</a></li><li><a href="global.html#NextPhaseButton">NextPhaseButton</a></li><li><a href="global.html#NextPlayerButton">NextPlayerButton</a></li><li><a href="global.html#PLAYER_GENDER">PLAYER_GENDER</a></li><li><a href="global.html#Phase1">Phase1</a></li><li><a href="global.html#Phase1Layout">Phase1Layout</a></li><li><a href="global.html#Phase2">Phase2</a></li><li><a href="global.html#Phase2Layout">Phase2Layout</a></li><li><a href="global.html#Phase3">Phase3</a></li><li><a href="global.html#Phase3Layout">Phase3Layout</a></li><li><a href="global.html#PlayerActionButton">PlayerActionButton</a></li><li><a href="global.html#PlayerCards">PlayerCards</a></li><li><a href="global.html#PlayerListItem">PlayerListItem</a></li><li><a href="global.html#PopupModal">PopupModal</a></li><li><a href="global.html#PopupOptions">PopupOptions</a></li><li><a href="global.html#RetryButton">RetryButton</a></li><li><a href="global.html#SettingsButton">SettingsButton</a></li><li><a href="global.html#ShinglesCard">ShinglesCard</a></li><li><a href="global.html#SoundManager">SoundManager</a></li><li><a href="global.html#SquareCard">SquareCard</a></li><li><a href="global.html#StatisticBox">StatisticBox</a></li><li><a href="global.html#ThemeSelector">ThemeSelector</a></li><li><a href="global.html#TurnInfo">TurnInfo</a></li><li><a href="global.html#achievLabels">achievLabels</a></li><li><a href="global.html#busfahrerSelectionMode">busfahrerSelectionMode</a></li><li><a href="global.html#cardMatchStyles">cardMatchStyles</a></li><li><a href="global.html#cardThemes">cardThemes</a></li><li><a href="global.html#drinkQuotes">drinkQuotes</a></li><li><a href="global.html#playSound">playSound</a></li><li><a href="global.html#playerActionFeatures">playerActionFeatures</a></li><li><a href="global.html#schluckGiveMode">schluckGiveMode</a></li><li><a href="global.html#shuffleStyles">shuffleStyles</a></li><li><a href="global.html#statLabels">statLabels</a></li><li><a href="global.html#turnModes">turnModes</a></li><li><a href="global.html#useAuthGuard">useAuthGuard</a></li><li><a href="global.html#useAvatarInfo">useAvatarInfo</a></li><li><a href="global.html#useAvatarUpload">useAvatarUpload</a></li><li><a href="global.html#useBusfahrer">useBusfahrer</a></li><li><a href="global.html#useCardTheme">useCardTheme</a></li><li><a href="global.html#useChatManager">useChatManager</a></li><li><a href="global.html#useFriendChatManager">useFriendChatManager</a></li><li><a href="global.html#useGameCards">useGameCards</a></li><li><a href="global.html#useGameGuard">useGameGuard</a></li><li><a href="global.html#useGameInfo">useGameInfo</a></li><li><a href="global.html#useGameManager">useGameManager</a></li><li><a href="global.html#useLobbiesManager">useLobbiesManager</a></li><li><a href="global.html#useLobbyGuard">useLobbyGuard</a></li><li><a href="global.html#useLobbyManager">useLobbyManager</a></li><li><a href="global.html#usePlayerCards">usePlayerCards</a></li><li><a href="global.html#useSpectatorManager">useSpectatorManager</a></li><li><a href="global.html#useStatistics">useStatistics</a></li><li><a href="global.html#useTitles">useTitles</a></li><li><a href="global.html#useWebSocketConnector">useWebSocketConnector</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Fri Nov 07 2025 20:48:43 GMT+0100 (Central European Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

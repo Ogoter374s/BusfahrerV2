@@ -1,8 +1,8 @@
 /**
- * BackButton.jsx — A reusable back navigation button for the game interface.
- *
- * Provides a consistent UI element to return to a previous or default route.
- * Plays a sound effect and triggers navigation when clicked.
+ * @fileoverview BackButton component
+ * <br><br>
+ * This component renders a back button that navigates to a specified route when clicked. <br>
+ * It plays a click sound effect on interaction and can be styled with custom dimensions.
  */
 
 // Utilities
@@ -12,40 +12,32 @@ import { SoundManager } from '../utils/soundManager';
 import { useNavigate } from 'react-router-dom';
 
 /**
- * BackButton component function.
- *
- * Renders a styled back button that plays a click sound and navigates
- * to the specified route (default is homepage) when activated.
- *
+ * A button component that navigates back to a specified route when clicked.
+ * <br><br>
+ * <strong>handleClick:</strong> <br>
+ * Plays a click sound effect using the `SoundManager` utility and navigates to the specified route.
+ * <br><br>
  * @function BackButton
- * @param {Object} props - Component properties.
- * @param {string} [props.to="/"] - The route to navigate to on click.
- * @returns {JSX.Element} The rendered back button element.
+ * @param {string} [to='/'] - The route to navigate to when the button is clicked. Defaults to '/'.
+ * @returns {JSX.Element} The rendered BackButton component.
  */
 function BackButton({ to = '/' }) {
     const navigate = useNavigate();
 
     /**
-     * Handles the back button click event.
-     *
-     * Plays a UI click sound using the SoundManager and navigates to the given route.
+     * Handles the click event on the back button.
+     * Plays a click sound effect using the `SoundManager` utility and navigates to the specified route.
      */
     const handleClick = () => {
         SoundManager.playClickSound();
         navigate(to);
     };
 
-    /**
-     * Renders the back button layout.
-     *
-     * Displays a back icon wrapped in a styled container for visual consistency.
-     */
     return (
-        <div className="back-cont">
-            <button className="btn-back" onClick={handleClick}>
-                <img src="/back.svg" alt="Back Button" className="back-icon" />
-            </button>
-        </div>
+        <button className="backBtn-style"
+            style={{ backgroundImage: `url('/icons/back.svg')` }}
+            onClick={handleClick}
+        />
     );
 }
 

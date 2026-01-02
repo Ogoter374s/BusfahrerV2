@@ -21,6 +21,7 @@ import { uploadDir } from '../middleware/uploadAvatar.js';
 
 // Constants
 import { USER_KEYS } from '../constants/defaultKeys.js';
+import { upgradeGird, levelSystem } from '../constants/defaultData.js';
 
 // Utilities
 import { logInfo, logTrace } from '../utils/logger.js';
@@ -43,11 +44,11 @@ async function getUserAccount(userId) {
         { _id: new ObjectId(userId) },
         {
             projection: {
+                username: 1,
                 statistics: 1,
                 avatar: 1,
-                uploadedAvatar: 1,
                 titles: 1,
-                username: 1
+                level: 1,
             }
         }
     );
@@ -59,16 +60,28 @@ async function getUserAccount(userId) {
     const format = user.titles || [];
     const active = format.find((title) => title.active) || null;
 
+    const info = {
+        selectedAvatar: user.avatar.avatarName || 'default.svg',
+        playerName: user.username || 'Player',
+        playerLevel: user.level.levelNr || 1,
+        playerXp: user.level.xpCurrent || 0,
+        xpPoints: user.level.xpPoints || 0,
+        upgrades: upgradeGird,
+        levels: levelSystem
+    }
+
     const account = {
         statistics: user.statistics || {},
 
-        avatar: user.avatar || 'default.svg',
-        uploadedAvatar: user.uploadedAvatar || '',
+        avatar: user.avatar.avatarName || 'default.svg',
+        uploadedAvatar: user.avatar.uploadedAvatar || '',
 
         titles: format || [],
         selectedTitle: active,
 
-        username: user.username || 'Player'
+        username: user.username || 'Player',
+
+        info,
     };
 
     return { success: true, data: account };
@@ -89,7 +102,7 @@ async function getCardTheme(userId) {
 
     const user = await usersCollection.findOne(
         { _id: new ObjectId(userId) },
-        { projection: { cardTheme: 1, color1: 1, color2: 1 } }
+        { projection: { cardTheme: 1 } }
     );
 
     if (!user) {
@@ -97,9 +110,9 @@ async function getCardTheme(userId) {
     }
 
     const data = {
-        theme: user.cardTheme || 'default',
-        color1: user.color1 || '#ffffff',
-        color2: user.color2 || '#ff4538'
+        theme: user.cardTheme.themeName || 'default.svg',
+        color1: user.cardTheme.color1 || '#ffffff',
+        color2: user.cardTheme.color2 || '#ff4538'
     };
 
     return { success: true, cardTheme: data };
@@ -123,7 +136,7 @@ async function uploadAvatar(userId, file, cropData) {
 
     const user = await usersCollection.findOne(
         { _id: new ObjectId(userId) },
-        { projection: { avatar: 1, uploadedAvatar: 1 } }
+        { projection: { avatar: 1 } }
     );
 
     if (!user) {
@@ -139,8 +152,8 @@ async function uploadAvatar(userId, file, cropData) {
     }
 
     // Delete old uploaded avatar if exists
-    if (user.uploadedAvatar && user.uploadedAvatar.trim() !== '') {
-        const oldAvatarPath = path.join(uploadDir, user.uploadedAvatar);
+    if (user.avatar.uploadedAvatar && user.avatar.uploadedAvatar.trim() !== '') {
+        const oldAvatarPath = path.join(uploadDir, user.avatar.uploadedAvatar);
         if (fs.existsSync(oldAvatarPath)) {
             fs.unlinkSync(oldAvatarPath);
         }
@@ -169,15 +182,14 @@ async function uploadAvatar(userId, file, cropData) {
     }
 
     // Automatically set the uploaded avatar as the user's avatar
-    user.uploadedAvatar = newAvatarUrl;
-    user.avatar = newAvatarUrl;
+    user.avatar.uploadedAvatar = newAvatarUrl;
+    user.avatar.avatarName = newAvatarUrl;
 
     await usersCollection.updateOne(
         { _id: new ObjectId(userId) },
         {
             $set: {
                 avatar: user.avatar,
-                uploadedAvatar: user.uploadedAvatar
             }
         }
     );
@@ -233,7 +245,7 @@ async function uploadAvatar(userId, file, cropData) {
  * @param {string} avatar - The URL of the new avatar
  * @returns {string} The URL of the saved avatar
  */
-async function saveAvatar(userId, avatar) {
+async function changeAvatar(userId, avatar) {
     const usersCollection = db.collection('users');
     const friendsCollection = db.collection('friends');
 
@@ -261,13 +273,13 @@ async function saveAvatar(userId, avatar) {
     const avatarUrl = avatar;
 
     // Check if avatar has changed don't call update if not
-    const changed = user.avatar === avatar;
+    const changed = user.avatar.avatarName !== avatarUrl;
     if (changed) {
         logInfo(`User ${userId} changed avatar to ${avatarUrl}`);
 
         await usersCollection.updateOne(
             { _id: user._id },
-            { $set: { avatar: avatarUrl } }
+            { $set: { "avatar.avatarName": avatarUrl } }
         );
 
         // Update friend objects
@@ -328,19 +340,25 @@ async function changeCardTheme(userId, theme, color1, color2) {
 
     const user = await usersCollection.findOne(
         { _id: new ObjectId(userId) },
-        { projection: { cardTheme: 1, color1: 1, color2: 1 } }
+        { projection: { cardTheme: 1 } }
     );
 
     if (!user) {
         throw { status: 404, message: 'User not found' };
     }
 
+    const newTheme = {
+        themeName: theme,
+        color1,
+        color2
+    }
+
     // Check if theme has changed, don't call update if not
-    if (user.cardTheme !== theme) {
+    if (JSON.stringify(user.cardTheme) !== JSON.stringify(newTheme)) {
 
         await usersCollection.updateOne(
             { _id: user._id },
-            { $set: { cardTheme: theme, color1, color2 } }
+            { $set: { cardTheme: newTheme } }
         );
 
         await updateStatistics(user._id.toString(), {
@@ -419,12 +437,12 @@ function checkAccountUpdate(keys, user, clients) {
     if (keys.some((key) =>
         key.startsWith('statistics') ||
         key.startsWith('titles') ||
-        key.startsWith('uploadedAvatar')
+        key.startsWith('avatar')
     )) {
         const data = {
             statistics: user.statistics || {},
             titles: user.titles || [],
-            avatar: user.uploadedAvatar || '',
+            avatar: user.avatar || '',
         };
 
         clients.forEach((client) => {
@@ -443,7 +461,7 @@ export {
     getCardTheme,
 
     uploadAvatar,
-    saveAvatar,
+    changeAvatar,
 
     changeCardTheme,
 

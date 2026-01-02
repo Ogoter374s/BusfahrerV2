@@ -8,6 +8,7 @@
 // Components
 import ChatSidebar from '../components/ChatSidebar';
 import BackButton from '../components/BackButton';
+import DustLayer from '../components/DustLayer';
 
 // Hooks
 import { useAuthGuard } from '../hooks/useAuthGuard';
@@ -68,7 +69,7 @@ function Achievements() {
 
         setAchievements(data);
     };
-    
+
     /**
      * Effect hook to fetch achievements when the component mounts and when the user is authenticated.
      * This hook ensures that the achievements are fetched only once when the user is authenticated.
@@ -97,7 +98,7 @@ function Achievements() {
 
     return (
         <div className="@container/achievements flex flex-col items-center justify-center h-screen">
-            
+
             {/* Background overlay image */}
             <div className="achievements-wrapper">
 
@@ -107,11 +108,11 @@ function Achievements() {
                 </h1>
 
                 <div className="achievement-list">
-                    
+
                     {/* Achievements List */}
                     {achievements.map((ach, index) => (
-                        <div 
-                            key={index} 
+                        <div
+                            key={index}
                             className="achievement-wrapper"
                         >
 
@@ -132,7 +133,7 @@ function Achievements() {
                                     <span className="achievement-name">
                                         {ach.name}
                                     </span>
-                                </div>             
+                                </div>
 
                                 {/* Achievement Title and Status */}
                                 <div className="flex items-center shrink-0">
@@ -153,7 +154,7 @@ function Achievements() {
 
                             {/* Achievement Details Dropdown */}
                             {expandedIndex === index && (
-                                <div 
+                                <div
                                     className="achievement-dropdown"
                                     onClick={() => toggleExpand(index)}
                                 >
@@ -192,6 +193,16 @@ function Achievements() {
 
             {/* Sidebar Toggle */}
             <ChatSidebar />
+
+            <DustLayer
+                density={200}
+                maxSize={2.5}
+                minSize={0.7}
+                speed={0.2}
+                sway={0.2}
+                tint="255,255,255"
+                opacity={0.3}
+            />
         </div>
     );
 }

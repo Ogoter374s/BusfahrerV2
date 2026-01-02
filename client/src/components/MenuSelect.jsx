@@ -23,10 +23,23 @@ import { SoundManager } from "../utils/soundManager";
  * @param {Object} selectStyle - An object containing inline styles to apply to the select element.
  * @returns {JSX.Element} The rendered MenuSelect component.
  */
-const MenuSelect = ({ label, id, value, onChange, options = {}, selectStyle = {} }) => {
+const MenuSelect = ({ label, id, value, onChange, options = {}, selectStyle = {}, wrapperClass = "select-wrapper", labelClass = "select-label", playSound = true }) => {
+
+    const handleMouseDown = (e) => {
+        const isOption = e.target?.tagName === "OPTION";
+
+        if (!playSound) {
+            if(!isOption) {
+                SoundManager.playClickSound();
+            }
+        } else {
+            SoundManager.playClickSound();
+        }
+    };
+
     return (
-        <div className="select-wrapper">
-            <label className="select-label">
+        <div className={wrapperClass}>
+            <label className={labelClass}>
                 {label}
             </label>
 
@@ -35,7 +48,7 @@ const MenuSelect = ({ label, id, value, onChange, options = {}, selectStyle = {}
                 value={value}
                 onChange={onChange}
                 style={selectStyle}
-                onClick={() => SoundManager.playClickSound()}
+                onMouseDown={handleMouseDown}
                 className="select-style"
             >
                 {options.map((opt, idx) => (

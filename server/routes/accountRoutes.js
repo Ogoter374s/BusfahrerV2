@@ -15,7 +15,7 @@ import {
     getCardTheme,
 
     uploadAvatar,
-    saveAvatar,
+    changeAvatar,
 
     changeCardTheme,
 
@@ -301,7 +301,7 @@ router.post('/set-avatar', authenticateToken, async (req, res) => {
     const { avatar } = req.body;
 
     try {
-        const avatarUrl = await saveAvatar(userId, avatar);
+        const avatarUrl = await changeAvatar(userId, avatar);
 
         if (avatarUrl) {
             return res.status(200).json({ success: true, avatarUrl });

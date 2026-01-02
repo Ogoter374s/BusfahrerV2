@@ -14,11 +14,15 @@ import MenuButton from '../components/MenuButton';
 import BackButton from '../components/BackButton';
 import ChatSidebar from '../components/ChatSidebar';
 import AvatarUploader from '../components/AvatarUploader';
-import AvatarIcon from '../components/AvatarIcon';
+import AvatarSettings from '../components/AvatarSettings';
+import LevelDisplay from '../components/LevelDisplay';
+import SoundSettings from '../components/SoundSettings';
+import CardSettings from '../components/CardSettings';
 import MenuSelect from '../components/MenuSelect';
 import ThemeSelector from '../components/ThemeSelector';
 import StatisticBox from '../components/StatisticBox';
 import PopupModal from '../components/PopUpModal';
+import DustLayer from '../components/DustLayer';
 
 // Hooks
 import useAvatarUpload from '../hooks/useAvatarUpload';
@@ -36,6 +40,7 @@ import { PopupManager } from '../utils/popupManager';
 // React
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { SOUND_TYPES } from '../utils/constants';
 
 /**
  * Account component serves as the user account management interface.
@@ -88,8 +93,20 @@ function Account() {
 
     const [showAvatarModal, setShowAvatarModal] = useState(false);
     const [showCardThemeModal, setShowCardThemeModal] = useState(false);
+    const [showLevelModal, setShowLevelModal] = useState(false);
 
-    const [selectedSound, setSelectedSound] = useState('none.mp3');
+    const [accountInfo, setAccountInfo] = useState({});
+
+    const [uploadedSounds, setUploadedSounds] = useState([]);
+    const [soundSettings, setSoundSettings] = useState({
+        click: 'none.mp3',
+        layCard: 'none.mp3',
+        flipRow: 'none.mp3',
+        ex: 'none.mp3',
+        lose: 'none.mp3',
+        win: 'none.mp3',
+    });
+
     const [selectedAvatar, setSelectedAvatar] = useState(`${BASE_URL}avatars/default.svg`,);
     const [uploadedAvatar, setUploadedAvatar] = useState('');
 
@@ -121,7 +138,7 @@ function Account() {
         selectPresetAvatar,
     } = useAvatarUpload({
         BASE_URL,
-        onUploadSuccess: (url) => { 
+        onUploadSuccess: (url) => {
             setSelectedAvatar(url);
             setShowAvatarModal(false);
         },
@@ -187,6 +204,7 @@ function Account() {
 
         const result = await response.json();
 
+        setAccountInfo(result.info || {});
         setUsername(result.username || 'Player');
 
         setStatistics(result.statistics || {});
@@ -195,6 +213,22 @@ function Account() {
         setUploadedAvatar(`${BASE_URL}avatars/${result.uploadedAvatar}`);
 
         loadTitlesFromAccount(result);
+    };
+
+    const fetchSoundUploads = async () => {
+        const response = await fetch(`${BASE_URL}get-upload-sounds`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+        });
+
+        if (!response.ok) throw new Error('Failed to fetch sound uploads');
+
+        const data = await response.json();
+
+        setUploadedSounds(data.sounds);
     };
 
     /**
@@ -215,10 +249,19 @@ function Account() {
         PopupManager.initPopupManager(setPopup);
 
         SoundManager.loadUserSound(true).then(() => {
-            setSelectedSound(SoundManager.getCurrentSound());
+            setSoundSettings(prev => ({
+                ...prev,
+                click: SoundManager.getCurrentSound(SOUND_TYPES.CLICK),
+                layCard: SoundManager.getCurrentSound(SOUND_TYPES.LAY_CARD),
+                flipRow: SoundManager.getCurrentSound(SOUND_TYPES.ROW_FLIP),
+                ex: SoundManager.getCurrentSound(SOUND_TYPES.EX),
+                lose: SoundManager.getCurrentSound(SOUND_TYPES.LOSE),
+                win: SoundManager.getCurrentSound(SOUND_TYPES.WIN),
+            }))
         });
 
         fetchAccount();
+        fetchSoundUploads();
     }, [isAuthenticated]);
 
     /**
@@ -230,16 +273,22 @@ function Account() {
      */
     useWebSocketConnector("account", {}, init.current, (message) => {
         if (message.type === 'accountUpdate') {
+            console.log(message.data)
+
             if (message.data.statistics) {
                 setStatistics(message.data.statistics);
             }
 
-            if(message.data.titles) {
+            if (message.data.titles) {
                 setTitles(message.data.titles);
             }
 
-            if(message.data.avatar) {
-                setUploadedAvatar(`${BASE_URL}avatars/${message.data.avatar}`);
+            if (message.data.avatar) {
+                console.log("Testing");
+                setSelectedAvatar(`${BASE_URL}avatars/${message.data.avatar.avatarName}`);
+                if (message.data.avatar.uploadedAvatar.trim() !== '') {
+                    setUploadedAvatar(`${BASE_URL}avatars/${message.data.avatar.uploadedAvatar}`);
+                }
             }
         }
     });
@@ -262,11 +311,12 @@ function Account() {
 
             const data = await response.json();
             if (data.success) {
+                SoundManager.userClearSounds();
                 navigate('/access');
             } else {
                 PopupManager.showPopup({
-                    title: data.title, 
-                    message: data.error, 
+                    title: data.title,
+                    message: data.error,
                     icon: '🚫'
                 });
             }
@@ -286,11 +336,6 @@ function Account() {
             {/* Background overlay image */}
             <div className="account-wrapper">
 
-                {/* Title for the account section */}
-                <h1 className="account-home">
-                    {username}
-                </h1>
-
                 {/* Container for displaying user options */}
                 <div className="account-menu">
 
@@ -301,60 +346,51 @@ function Account() {
                             Options
                         </h2>
 
-                        {/* Avatar selection and upload */}
-                        <AvatarIcon 
-                            src={selectedAvatar}
-                            isLocal
-                            onClick={() => setShowAvatarModal(true)}
-                        />
+                        <div
+                            className="
+                                max-h-[635px]
+                                max-w-[480px]
+                                min-w-[480px]
+                                overflow-y-auto
+                                -mt-3
+                                scroll-gutter-stable
+                            "
+                        >
 
-                        {/* Sound selection dropdown */}
-                        <MenuSelect
-                            label="Select Click Sound:"
-                            id="optionsSelect"
-                            value={selectedSound}
-                            onChange={(e) => {
-                                const selectedOption = e.target.selectedOptions[0];
-                                const soundPath = selectedOption.getAttribute('data-path');
-                                const soundName = selectedOption.getAttribute('data-name');
+                            {/* Avatar selection and upload */}
+                            <AvatarSettings
+                                selectedAvatar={selectedAvatar}
+                                accountInfo={accountInfo}
+                                setShowAvatarModal={setShowAvatarModal}
+                                setShowLevelModal={setShowLevelModal}
+                            />
 
-                                setSelectedSound(soundPath);
-                                SoundManager.userSoundChange(soundPath, soundName);
-                            }}
-                            options={SoundManager.getClickSounds()}
-                        />
+                            <SoundSettings
+                                soundSettings={soundSettings}
+                                uploadedSounds={uploadedSounds}
+                                setSoundSettings={setSoundSettings}
+                            />
 
-                        {/* Card Theme selection dropdown */}
-                        <div className="select-wrapper">
-                            <label 
-                                htmlFor="optionsSelect"
-                                className="select-label">
-                                Select Card Theme:
-                            </label>
-                            <div
-                                className="options-theme"
-                                onClick={() => {
-                                    SoundManager.playClickSound();
-                                    setShowCardThemeModal(true);
-                                }}
-                            >
-                                {cardThemes.find((theme) => theme.path === selectedTheme)?.name || 'Classic'}
-                            </div>
+                            <CardSettings 
+                                setShowCardThemeModal={setShowCardThemeModal}
+                                cardThemes={cardThemes}
+                                selectedTheme={selectedTheme}
+                            />
+
+                            {/* Title selection dropdown */}
+                            <MenuSelect
+                                label="Select Title:"
+                                id="optionsSelect"
+                                value={selectedTitle}
+                                onChange={handleTitleChange}
+                                selectStyle={{ color: selectedColor }}
+                                options={titles.map((title) => ({
+                                    name: title.name,
+                                    value: title.name,
+                                    color: title.color,
+                                }))}
+                            />
                         </div>
-
-                        {/* Title selection dropdown */}
-                        <MenuSelect
-                            label="Select Title:"
-                            id="optionsSelect"
-                            value={selectedTitle}
-                            onChange={handleTitleChange}
-                            selectStyle={{ color: selectedColor }}
-                            options={titles.map((title) => ({
-                                name: title.name,
-                                value: title.name,
-                                color: title.color,
-                            }))}
-                        />
                     </div>
 
                     {/* Container for displaying user statistics */}
@@ -364,7 +400,7 @@ function Account() {
                 {/* Buttons for navigating to achievements and logging out */}
                 <div className="flex mt-4 sm:mt-1 lg:mt-2 xl:mt-2 2xl:mt-0">
 
-                    { /* Button to view achievements */ }
+                    { /* Button to view achievements */}
                     <MenuButton
                         wrapper={true}
                         buttonClass="account-btn"
@@ -409,6 +445,15 @@ function Account() {
                 handleAvatarChange={handleAvatarChange}
             />
 
+            <LevelDisplay
+                isOpen={showLevelModal}
+                onClose={() => {
+                    SoundManager.playClickSound();
+                    setShowLevelModal(false);
+                }}
+                accountInfo={accountInfo}
+            />
+
             <ThemeSelector
                 isOpen={showCardThemeModal}
                 onClose={() => setShowCardThemeModal(false)}
@@ -434,6 +479,16 @@ function Account() {
                 onOk={PopupManager.okPopup}
                 onCancel={PopupManager.cancelPopup}
                 useCancel={popup.useCancel}
+            />
+
+            <DustLayer
+                density={200}
+                maxSize={2.5}
+                minSize={0.7}
+                speed={0.2}
+                sway={0.2}
+                tint="255,255,255"
+                opacity={0.3}
             />
         </div>
     );

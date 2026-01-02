@@ -10,13 +10,16 @@ import jwt from 'jsonwebtoken';
 
 // Database
 import { db, updateStatistics } from '../database/mongoClient.js';
+import { UserSchema, FriendSchema } from '../database/dataModels.js';
+import { checkUserData, getUnknownFields } from '../database/migrateData.js';
 
 // Constants
 import { USER_KEYS } from '../constants/defaultKeys.js';
-import { defaultStatistics, defaultTitle } from '../constants/defaultData.js';
+import { defaultStatistics, defaultTitle, userSounds, userUploadSounds } from '../constants/defaultData.js';
 
 // Utilities
 import { generateUniqueFriendCode } from '../utils/friendUtils.js';
+import { logInfo } from '../utils/logger.js';
 
 /**
  * Registers a new user in the system. <br>
@@ -38,36 +41,64 @@ async function registerUser(username, password) {
         throw { status: 400, message: 'Username already exists' };
     }
 
+    // Hash password
     const SALT_ROUNDS = parseInt(process.env.BCRYPT_SALT_ROUNDS) || 10;
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
+    // Generate unique friend code
     const friendCode = await generateUniqueFriendCode();
 
-    const result = await usersCollection.insertOne({
+    const newUser = {
+        ...UserSchema,
+
+        // Basic info
         username,
         password: hashedPassword,
         createdAt: new Date(),
         lastLogin: new Date(),
-        avatar: 'default.svg',
-        uploadedAvatar: '',
-        clickSound: 'ui-click.mp3',
-        cardTheme: 'default.svg',
-        color1: '#ffffff',
-        color2: '#ff4538',
+
+        // Profile & customization
+        avatar: {
+            avatarName: 'default.svg',
+            uploadedAvatar: '',
+            frame: 'none.svg',
+        },
+        sound: {
+            soundEnabled: true,
+            eventSoundEnabled: true,
+            sounds: userSounds,
+            uploadedSounds: userUploadSounds,
+        },
+        cardTheme: {
+            themeName: 'default.svg',
+            color1: '#ffffff',
+            color2: '#ff4538',
+        },
+        level: {
+            levelNr: 1,
+            xpCurrent: 0,
+            xpPoints: 0,
+        },
+
+        // Statistics
         statistics: defaultStatistics,
+
+        // Titles & achievements
         titles: defaultTitle,
         achievements: [],
-    });
+    };
 
-    await friendsCollection.insertOne({
+
+    const result = await usersCollection.insertOne(newUser);
+
+    const newFriend = {
+        ...FriendSchema,
+
         userId: result.insertedId,
         friendCode,
-        friends: [],
-        blockedUsers: [],
-        sentRequests: [],
-        pendingRequests: [],
-        invitations: [],
-    });
+    }
+
+    await friendsCollection.insertOne(newFriend);
 
     const token = jwt.sign(
         { userId: result.insertedId.toString() },
@@ -92,7 +123,7 @@ async function registerUser(username, password) {
 async function loginUser(username, password) {
     const usersCollection = db.collection('users');
 
-    const user = await usersCollection.findOne({ username });
+    let user = await usersCollection.findOne({ username });
     if (!user) {
         throw { status: 400, message: 'User not found' };
     }
@@ -101,6 +132,28 @@ async function loginUser(username, password) {
     if (!isMatch) {
         throw { status: 400, message: 'Wrong Password' };
     }
+
+    const migratedUserData = checkUserData(user);
+
+    const unknownFields = getUnknownFields(UserSchema, user);
+    const unsetObj = {};
+    unknownFields.forEach(field => {
+        unsetObj[field] = "";
+    });
+
+    if(JSON.stringify(user) !== JSON.stringify(migratedUserData)) {
+        await usersCollection.updateOne(
+            { _id: user._id },
+            { 
+                ...(unknownFields.length > 0 && { $unset: unsetObj }),
+                $set: migratedUserData    
+            }
+        );
+
+        logInfo(`Migrated user data for userId: ${user._id.toString()}`);
+    }
+
+    user = migratedUserData;
 
     const now = new Date();
     const lastLogin = user.lastLogin ? new Date(user.lastLogin) : null;

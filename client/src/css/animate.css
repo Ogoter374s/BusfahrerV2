@@ -1,12 +1,14 @@
 @keyframes pulsate {
-    0% { 
-        transform: scale(1) 
+    0% {
+        transform: scale(1)
     }
+
     50% {
-        transform: scale(1.05) 
+        transform: scale(1.05)
     }
+
     100% {
-        transform: scale(1) 
+        transform: scale(1)
     }
 }
 
@@ -15,8 +17,40 @@
         transform: translateX(-10px);
         opacity: 0;
     }
+
     to {
         transform: translateX(0);
         opacity: 1;
     }
+}
+
+@keyframes lightSweep {
+    0% {
+        left: -60%;
+    }
+
+    100% {
+        left: 120%;
+    }
+}
+
+@keyframes pulseBorder {
+    0% {
+        border-color: #c28a40;
+        box-shadow: 0 0 6px rgba(255, 200, 80, 0.4);
+    }
+    50% {
+        border-color: #FF8C32;
+        box-shadow: 0 0 24px rgba(255, 220, 120, 1.5);
+    }
+    100% {
+        border-color: #c28a40;
+        box-shadow: 0 0 6px rgba(255, 200, 80, 0.4);
+    }
+}
+
+@keyframes jumpPoints {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.25); }
+    100% { transform: scale(1); }
 }

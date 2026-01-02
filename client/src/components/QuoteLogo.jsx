@@ -50,11 +50,15 @@ function GameLogo() {
             </p>
 
             {/* Game logo image */}
-            <img 
-                src="/logos/logo.svg" 
-                alt="Game Logo"
-                className="pointer-events-none select-none mx-auto block w-full h-auto"
-            />
+            <div className="logo-mask relative inline-block">
+                <img
+                    src="/logos/logo.svg"
+                    alt="Game Logo"
+                    className="pointer-events-none select-none mx-auto block w-full h-auto"
+                />
+
+                <div className="logo-sweep"></div>
+            </div>
         </div>
     );
 }

@@ -230,6 +230,36 @@
 
 /* #endregion */
 
+/* #region Logo */
+
+.logo-mask {
+    @apply
+        relative inline-block
+        [--webkit-mask-image:url('/logos/logo.svg')]
+        [mask-image:url('/logos/logo.svg')]
+        [mask-repeat:no-repeat] [--webkit-mask-repeat:no-repeat]
+        [mask-position:center] [--webkit-mask-position:center]
+        [mask-size:contain] [--webkit-mask-size:contain]
+    ;
+}
+
+
+.logo-sweep {
+    @apply
+        absolute 
+        top-1/2 -translate-y-1/2 
+        left-[-70%] 
+        h-[180%] w-[38%] 
+        pointer-events-none
+        [background:linear-gradient(to_right,rgba(255,255,255,0)_0%,rgba(255,255,255,0.6)_50%,rgba(255,255,255,0)_100%)]
+        mix-blend-screen blur-[2px]
+        animate-[lightSweep_4.5s_linear_infinite]
+        rotate-[17.5deg];
+    ;
+}
+
+/* #endregion */
+
 /* #region Quote Logo */
 
 .quote-wrapper {
@@ -763,6 +793,84 @@
         transition-transform duration-200 ease-in-out
         pointer-events-auto select-none
         hover:scale-105
+        mb-4
+    ;
+}
+
+/* #endregion */
+
+/* #region Avatar Settings */
+
+.xp-frame {
+    @apply
+        relative
+        w-[400px]
+        mt-3
+        flex flex-col
+        items-center
+        mb-3
+        hover:scale-110
+        active:scale-100
+        transition-transform duration-250 ease-in-out
+    ;
+}
+
+.xp-points {
+    @apply
+        absolute
+        -top-[50%]
+        left-[50%]
+        transform -translate-x-1/2
+        text-white
+        text-[3.25rem]
+        font-bold
+        font-["Cinzel"]
+        pointer-events-none
+        select-none
+        z-10
+        animate-[jumpPoints_1s_infinite_ease-in-out]
+    ;
+}
+
+.xp-bar {
+    @apply
+        w-[90%]
+        h-[40px]
+        bg-[#2a1b14]
+        border-3 border-[#c28a40]
+        rounded-lg
+        relative
+        overflow-hidden
+        shadow-[0_0_10px_rgba(0,0,0,0.7)]
+    ;
+}
+
+.xp-fill {
+    @apply
+        h-full
+        bg-gradient-to-r from-[#ffcc49] to-[#ff8c00]
+        shadow-[inset_0_0_8px_rgba(255,255,255,0.4)]
+        transition-all duration-500 ease-in-out
+    ;
+}
+
+.xp-text {
+    @apply
+        absolute
+        top-1/2 left-1/2
+        transform -translate-x-1/2 -translate-y-1/2
+        font-sans
+        text-white
+        font-bold
+        text-[1.7rem]
+        pointer-events-none
+        select-none
+    ;
+}
+
+.points-active {
+    @apply
+        animate-[pulseBorder_1s_infinite_ease-in-out]
     ;
 }
 
@@ -852,6 +960,61 @@
 }
 
 /* #endregion */
+
+/* #region Level Display */
+
+.level-display-wrapper {
+    @apply
+        fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+        flex flex-col items-center justify-center
+        bg-black/80
+        p-5 sm:p-5 lg:p-4 xl:p-5 2xl:p-6
+        rounded text-center
+        font-[Luckiest_Guy] text-[#a65a2e] z-10
+        min-w-[50vw] sm:min-w-[40vw] lg:min-w-[55vw] xl:min-w-[40vw] 2xl:min-w-[72vw]
+        min-h-[98.5vh]
+    ;
+}
+
+.level-tree-wrapper {
+    @apply
+        min-h-[80vh]
+    ;
+}
+
+.upgrade-grid {
+  @apply
+    flex flex-col
+    justify-center items-center
+  ;
+}
+
+/* #endregion */
+
+/* #region Sound Settings */
+
+.filter-sand {
+    filter: brightness(0) saturate(100%) invert(90%) sepia(25%) saturate(350%) hue-rotate(1deg) brightness(100%) contrast(90%);
+}
+
+.filter-white {
+    filter: brightness(0) invert(1);
+}
+
+.scroll-gutter-stable {
+    scrollbar-gutter: stable;
+}
+
+.sound-label {
+    @apply
+        text-white
+        text-[1.5rem] sm:text-[0.75rem] lg:text-[1.35rem] xl:text-[1.75rem] 2xl:text-[1.6rem]
+        font-bold select-none
+        mb-1 sm:mb-0.5 lg:mb-0.5 xl:mb-0.5 2xl:mb-1
+    ;
+}
+
+/* #rendregion */
 
 /* #region Theme Selector */
 
@@ -1347,7 +1510,8 @@
         font-[Luckiest_Guy]
         text-[#f5e1a4]
         gap-16 sm:gap-10 lg:gap-10 xl:gap-15
-        min-h-[725px] sm:min-h-[60vh] lg:min-h-[50vh] xl:min-h-[50vh] 2xl:min-h-[65vh]
+        min-h-[725px] sm:min-h-[60vh] lg:min-h-[50vh] xl:min-h-[50vh] 2xl:min-h-[78vh]
+        -mt-2.5
     ;
 }
 
@@ -1365,6 +1529,7 @@
         flex flex-col items-center
         text-center
         w-[50vw] sm:w-[25vw] lg:w-[35vw] xl:w-[35vw] 2xl:w-[25vw]
+        gap-1.5
     ;
 }
 
@@ -1376,6 +1541,7 @@
         border-[#a65a2e]
         select-none pointer-events-none
         w-[50vw] sm:w-[25vw] lg:w-[35vw] xl:w-[35vw] 2xl:w-[25vw]
+        mb-4
     ;
 }
 
@@ -1421,7 +1587,7 @@
 .statistics-list {
     @apply
         mt-2
-        max-h-[725px] sm:max-h-[55vh] lg:max-h-[40vh] xl:max-h-[50vh] 2xl:max-h-[52vh]
+        max-h-[725px] sm:max-h-[55vh] lg:max-h-[40vh] xl:max-h-[50vh] 2xl:max-h-[635px]
         overflow-y-auto
         pr-4
     ;

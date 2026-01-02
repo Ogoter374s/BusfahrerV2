@@ -34,7 +34,7 @@ const storage = multer.diskStorage({
 // Multer upload configuration with file size limit and type filtering
 const upload = multer({
     storage,
-    limits: { fileSize: 2 * 1024 * 1024 },
+    limits: { fileSize: process.env.MAX_FILE_SIZE_MB * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         const allowedTypes = /jpeg|jpg|png|gif/;
         const extname = allowedTypes.test(
@@ -45,7 +45,7 @@ const upload = multer({
         if (mimetype && extname) {
             return cb(null, true);
         } else {
-            cb(new Error('Only images are allowed!'));
+            return cb(new Error('Only images are allowed!'));
         }
     },
 });

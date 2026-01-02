@@ -8,6 +8,9 @@ export default {
       animation: {
         pulsate: 'pulsate 2.2s ease-in-out infinite',
         slideIn: 'slideIn 0.3s ease-out forwards',
+        lightSweep: 'lightSweep 3s linear infinite',
+        pulseBorder: 'pulseBorder 1.4s infinite ease-in-out',
+        jumpPoints: 'jumpPoints 1s infinite ease-in-out',
       },
       fontFamily: {
         times: ['"Times New Roman"', 'serif'],

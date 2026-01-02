@@ -28,6 +28,7 @@ import { SoundManager } from "../utils/soundManager";
  * @returns {JSX.Element} The rendered avatar image component.
  */
 const Avatar = ({ src, name = "Avatar", isLocal = false, onClick, className }) => {
+    if(!src) return null;
 
     /**
      * Handles the click event on the avatar image.

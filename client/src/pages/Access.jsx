@@ -10,6 +10,7 @@ import MenuInput from '../components/MenuInput';
 import MenuButton from '../components/MenuButton';
 import BackButton from '../components/BackButton';
 import PopupModal from '../components/PopUpModal';
+import DustLayer from '../components/DustLayer';
 
 // Utilities
 import BASE_URL from '../utils/config';
@@ -54,7 +55,7 @@ function Access() {
     useEffect(() => {
         PopupManager.initPopupManager(setPopup);
     }, []);
-    
+
     /**
      * Handles the form submission for either logging in or registering a user.
      * It sends a POST request to the server with the username and password,
@@ -78,8 +79,8 @@ function Access() {
                 navigate('/');
             } else {
                 PopupManager.showPopup({
-                    title: data.title, 
-                    message: data.error, 
+                    title: data.title,
+                    message: data.error,
                     icon: '🚫'
                 });
             }
@@ -95,14 +96,14 @@ function Access() {
 
     return (
         <div className="@container/access flex flex-col items-center justify-center h-screen">
-            
+
             {/* Background overlay image */}
             <div className="access-wrapper"
             >
                 {/* Game Logo displayed above the form */}
                 <div className="access-logo">
-                    <img 
-                        src="/logos/logo.svg" 
+                    <img
+                        src="/logos/logo.svg"
                         alt="Game Logo"
                         className="
                             pointer-events-none select-none 
@@ -180,6 +181,16 @@ function Access() {
                 onOk={PopupManager.okPopup}
                 onCancel={PopupManager.cancelPopup}
                 useCancel={popup.useCancel}
+            />
+
+            <DustLayer
+                density={200}
+                maxSize={2.5}
+                minSize={0.7}
+                speed={0.2}
+                sway={0.2}
+                tint="255,255,255"
+                opacity={0.3}
             />
         </div>
     );

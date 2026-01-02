@@ -270,3 +270,19 @@ export const playerActionFeatures = (manager, lobbyId) => [
         }
     }
 ];
+
+export const REWARD_TYPES = {
+    TITLE: 'title',
+    FRAME: 'frame',
+    PERK: 'perk',
+    NONE: 'none',
+}
+
+export const SOUND_TYPES = {
+    CLICK: 'click',
+    LAY_CARD: 'layCard',
+    ROW_FLIP: 'flipRow',
+    EX: 'ex',
+    WIN: 'win',
+    LOSE: 'lose',
+};

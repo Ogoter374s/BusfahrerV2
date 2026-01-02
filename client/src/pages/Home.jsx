@@ -12,6 +12,7 @@ import MenuButton from '../components/MenuButton';
 import SettingsButton from '../components/SettingsButton';
 import ChatSidebar from '../components/ChatSidebar';
 import QuoteLogo from '../components/QuoteLogo';
+import DustLayer from '../components/DustLayer';
 
 // Hooks
 import { useAuthGuard } from '../hooks/useAuthGuard';
@@ -62,7 +63,7 @@ function Home() {
 
             {/* Background overlay image */}
             <div className="home-wrapper">
-                
+
                 {/* Game logo displayed prominently on the homepage */}
                 <QuoteLogo />
 
@@ -85,7 +86,7 @@ function Home() {
                         disabled={!isAuthenticated}
                         to="/create"
                     />
-                    
+
                     {/* Button to join an existing game lobby; disabled if user is not authenticated */}
                     <MenuButton
                         wrapper={true}
@@ -104,6 +105,16 @@ function Home() {
 
             {/* Sidebar Toggle (Only if Authenticated) */}
             {isAuthenticated && <ChatSidebar />}
+
+            <DustLayer
+                density={200} 
+                maxSize={2.5}
+                minSize={0.7}
+                speed={0.2}
+                sway={0.2}
+                tint="255,255,255"
+                opacity={0.3}
+            />
         </div>
     );
 }

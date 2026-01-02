@@ -3,16 +3,18 @@
  */
 
 import express from 'express';
-import { ObjectId } from 'mongodb';
 
-// Database
-import { db, updateStatistics } from '../database/mongoClient.js';
+// Services
+import {
+    getSounds,
+    getUploadedSounds,
+    setSound,
+    uploadSound,
+} from "../services/soundService.js";
 
 // Middleware
 import { authenticateToken } from '../middleware/authenticator.js';
-
-// Constants
-import { USER_KEYS } from '../constants/defaultKeys.js';
+import { upload } from '../middleware/uploadSound.js'
 
 // Utilities
 import { logError } from '../utils/logger.js';
@@ -54,25 +56,29 @@ const router = express.Router();
  *       500:
  *         description: Internal Server Error.
  */
-router.get('/get-click-sound', authenticateToken, async (req, res) => {
+router.get('/get-sounds', authenticateToken, async (req, res) => {
     const userId = req.user.userId;
 
     try {
-        const user = await db
-            .collection('users')
-            .findOne(
-                { _id: new ObjectId(userId) },
-                { projection: { clickSound: 1 } },
-            );
+        const result = await getSounds(userId);
 
-        if (!user) {
-            return res.status(404).json({ error: 'User not found', title: 'Error' });
-        }
-
-        res.json({ sound: user.clickSound || 'ui-click.mp3' });
+        return res.json({ sounds: result.sounds });
     } catch (error) {
         logError(`Error fetching click sound: ${error.message}`);
-        res.status(500).json({ error: 'Database error', title: 'Error' });
+        return res.status(500).json({ error: error.message, title: 'Sound Error' });
+    }
+});
+
+router.get('/get-upload-sounds', authenticateToken, async (req, res) => {
+    const userId = req.user.userId;
+
+    try {
+        const result = await getUploadedSounds(userId);
+
+        return res.json({ sounds: result.sounds });
+    } catch (error) {
+        logError(`Error fetching click sound: ${error.message}`);
+        return res.status(500).json({ error: error.message, title: 'Sound Error' });
     }
 });
 
@@ -114,34 +120,42 @@ router.get('/get-click-sound', authenticateToken, async (req, res) => {
  *       500:
  *         description: Internal Server Error.
  */
-router.post('/set-click-sound', authenticateToken, async (req, res) => {
+router.post('/set-sound', authenticateToken, async (req, res) => {
     const userId = req.user.userId;
-    const { sound } = req.body;
+    const { sound, soundType } = req.body;
 
     try {
-        const user = await db
-            .collection('users')
-            .findOne({ _id: new ObjectId(userId) });
+        const result = await setSound(userId, soundType, sound);
 
-        if (!user) {
-            return res.status(404).json({ error: 'User not found', title: 'Error' });
-        }
-
-        await db.collection('users').updateOne(
-            { _id: new ObjectId(userId) },
-            {
-                $set: { clickSound: sound },
-            },
-        );
-
-        await updateStatistics(userId, {
-            [USER_KEYS.CHANGED_SOUND]: { inc: 1 }
-        });
-
-        res.json({ message: 'Sound preference saved' });
+        return res.json({ success: result.success });
     } catch (error) {
         logError(`Error updating click sound: ${error.message}`);
-        res.status(500).json({ error: 'Database error', title: 'Error' });
+        res.status(500).json({ error: error.message, title: 'Sound Error' });
+    }
+});
+
+router.post('/upload-sound', authenticateToken, upload.fields([{name: 'soundType', maxCount: 1}, {name: 'sound', maxCount: 1}]), async (req, res) => {
+    const userId = req.user.userId;
+    const { soundType } = req.body;
+
+    console.log(soundType + " upload attempt by userId: " + userId);
+
+    if(!req.files?.sound?.length) {
+        return res.status(400).json({ error: 'No file uploaded.', title: 'Upload Error' });
+    }
+    
+    try {
+        const file = req.files.sound[0];
+        const soundUrl = await uploadSound(userId, soundType, file);
+
+        if(soundUrl) {
+            return res.status(200).json({ success: true, soundUrl });
+        } else {
+            return res.status(500).json({ error: 'Failed to upload sound.', title: 'Upload Error' });
+        }
+    } catch (error) {
+        logError(`Error uploading click sound: ${error.message}`);
+        res.status(500).json({ error: error.message, title: 'Sound Upload Error' });
     }
 });
 

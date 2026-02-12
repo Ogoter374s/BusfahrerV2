@@ -1,5 +1,5 @@
 
-import { defaultStatistics, userSounds, userUploadSounds } from "../constants/defaultData.js";
+import { userSounds, userUploadSounds, defaultStatistics} from "../constants/defaultData.js";
 
 export const UserSchema = {
     // Basic info
@@ -12,7 +12,6 @@ export const UserSchema = {
     avatar: {                               // Avatar Object
         avatarName: "default_avatar.svg",   // Avatar file name
         uploadedAvatar: "",                 // Uploaded avatar file name
-        frame: "none.svg",                  // Frame file name
     },                         
     sound: {                                // Sound Object
         soundEnabled: true,                 // Whether sound is enabled
@@ -22,21 +21,23 @@ export const UserSchema = {
     },                          
     cardTheme: {                            // Card theme Object
         themeName: "default.svg",           // Theme file name
-        color1: "#ffffff",                  // Primary color
-        color2: "#ff4538",                  // Secondary color
+        color1: "#ffffff",                // Primary color
+        color2: "#ff4538",                // Secondary color
     },                      
     level: {                                // Level Object
         levelNr: 1,                         // Current level number
+        maxLevelNr: 1,                      // Maximum level number the player has reached
         xpCurrent: 0,                       // Current XP points
         xpPoints: 0,                        // Total XP points
     },                          
 
     // Statistics
-    statistics: defaultStatistics,          // Statistics Object
+    statistics: defaultStatistics,        // Array of statistics objects
 
     // Titles & achievements
     titles: [],                             // Array of title objects
     achievements: [],                       // Array of achievement objects
+    frames: [],                             // Array of frame objects
 };
 
 export const FriendSchema = {
@@ -48,4 +49,24 @@ export const FriendSchema = {
     sentRequests: [],                       // Array of sent friend request userIds
     pendingRequests: [],                    // Array of pending friend request userIds
     invitations: [],                        // Array of invitation objects
+};
+
+export const PerkSchema = {
+    userId: null,                           // Reference to User _id
+
+    levelPerks: {                           // Object containing perk arrays for each category
+        "game": [],                         // Array of perk objects for game category
+        "luck": [],                         // Array of perk objects for luck category
+        "player": [],                       // Array of perk objects for player category
+    },
+
+    perkBuilds: [],                         // Array of perk build objects
+    permantPerks: [],                       // Array of permanent perk objects
+    unlockedPerks: [],                      // Array of unlocked perk objects
+};
+
+export const PerkBuildSchema = {
+    buildName: "",                          // Name of the perk build
+    perks: [],                              // Array of perk IDs included in the build
+    active: false,                          // Whether this build is currently active
 };

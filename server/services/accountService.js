@@ -49,6 +49,7 @@ async function getUserAccount(userId) {
                 avatar: 1,
                 titles: 1,
                 level: 1,
+                frames: 1,
             }
         }
     );
@@ -57,8 +58,11 @@ async function getUserAccount(userId) {
         throw { status: 404, message: 'User not found' };
     }
 
-    const format = user.titles || [];
-    const active = format.find((title) => title.active) || null;
+    const formatTitle = user.titles || [];
+    const activeTitle = formatTitle.find((title) => title.active) || null;
+
+    const formatFrame = user.frames || [];
+    const activeFrame = formatFrame.find((frame) => frame.active) || null;
 
     const info = {
         selectedAvatar: user.avatar.avatarName || 'default.svg',
@@ -76,8 +80,11 @@ async function getUserAccount(userId) {
         avatar: user.avatar.avatarName || 'default.svg',
         uploadedAvatar: user.avatar.uploadedAvatar || '',
 
-        titles: format || [],
-        selectedTitle: active,
+        titles: formatTitle || [],
+        selectedTitle: activeTitle,
+
+        frames: formatFrame || [],
+        selectedFrame: activeFrame,
 
         username: user.username || 'Player',
 

@@ -99,6 +99,34 @@ const router = express.Router();
  *                   type: string
  *                   description: User's username.
  *                   example: "Player123"
+ *                 frames:
+ *                   type: array
+ *                   description: User unlocked frames.
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       name:
+ *                         type: string
+ *                         example: "None"
+ *                       url:
+ *                         type: string
+ *                         example: ""
+ *                       active:
+ *                         type: boolean
+ *                         example: true
+ *                 selectedFrame:
+ *                   type: object
+ *                   description: User selected frame.
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                       example: "None"
+ *                     url:
+ *                       type: string
+ *                       example: ""
+ *                     active:
+ *                       type: boolean
+ *                       example: true
  *       401:
  *         description: No Token was provided.
  *       403:

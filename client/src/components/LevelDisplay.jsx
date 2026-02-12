@@ -1,28 +1,27 @@
-
 // Features
-import UpgradeGrid from "../features/UpgradeGrid";
-import Octagon from "../features/Octagon";
+import UpgradeGrid from '../features/UpgradeGrid';
+import Octagon from '../features/Octagon';
 
 // Utilities
 import { SoundManager } from '../utils/soundManager';
-import { REWARD_TYPES } from "../utils/constants";
+import { REWARD_TYPES } from '../utils/constants';
 
 // React
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from 'react';
 
 function XPBar({ current, required }) {
     const percentage = Math.min(100, Math.round((current / required) * 100));
 
-    let xpText = "";
-    if(current < required) {
+    let xpText = '';
+    if (current < required) {
         xpText = `${current} / ${required} XP`;
     } else {
         xpText = required + ' XP';
     }
-    
 
     return (
-        <div className="
+        <div
+            className="
             relative
             w-[400px]
             mt-3
@@ -30,11 +29,16 @@ function XPBar({ current, required }) {
             items-center
             mb-3
             transition-transform duration-250 ease-in-out origin-right
-        ">
+        "
+        >
             <div className="xp-bar">
-                <div className="xp-fill" style={{ width: `${percentage}%` }}></div>
+                <div
+                    className="xp-fill"
+                    style={{ width: `${percentage}%` }}
+                ></div>
 
-                <span className="absolute
+                <span
+                    className="absolute
                     top-1/2 left-1/2
                     transform -translate-x-1/2 -translate-y-1/2
                     font-sans
@@ -44,7 +48,8 @@ function XPBar({ current, required }) {
                     w-full
                     pointer-events-none
                     select-none
-                ">
+                "
+                >
                     {xpText}
                 </span>
             </div>
@@ -52,51 +57,43 @@ function XPBar({ current, required }) {
     );
 }
 
-function LevelDisplay({
-    isOpen, onClose, accountInfo, unlockNode
-}) {
+function LevelDisplay({ isOpen, onClose, accountInfo, unlockNode }) {
     if (!isOpen) return null;
 
-    const tabs = ['upgrades', 'levels'];
+    const tabs = ['upgrades', 'levels', 'perks'];
 
     const scrollRef = useRef(null);
-    
+
     const [savedScrollPos, setSavedScrollPos] = useState(0);
     const [selectedNode, setSelectedNode] = useState(null);
     const [expandedLevel, setExpandedLevel] = useState(null);
     const [activeTab, setActiveTab] = useState(0);
 
-    const {
-        playerLevel,
-        xpPoints,
-        upgrades,
-        modifiers,
-        perks,
-        levels,
-    } = accountInfo;
+    const { playerLevel, xpPoints, upgrades, modifiers, perks, levels } =
+        accountInfo;
 
     const handleNodeClick = (node) => {
         SoundManager.playClickSound();
         setSelectedNode(node);
     };
 
-    const changeTab = () => {
+    const changeTab = (inc) => {
         SoundManager.playClickSound();
-        setActiveTab((prevTab) => (prevTab + 1) % tabs.length);
+        setActiveTab((prevTab) => (prevTab + inc + tabs.length) % tabs.length);
     };
 
     useEffect(() => {
-        if(tabs[activeTab] === 'levels' && scrollRef.current) {
+        if (tabs[activeTab] === 'levels' && scrollRef.current) {
             scrollRef.current.scrollTop = savedScrollPos;
         }
-    }, [activeTab])
+    }, [activeTab]);
 
     return (
         <div className="modal-style">
             <div className="level-display-wrapper">
                 {/* Left Tab Button */}
                 <button
-                    onClick={changeTab}
+                    onClick={() => changeTab(-1)}
                     className="
                         absolute 
                         left-4
@@ -114,7 +111,7 @@ function LevelDisplay({
 
                 {/* Right Tab Button */}
                 <button
-                    onClick={changeTab}
+                    onClick={() => changeTab(1)}
                     className="
                         absolute 
                         right-4
@@ -133,9 +130,7 @@ function LevelDisplay({
 
                 {tabs[activeTab] === 'upgrades' && (
                     <>
-                        <h2 className="cropper-h2">
-                            Spend Your Level Points
-                        </h2>
+                        <h2 className="cropper-h2">Spend Your Level Points</h2>
 
                         {/* Display Level Tree */}
                         <div className="level-tree-wrapper">
@@ -161,7 +156,8 @@ function LevelDisplay({
                                 >
                                     {/* Title */}
                                     <h2 className="text-[1.75rem] font-bold text-orange-300 mb-1">
-                                        {selectedNode.node.name ?? "Unnamed Node"}
+                                        {selectedNode.node.name ??
+                                            'Unnamed Node'}
                                     </h2>
 
                                     {/* Icon */}
@@ -173,13 +169,15 @@ function LevelDisplay({
 
                                     {/* Description */}
                                     <p className="text-[1.5rem] text-gray-200 mb-1">
-                                        {selectedNode.node.description ?? "No description available"}
+                                        {selectedNode.node.description ??
+                                            'No description available'}
                                     </p>
 
                                     {/* Modifier info */}
-                                    {selectedNode.type === "modifier" && (
+                                    {selectedNode.type === 'modifier' && (
                                         <p className="text-green-400 font-semibold mb-2 text-[1.25rem]">
-                                            Current Modifier: {selectedNode.node.multiplier}%
+                                            Current Modifier:{' '}
+                                            {selectedNode.node.multiplier}%
                                         </p>
                                     )}
                                 </div>
@@ -207,10 +205,12 @@ function LevelDisplay({
                                         Unlock (Cost: 1 point)
                                     </button>
                                 ) : (
-                                    <p className="
+                                    <p
+                                        className="
                                         text-yellow-300 text-center font-bold
 
-                            ">
+                            "
+                                    >
                                         Already Unlocked
                                     </p>
                                 )}
@@ -221,13 +221,13 @@ function LevelDisplay({
 
                 {tabs[activeTab] === 'levels' && (
                     <>
-                        <h2 className="cropper-h2">
-                            Level Progression
-                        </h2>
+                        <h2 className="cropper-h2">Level Progression</h2>
 
                         <div
-                            ref = {scrollRef}
-                            onScroll={(e) => setSavedScrollPos(e.target.scrollTop)}
+                            ref={scrollRef}
+                            onScroll={(e) =>
+                                setSavedScrollPos(e.target.scrollTop)
+                            }
                             className="
                                 relative
                                 flex flex-col items-center justify-start
@@ -255,13 +255,21 @@ function LevelDisplay({
                                             bg-[#1e1e1e]/80
                                             mb-4
                                             px-4 py-3 transition-all duration-300
-                                    ">
+                                    "
+                                    >
                                         <div
                                             className="flex flex-row items-center justify-between cursor-pointer"
                                             onClick={() => {
-                                                if (lvl.type === REWARD_TYPES.PERK) {
+                                                if (
+                                                    lvl.type ===
+                                                    REWARD_TYPES.PERK
+                                                ) {
                                                     SoundManager.playClickSound();
-                                                    setExpandedLevel(isOpen ? null : lvl.level);
+                                                    setExpandedLevel(
+                                                        isOpen
+                                                            ? null
+                                                            : lvl.level,
+                                                    );
                                                 }
                                             }}
                                         >
@@ -273,12 +281,14 @@ function LevelDisplay({
                                                         alt="Level Icon"
                                                     />
 
-                                                    <span className="
+                                                    <span
+                                                        className="
                                                         absolute inset-0 flex items-center justify-center
                                                         text-black font-bold text-[1.25rem]
                                                         mb-0.5
                                                         select-none
-                                                    ">
+                                                    "
+                                                    >
                                                         {lvl.level}
                                                     </span>
                                                 </div>
@@ -287,32 +297,50 @@ function LevelDisplay({
                                             {/* Reward or No Reward */}
                                             <div className="flex flex-col w-1/3 items-center">
                                                 <div className="flex items-center gap-2 group select-none">
-                                                    {lvl.type !== REWARD_TYPES.NONE ? (
+                                                    {lvl.type !==
+                                                    REWARD_TYPES.NONE ? (
                                                         <>
-                                                            {lvl.type !== REWARD_TYPES.TITLE && (
+                                                            {lvl.type !==
+                                                                REWARD_TYPES.TITLE && (
                                                                 <img
-                                                                    src={`${lvl.type === REWARD_TYPES.FRAME
-                                                                        ? `/frames/${lvl.reward.icon}`
-                                                                        : `/icons/${lvl.reward.icon}`}`}
+                                                                    src={`${
+                                                                        lvl.type ===
+                                                                        REWARD_TYPES.FRAME
+                                                                            ? `/frames/${lvl.reward.icon}`
+                                                                            : `/icons/${lvl.reward.icon}`
+                                                                    }`}
                                                                     alt="Reward Icon"
                                                                     className="w-30 h-30 transition-transform group-hover:scale-110"
                                                                 />
                                                             )}
 
-                                                            {lvl.type !== REWARD_TYPES.FRAME && (
+                                                            {lvl.type !==
+                                                                REWARD_TYPES.FRAME && (
                                                                 <p
                                                                     className="text-white text-[1.85rem] font-semibold"
                                                                     style={{
-                                                                        color: lvl.type === REWARD_TYPES.TITLE ? lvl.reward.color : "white",
+                                                                        color:
+                                                                            lvl.type ===
+                                                                            REWARD_TYPES.TITLE
+                                                                                ? lvl
+                                                                                      .reward
+                                                                                      .color
+                                                                                : 'white',
                                                                         textShadow:
-                                                                            lvl.type === REWARD_TYPES.TITLE
+                                                                            lvl.type ===
+                                                                            REWARD_TYPES.TITLE
                                                                                 ? `0 0 1px ${lvl.reward.color}, 0 0 40px ${lvl.reward.color}AA`
-                                                                                : lvl.type === REWARD_TYPES.PERK
-                                                                                    ? `0 0 1px #FCD34D, 0 0 40px #FCD34DAA`
-                                                                                    : "none"
+                                                                                : lvl.type ===
+                                                                                    REWARD_TYPES.PERK
+                                                                                  ? `0 0 1px #FCD34D, 0 0 40px #FCD34DAA`
+                                                                                  : 'none',
                                                                     }}
                                                                 >
-                                                                    {lvl.reward.name}
+                                                                    {
+                                                                        lvl
+                                                                            .reward
+                                                                            .name
+                                                                    }
                                                                 </p>
                                                             )}
                                                         </>
@@ -334,33 +362,43 @@ function LevelDisplay({
                                         </div>
 
                                         {/* Expanded Reward Details */}
-                                        {expandedLevel === lvl.level && lvl.reward && (
-                                            <div className="
+                                        {expandedLevel === lvl.level &&
+                                            lvl.reward && (
+                                                <div
+                                                    className="
                                             mt-2 p-3
                                             bg-black/40 border border-[#a65a2e] rounded-lg
                                             text-white text-[1.65rem] leading-relaxed
                                             animate-fadeIn
-                                        ">
-                                                {lvl.reward.description}
-                                            </div>
-                                        )}
+                                        "
+                                                >
+                                                    {lvl.reward.description}
+                                                </div>
+                                            )}
                                     </div>
-                                )
+                                );
                             })}
                         </div>
                     </>
                 )}
 
+                {tabs[activeTab] === 'perks' && (
+                    <>
+                        <h2 className="cropper-h2">Perk Builds</h2>
+
+                        <div>
+                            
+                        </div>
+                    </>
+                )}
+
                 {/* Close Button */}
-                <button
-                    onClick={onClose}
-                    className="modal-btn"
-                >
+                <button onClick={onClose} className="modal-btn">
                     Close
                 </button>
             </div>
         </div>
     );
-};
+}
 
 export default LevelDisplay;

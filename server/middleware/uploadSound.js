@@ -28,8 +28,6 @@ const storage = multer.diskStorage({
             null,
             `${req.user.userId}_${Date.now()}_${soundType}${path.extname(file.originalname)}`,
         );
-
-        console.log("Filename set");
     },
 });
 
@@ -46,7 +44,6 @@ const upload = multer({
         const mimetype = allowedMime.test(file.mimetype);
 
         if (mimetype && extname) {
-            console.log("File type and extension validated");
             return cb(null, true);
         } else {
             return cb(new Error('Only audio files are allowed!'));

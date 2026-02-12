@@ -104,7 +104,7 @@ function Achievements() {
 
                 {/* Account title */}
                 <h1 className="achievements-title">
-                    Achievements
+                    Achievements {achievements.length > 0 && `(${achievements.filter(a => a.unlocked).length} / ${achievements.length})`}
                 </h1>
 
                 <div className="achievement-list">

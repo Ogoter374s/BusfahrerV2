@@ -39,7 +39,7 @@ function CardSettings({setShowCardThemeModal, cardThemes, selectedTheme}) {
                     <div className="select-wrapper">
                         <label
                             htmlFor="optionsSelect"
-                            className="select-label">
+                            className="select-label text-white">
                             Select Card Theme:
                         </label>
                         <div

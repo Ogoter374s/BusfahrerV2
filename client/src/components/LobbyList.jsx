@@ -56,7 +56,7 @@ function LobbyList({ lobbies, onJoin }) {
                                 {lobby.avatars.slice(0, 3).map((player, idx) => (
                                     <img
                                         key={idx}
-                                        src={`${BASE_URL}avatars/${player.avatar}`}
+                                        src={`${BASE_URL}avatars/${player.avatar.avatarName}`}
                                         alt={`Player ${idx + 1}`}
                                         className="lobby-list-avatar"
                                     />

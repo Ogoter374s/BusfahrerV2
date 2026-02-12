@@ -20,7 +20,7 @@ import { PopupManager } from '../utils/popupManager';
 
 // Utils
 import BASE_URL from '../utils/config';
-import { shuffleStyles, cardMatchStyles, turnModes, busfahrerSelectionMode, schluckGiveMode, PLAYER_GENDER } from "../utils/constants";
+import { gameModes, shuffleStyles, cardMatchStyles, turnModes, busfahrerSelectionMode, schluckGiveMode, PLAYER_GENDER } from "../utils/constants";
 
 // React
 import { useState, useEffect, useRef } from 'react';
@@ -51,6 +51,7 @@ function Create() {
     const [isPrivate, setIsPrivate] = useState(false);
     const [gender, setGender] = useState(PLAYER_GENDER.MALE);
 
+    const [selectedGameMode, setSelectedGameMode] = useState('Busfahrer');
     const [selectedShuffle, setSelectedShuffle] = useState('Fisher-Yates');
     const [selectedCardMatch, setSelectedCardMatch] = useState('Number-only');
     const [cardChaos, setCardChaos] = useState(false);
@@ -247,6 +248,7 @@ function Create() {
                                 isPrivate,
                                 gender,
                                 settings: {
+                                    gameMode: selectedGameMode,
                                     shuffling: selectedShuffle,
                                     matching: selectedCardMatch,
                                     isChaos: cardChaos,
@@ -272,6 +274,15 @@ function Create() {
                     </h2>
 
                     <div className="create-options-wrapper">
+
+                        {/* Game Mode */}
+                        <MenuSelect 
+                            label="Game Mode"
+                            id="optionsSelect"
+                            value={selectedGameMode}
+                            onChange={(e) => setSelectedGameMode(e.target.value)}
+                            options={gameModes.map((s) => ({ name: s.name, value: s.type }))}
+                        />
 
                         {/* Card Shuffle selection */}
                         <MenuSelect 

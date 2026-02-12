@@ -1139,6 +1139,7 @@
     @apply
         pointer-events-none select-none
         text-[1.5rem] sm:text-[1.25rem] lg:text-[1.75rem] xl:text-[2.25rem] 2xl:text-[2.5rem]
+        text-white
     ;
 }
 

@@ -11,11 +11,17 @@ import jwt from 'jsonwebtoken';
 // Database
 import { db, updateStatistics } from '../database/mongoClient.js';
 import { UserSchema, FriendSchema } from '../database/dataModels.js';
-import { checkUserData, getUnknownFields } from '../database/migrateData.js';
+import { checkUserData, loadOrCreateLinkedDoc, checkFriendData, checkPerkData } from '../database/migrateData.js';
 
 // Constants
 import { USER_KEYS } from '../constants/defaultKeys.js';
-import { defaultStatistics, defaultTitle, userSounds, userUploadSounds } from '../constants/defaultData.js';
+import {
+    defaultStatistics,
+    defaultTitle,
+    userSounds,
+    userUploadSounds,
+    defaultFrame,
+} from '../constants/defaultData.js';
 
 // Utilities
 import { generateUniqueFriendCode } from '../utils/friendUtils.js';
@@ -26,7 +32,7 @@ import { logInfo } from '../utils/logger.js';
  * Hashes the password, creates user and friend documents, and generates a JWT token. <br>
  * Throws an error if the username already exists.
  * <br><br>
- * 
+ *
  * @function registerUser
  * @param {string} username - The desired username for the new user.
  * @param {string} password - The plaintext password for the new user.
@@ -84,10 +90,10 @@ async function registerUser(username, password) {
         statistics: defaultStatistics,
 
         // Titles & achievements
-        titles: defaultTitle,
+        titles: [defaultTitle],
+        frames: [defaultFrame],
         achievements: [],
     };
-
 
     const result = await usersCollection.insertOne(newUser);
 
@@ -96,7 +102,7 @@ async function registerUser(username, password) {
 
         userId: result.insertedId,
         friendCode,
-    }
+    };
 
     await friendsCollection.insertOne(newFriend);
 
@@ -114,7 +120,7 @@ async function registerUser(username, password) {
  * Generates a JWT token upon successful authentication. <br>
  * Updates the user's daily login streak based on their last login date.
  * <br><br>
- * 
+ *
  * @function loginUser
  * @param {string} username - The username of the user attempting to log in.
  * @param {string} password - The plaintext password provided for authentication.
@@ -122,6 +128,8 @@ async function registerUser(username, password) {
  */
 async function loginUser(username, password) {
     const usersCollection = db.collection('users');
+    const friendsCollection = db.collection('friends');
+    const perksCollection = db.collection('perks');
 
     let user = await usersCollection.findOne({ username });
     if (!user) {
@@ -135,25 +143,23 @@ async function loginUser(username, password) {
 
     const migratedUserData = checkUserData(user);
 
-    const unknownFields = getUnknownFields(UserSchema, user);
-    const unsetObj = {};
-    unknownFields.forEach(field => {
-        unsetObj[field] = "";
-    });
-
-    if(JSON.stringify(user) !== JSON.stringify(migratedUserData)) {
+    if (JSON.stringify(user) !== JSON.stringify(migratedUserData)) {
         await usersCollection.updateOne(
             { _id: user._id },
-            { 
-                ...(unknownFields.length > 0 && { $unset: unsetObj }),
-                $set: migratedUserData    
-            }
+            {
+                $set: migratedUserData,
+            },
         );
 
         logInfo(`Migrated user data for userId: ${user._id.toString()}`);
     }
 
     user = migratedUserData;
+
+    const userIdStr = user._id.toString();
+
+    await loadOrCreateLinkedDoc(friendsCollection, userIdStr, checkFriendData);
+    await loadOrCreateLinkedDoc(perksCollection, userIdStr, checkPerkData);
 
     const now = new Date();
     const lastLogin = user.lastLogin ? new Date(user.lastLogin) : null;
@@ -172,7 +178,7 @@ async function loginUser(username, password) {
 
     await usersCollection.updateOne(
         { _id: user._id },
-        { $set: { lastLogin: now } }
+        { $set: { lastLogin: now } },
     );
 
     await updateStatistics(user._id.toString(), {
@@ -192,7 +198,7 @@ async function loginUser(username, password) {
  * Logs out a user by clearing the authentication cookie. <br>
  * This function does not require any parameters other than the response object to clear the cookie.
  * <br><br>
- * 
+ *
  * @function logoutUser
  * @param {Object} res - The Express response object used to clear the authentication cookie.
  * @returns {void}
@@ -205,9 +211,4 @@ async function logoutUser(res) {
     });
 }
 
-export {
-    registerUser,
-
-    loginUser,
-    logoutUser,
-};
+export { registerUser, loginUser, logoutUser };

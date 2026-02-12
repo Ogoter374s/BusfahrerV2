@@ -98,13 +98,17 @@ export const cardThemes = [
  * This list is used to render user statistics in the UI.
  */
 export const statLabels = [
+    { key: 'playerStats', label: 'Player Statistics' },
+    { key: 'gameStats', label: 'Game Statistics' },
+    { key: 'friendStats', label: 'Friend Statistics' },
+    { key: 'cosmeticStats', label: 'Cosmetic Statistics' },
     { key: 'gamesPlayed', label: 'Games Played' },
     { key: 'gamesBusfahrer', label: 'Games Busfahrer' },
-    { key: 'drinksGiven', label: 'Schlucke Given' },
-    { key: 'drinksSelf', label: 'Schlucke Self' },
-    { key: 'numberEx', label: 'Number Exen' },
-    { key: 'maxDrinksGiven', label: 'Max. Schlucke Given' },
-    { key: 'maxDrinksSelf', label: 'Max. Schlucke Self' },
+    { key: 'drinksGiven', label: 'Drinks Given' },
+    { key: 'drinksSelf', label: 'Drinks Self' },
+    { key: 'numberEx', label: 'Number Ex' },
+    { key: 'maxDrinksGiven', label: 'Max. Drinks Given' },
+    { key: 'maxDrinksSelf', label: 'Max. Drinks Self' },
     { key: 'maxCardsSelf', label: 'Max. Cards Number' },
     { key: 'layedCards', label: 'Layed Cards' },
     { key: 'gamesJoined', label: 'Games Joined' },
@@ -132,6 +136,18 @@ export const statLabels = [
     { key: 'friendsMessagesSent', label: 'Messages Sent' },
     { key: 'friendsRequestsReceived', label: 'Requests Received' },
     { key: 'friendsRequestsSent', label: 'Requests Sent' },
+    { key: 'drinksPhase3', label: 'Drinks in Phase 3' },
+    { key: 'spectatorJoined', label: 'Spectator Joined' },
+    { key: 'lobbyLeft', label: 'Lobbies Left' },
+    { key: 'gamesLeft', label: 'Games Left' },
+    { key: 'masterInherited', label: 'Game Master Inherited' },
+    { key: 'lobbyCreated', label: 'Lobbies Created' },
+    { key: 'lobbyJoined', label: 'Lobbies Joined' },
+    { key: 'friendsRequestDeclined', label: 'Requests Declined' },
+    { key: 'friendsRequestAccepted', label: 'Requests Accepted' },
+    { key: 'chatMessagesSent', label: 'Chat Messages Sent' },
+    { key: 'avatarChanged', label: 'Avatar Changed' },
+    { key: 'titleChanged', label: 'Title Changed' },
 ];
 
 /**
@@ -161,6 +177,11 @@ export const achievLabels = {
     changedSound: 'Changed the Sound',
     uploadedAvatar: 'Uploaded an Avatar',
 };
+
+export const gameModes = [
+    { name: "Busfahrer", type: "Busfahrer" },
+    { name: "Windows-Extreme", type: "Windows-Extreme" },
+];
 
 /**
  * Predefined list of shuffle styles. <br>

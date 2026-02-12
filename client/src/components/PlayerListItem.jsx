@@ -31,7 +31,7 @@ function PlayerListItem({ player, index, isGameMaster, onKick, isSpectator=false
         <div className="player-list-wrapper">
             {/* Avatar Image */}
             <img
-                src={`${BASE_URL}avatars/${player.avatar}`}
+                src={`${BASE_URL}avatars/${player.avatar.avatarName}`}
                 alt={`${player.name}'s Avatar`}
                 className="player-list-avatar"
             />

@@ -282,15 +282,11 @@ export const SoundManager = {
      * This method ensures that the application uses the user's preferred sound settings, enhancing the user experience.
      */
     async loadUserSound(isAuthenticated) {
-        if (soundInitialized) return;
-
-        if (!sounds) sounds = {};
+        if (soundInitialized) return; 
 
         const cached = localStorage.getItem('allSounds');
         if (cached) {
             const parsed = JSON.parse(cached);
-
-            console.log(parsed);
 
             for (const { type, name } of parsed) {
                 sounds[type] = new Audio(`${BASE_URL}sounds/${name}`);
@@ -298,7 +294,7 @@ export const SoundManager = {
 
             soundInitialized = true;
             return;
-        }
+        } 
 
         const fallback = () => {
             for (const [type, defaultName] of Object.entries(DEFAULT_SOUNDS)) {

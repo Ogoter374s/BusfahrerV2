@@ -18,7 +18,7 @@ import AvatarSettings from '../components/AvatarSettings';
 import LevelDisplay from '../components/LevelDisplay';
 import SoundSettings from '../components/SoundSettings';
 import CardSettings from '../components/CardSettings';
-import MenuSelect from '../components/MenuSelect';
+import TitleSettings from '../components/TitleSettings';
 import ThemeSelector from '../components/ThemeSelector';
 import StatisticBox from '../components/StatisticBox';
 import PopupModal from '../components/PopUpModal';
@@ -28,6 +28,7 @@ import DustLayer from '../components/DustLayer';
 import useAvatarUpload from '../hooks/useAvatarUpload';
 import useCardTheme from '../hooks/useCardTheme';
 import useTitles from '../hooks/useTitles';
+import useFrames from '../hooks/useFrames';
 import useStatistics from '../hooks/useStatistics';
 import useWebSocketConnector from '../hooks/useWebSocketConnector';
 import { useAuthGuard } from '../hooks/useAuthGuard';
@@ -130,7 +131,6 @@ function Account() {
         zoom,
         setCrop,
         setZoom,
-        croppedAreaPixels,
         setCroppedAreaPixels,
         handleAvatarChange,
         uploadAvatar,
@@ -177,13 +177,21 @@ function Account() {
         handleTitleChange,
     } = useTitles();
 
+    const {
+        frames,
+        selectedFrame,
+        setFrames,
+        loadFramesFromAccount,
+        handleFrameChange,
+    } = useFrames();
+
     /**
      * A custom hook that manages the user statistics, providing methods to fetch and update statistics.
      * It also provides the labels for the statistics to be displayed in the UI.
      * The hook returns the necessary state and methods to manage user statistics, including the statistics data
      * and the labels for the statistics.
      */
-    const { statistics, setStatistics, statLabels } = useStatistics();
+    const { statistics, formatStatistics, statLabels } = useStatistics();
 
     /**
      * Fetches the user's account details from the server, including avatar, uploaded avatar, and statistics.
@@ -207,12 +215,13 @@ function Account() {
         setAccountInfo(result.info || {});
         setUsername(result.username || 'Player');
 
-        setStatistics(result.statistics || {});
+        formatStatistics(result.statistics || {});
 
         setSelectedAvatar(`${BASE_URL}avatars/${result.avatar}`);
         setUploadedAvatar(`${BASE_URL}avatars/${result.uploadedAvatar}`);
 
         loadTitlesFromAccount(result);
+        loadFramesFromAccount(result);
     };
 
     const fetchSoundUploads = async () => {
@@ -273,18 +282,20 @@ function Account() {
      */
     useWebSocketConnector("account", {}, init.current, (message) => {
         if (message.type === 'accountUpdate') {
-            console.log(message.data)
 
             if (message.data.statistics) {
-                setStatistics(message.data.statistics);
+                formatStatistics(message.data.statistics);
             }
 
             if (message.data.titles) {
                 setTitles(message.data.titles);
             }
 
+            if (message.data.frames) {
+                setFrames(message.data.frames);
+            }
+
             if (message.data.avatar) {
-                console.log("Testing");
                 setSelectedAvatar(`${BASE_URL}avatars/${message.data.avatar.avatarName}`);
                 if (message.data.avatar.uploadedAvatar.trim() !== '') {
                     setUploadedAvatar(`${BASE_URL}avatars/${message.data.avatar.uploadedAvatar}`);
@@ -349,20 +360,21 @@ function Account() {
                         <div
                             className="
                                 max-h-[635px]
-                                max-w-[480px]
-                                min-w-[480px]
+                                max-w-[490px]
+                                min-w-[490px]
                                 overflow-y-auto
+                                overflow-x-hidden
                                 -mt-3
                                 scroll-gutter-stable
                             "
                         >
-
                             {/* Avatar selection and upload */}
                             <AvatarSettings
                                 selectedAvatar={selectedAvatar}
                                 accountInfo={accountInfo}
                                 setShowAvatarModal={setShowAvatarModal}
                                 setShowLevelModal={setShowLevelModal}
+                                selectedFrame={selectedFrame}
                             />
 
                             <SoundSettings
@@ -377,18 +389,14 @@ function Account() {
                                 selectedTheme={selectedTheme}
                             />
 
-                            {/* Title selection dropdown */}
-                            <MenuSelect
-                                label="Select Title:"
-                                id="optionsSelect"
-                                value={selectedTitle}
-                                onChange={handleTitleChange}
-                                selectStyle={{ color: selectedColor }}
-                                options={titles.map((title) => ({
-                                    name: title.name,
-                                    value: title.name,
-                                    color: title.color,
-                                }))}
+                            <TitleSettings
+                                titles={titles}
+                                selectedTitle={selectedTitle}
+                                selectedColor={selectedColor}
+                                onTitleChange={handleTitleChange}
+                                frames={frames}
+                                selectedFrame={selectedFrame}
+                                onFrameChange={handleFrameChange}
                             />
                         </div>
                     </div>

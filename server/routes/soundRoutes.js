@@ -138,8 +138,6 @@ router.post('/upload-sound', authenticateToken, upload.fields([{name: 'soundType
     const userId = req.user.userId;
     const { soundType } = req.body;
 
-    console.log(soundType + " upload attempt by userId: " + userId);
-
     if(!req.files?.sound?.length) {
         return res.status(400).json({ error: 'No file uploaded.', title: 'Upload Error' });
     }

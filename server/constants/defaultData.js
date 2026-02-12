@@ -282,3 +282,11 @@ export const userUploadSounds = [
     { type: SOUND_KEYS.WIN, name: '', },
     { type: SOUND_KEYS.LOSE, name: '', },
 ]
+
+export const defaultFrame = [
+    {
+        name: 'None',
+        url: '',
+        active: true,
+    },
+];

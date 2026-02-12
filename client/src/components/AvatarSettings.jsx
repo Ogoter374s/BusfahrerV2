@@ -1,8 +1,7 @@
 import { SoundManager } from "../utils/soundManager";
 import Avatar from "./AvatarIcon";
 
-function AvatarSettings({ selectedAvatar, accountInfo, setShowAvatarModal, setShowLevelModal }) {
-
+function AvatarSettings({ selectedAvatar, accountInfo, setShowAvatarModal, setShowLevelModal, selectedFrame }) {
     const {
         playerName,
         playerLevel,
@@ -25,9 +24,10 @@ function AvatarSettings({ selectedAvatar, accountInfo, setShowAvatarModal, setSh
                 src={selectedAvatar}
                 isLocal
                 onClick={() => setShowAvatarModal(true)}
+                frame={selectedFrame.url || ''}
             />
 
-            <div className="flex flex-row justify-between">
+            <div className="flex flex-row justify-between select-none">
                 <p className="text-[2rem] text-white mr-4">
                     {playerName}
                 </p>
